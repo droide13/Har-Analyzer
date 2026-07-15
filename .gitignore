@@ -1,0 +1,4 @@
+# Ignore captures
+/src/captures/
+# Ignore outputs
+/src/output
