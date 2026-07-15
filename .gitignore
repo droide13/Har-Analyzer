@@ -2,3 +2,6 @@
 /src/captures/
 # Ignore outputs
 /src/output
+
+# Virtual environment
+/.venv
