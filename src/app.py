@@ -4,6 +4,12 @@ import streamlit as st
 from models import load_parsed_entries
 from tabs import Tab, RequestsTab, OverviewTab, CookiesTab, IdentifiersTab
 
+st.set_page_config(
+    page_title="HAR Visualizer",
+    page_icon="har_analyzer.png",
+    layout="wide",
+)
+
 def main() -> None:
     st.title("HAR Analyzer")
     
