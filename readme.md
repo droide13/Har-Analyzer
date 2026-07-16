@@ -1,6 +1,6 @@
 # HAR Analyzer
 
-A fast, highly modular, and strictly typed Streamlit application to parse, filter, and audit HTTP Archive (`.har`) files.
+A fast, simple, highly modular, and strictly typed Streamlit application to parse, filter, and audit HTTP Archive (`.har`) files.
 
 ---
 
