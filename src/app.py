@@ -2,7 +2,7 @@
 
 import streamlit as st
 from models import load_parsed_entries
-from tabs import Tab, RequestsTab, OverviewTab, CookiesTab
+from tabs import Tab, RequestsTab, OverviewTab, CookiesTab, IdentifiersTab
 
 def main() -> None:
     st.title("HAR Visualizer")
@@ -28,7 +28,8 @@ def main() -> None:
         tabs_to_render: list[Tab] = [
             RequestsTab(),
             OverviewTab(),
-            CookiesTab()
+            CookiesTab(),
+            IdentifiersTab()
         ]
 
         # Layout allocation using standard Streamlit Tab Components

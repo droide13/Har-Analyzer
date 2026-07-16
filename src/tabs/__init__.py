@@ -4,5 +4,6 @@ from .protocols import Tab
 from .requests import RequestsTab
 from .overview import OverviewTab
 from .cookies import CookiesTab
+from tabs.identifiers import IdentifiersTab
 
-__all__ = ["Tab", "RequestsTab", "OverviewTab", "CookiesTab"]
+__all__ = ["Tab", "RequestsTab", "OverviewTab", "CookiesTab", "IdentifiersTab"]
