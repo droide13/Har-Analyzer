@@ -8,7 +8,7 @@ from tabs import CookiesTab, IdentifiersTab, OverviewTab, RequestsTab, Tab
 
 st.set_page_config(
     page_title="HAR Visualizer",
-    page_icon="har_analyzer.png",
+    page_icon="assets/har_analyzer.png",
     layout="wide",
 )
 
