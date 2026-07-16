@@ -27,6 +27,29 @@ streamlit run app.py
 
 ---
 
+## Search Functionality
+
+The Network Log tab supports two independent query fields: a **Filter** query
+(discards non-matching entries) and a **Highlight** query (flags matches
+without removing anything). Both share the same syntax.
+
+* **Free text** — matches against the field selected in the scope dropdown.
+* **Field prefixes** — target a specific field regardless of scope:
+  `url:`, `status:`, `method:`, `header:`, `cookies:`, `body:`
+* **Negation** — prefix any term with `-` to exclude matches (e.g. `-status:200`).
+* **Status classes** — `status:4xx` matches any 4xx code.
+* **Multiple terms** — space-separated terms are combined with AND logic;
+  quote terms containing spaces (`"foo bar"`).
+
+Additionally, each search term can be checked against **encoded or hashed
+forms** of itself (Base64, Base32, MD5, SHA1, SHA256, SHA512) via the
+checkboxes above the query fields. This surfaces matches even when the
+plaintext only appears in encoded form somewhere in the traffic (e.g. a
+token that shows up Base64-encoded in a cookie). Matched entries display a
+badge indicating which field and encoding produced the match.
+
+---
+
 ## 🔌 How to Add a New Tab
 
 Adding custom tabs (e.g., a "Performance" audit tab) takes less than two minutes:

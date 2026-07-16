@@ -3,25 +3,84 @@
 from typing import Any, cast
 import streamlit as st
 from models import ParsedEntry, SCOPE_OPTIONS, list_to_safe_dict, METHOD_ORDER
-from search import entry_matches
+from search import entry_matches, ENCODING_OPTIONS, MatchReason
+
+_ATTR_LABELS: dict[str, str] = {
+    "url": "URL",
+    "method": "Method",
+    "status": "Status",
+    "req_headers": "Request Headers",
+    "res_headers": "Response Headers",
+    "req_body": "POST Data",
+    "res_body": "Response Body",
+    "req_cookies": "Request Cookies",
+    "res_cookies": "Response Cookies",
+    "query_params": "Query Params",
+}
+
+
+def _attr_label(attr: str) -> str:
+    return _ATTR_LABELS.get(attr, attr.replace("_", " ").title())
+
+
+def _format_reason(reason: MatchReason) -> str:
+    label = _attr_label(reason.attr)
+    return f"{label} ({reason.encoding})" if reason.encoding else label
+
+
+def _reason_summary(reasons: list[MatchReason]) -> str:
+    return ", ".join(sorted({_format_reason(r) for r in reasons}))
 
 class RequestsTab:
     @property
     def title(self) -> str:
         return "Network Log"
-
-    def _render_row(self, entry: ParsedEntry, key_prefix: str) -> None:
+    
+    def _render_pagination_controls(self, curr_p: int, total_p: int, key_suffix: str) -> None:
+        c_prev, c_mid, c_next = st.columns([1, 2, 1])
+        with c_prev:
+            if st.button(
+                "Previous",
+                disabled=(curr_p == 0),
+                key=f"btn_prev_{key_suffix}",
+                icon=":material/chevron_left:",
+                use_container_width=True,
+            ):
+                st.session_state["req_page"] = curr_p - 1
+                st.rerun()
+        with c_mid:
+            st.markdown(f"<p style='text-align:center;'>Page {curr_p + 1} of {total_p}</p>", unsafe_allow_html=True)
+        with c_next:
+            if st.button(
+                "Next",
+                disabled=(curr_p >= total_p - 1),
+                key=f"btn_next_{key_suffix}",
+                icon=":material/chevron_right:",
+                use_container_width=True,
+            ):
+                st.session_state["req_page"] = curr_p + 1
+                st.rerun()
+    
+    def _render_row(self, entry: ParsedEntry, key_prefix: str, filter_reasons: list[MatchReason],highlight_reasons: list[MatchReason],) -> None:
+        
         response = cast(dict[str, Any], entry.raw.get("response", {}) or {})
         status_color = "green" if entry.status.startswith(("2", "3")) else ("red" if entry.status else "grey")
         emoji = "🟢" if entry.status.startswith(("2", "3")) else ("🔴" if entry.status else "⚪")
         status_text = f":{status_color}[[{entry.status or '—'}]]"
-        
+
         badges: list[str] = []
         if entry.req_cookies: badges.append(f"ReqCookies: {len(entry.req_cookies)}")
         if entry.res_cookies: badges.append(f"SetCookies: {len(entry.res_cookies)}")
         badge_text = f" :blue-background[{' | '.join(badges)}]" if badges else ""
-        
-        title = f"{emoji} {status_text} **{entry.method}** {entry.url.replace('[', '\\[').replace(']', '\\]')}{badge_text}"
+
+        match_text = f" :blue-background[Matched via: {_reason_summary(filter_reasons)}]" if filter_reasons else ""
+        highlight_text = f" :orange-background[Highlighted via: {_reason_summary(highlight_reasons)}]" if highlight_reasons else ""
+
+        title = (
+            f"{emoji} {status_text} **{entry.method}** "
+            f"{entry.url.replace('[', '\\[').replace(']', '\\]')}"
+            f"{badge_text}{match_text}{highlight_text}"
+        )
 
         with st.expander(title, key=f"expander_{entry.index}"):
             # Dynamically build the tab names based on the HTTP method
@@ -93,14 +152,31 @@ class RequestsTab:
                 df_field = SCOPE_OPTIONS[scope_label]
                 methods = sorted({e.method for e in entries if e.method}, key=lambda m: (METHOD_ORDER.index(m) if m in METHOD_ORDER else len(METHOD_ORDER), m))
                 selected_m = st.multiselect("Methods target", methods, default=[], key="req_methods")
+                
+            st.markdown("#### Also match encoded/hashed forms of each term")
+            enc_cols = st.columns(len(ENCODING_OPTIONS))
+            selected_encodings: set[str] = set()
+            for col, name in zip(enc_cols, ENCODING_OPTIONS):
+                with col:
+                    if st.checkbox(name, value=True, key=f"req_enc_{name}"):
+                        selected_encodings.add(name)
 
         page_size = int(st.number_input("Results per page", min_value=10, max_value=500, value=50, step=10, key="req_size"))
-        filtered = [e for e in entries if entry_matches(e, f_query, df_field, set(selected_m))]
-        
+
+        filter_results = {
+            e.index: entry_matches(e, f_query, df_field, set(selected_m), selected_encodings)
+            for e in entries
+        }
+        filtered = [e for e in entries if filter_results[e.index].matched]
+
         h_active = bool(h_query.strip())
-        flags = [entry_matches(e, h_query, df_field, set()) for e in filtered] if h_active else [False] * len(filtered)
-        
-        sig = (f_query, h_query, df_field, tuple(selected_m))
+        highlight_results = {
+            e.index: entry_matches(e, h_query, df_field, set(), selected_encodings)
+            for e in filtered
+        } if h_active else {}
+        flags = [highlight_results[e.index].matched for e in filtered] if h_active else [False] * len(filtered)
+
+        sig = (f_query, h_query, df_field, tuple(selected_m), tuple(sorted(selected_encodings)))
         if st.session_state.get("req_sig") != sig:
             st.session_state["req_page"] = 0
             st.session_state["req_sig"] = sig
@@ -111,25 +187,47 @@ class RequestsTab:
         curr_p = st.session_state["req_page"]
 
         start, end = curr_p * page_size, (curr_p + 1) * page_size
-        
+
         if h_active:
-            css = [f".st-key-expander_{e.index}, .st-key-expander_{e.index} [data-testid='stExpander'] {{ background-color: rgba(255, 170, 0, 0.04) !important; border: 2px solid #ffaa00 !important; border-left: 8px solid #ffaa00 !important; }}" for e, match in zip(filtered[start:end], flags[start:end]) if match]
+            css = [
+                f".st-key-expander_{e.index}, .st-key-expander_{e.index} [data-testid='stExpander'] "
+                f"{{ background-color: rgba(255, 170, 0, 0.04) !important; border: 2px solid #ffaa00 !important; "
+                f"border-left: 8px solid #ffaa00 !important; }}"
+                for e, match in zip(filtered[start:end], flags[start:end]) if match
+            ]
             if css: st.html(f"<style>{''.join(css)}</style>")
 
         st.write(f"Showing **{len(filtered)}** items (Matches: {sum(flags)} highlighted) out of {len(entries)} total entries.")
 
-        c_prev, c_mid, c_next = st.columns([1, 2, 1])
-        with c_prev:
-            if st.button("⬅️ Previous", disabled=(curr_p == 0), key="btn_prev"):
-                st.session_state["req_page"] = curr_p - 1
-                st.rerun()
-        with c_mid:
-            st.markdown(f"<p style='text-align:center;'>Page {curr_p + 1} of {total_p}</p>", unsafe_allow_html=True)
-        with c_next:
-            if st.button("Next ➡️", disabled=(curr_p >= total_p - 1), key="btn_next"):
-                st.session_state["req_page"] = curr_p + 1
-                st.rerun()
+        if h_active and sum(flags):
+            matched_pages = sorted({(i // page_size) + 1 for i, is_hit in enumerate(flags) if is_hit})
+            st.caption(f"Highlighted matches appear on {len(matched_pages)} page(s): jump directly below.")
+
+            jump_cols = st.columns(min(len(matched_pages), 12))
+            for i, page_num in enumerate(matched_pages):
+                with jump_cols[i % len(jump_cols)]:
+                    is_current = page_num - 1 == curr_p
+                    if st.button(
+                        str(page_num),
+                        key=f"jump_page_{page_num}",
+                        type="primary" if is_current else "secondary",
+                        disabled=is_current,
+                        use_container_width=True,
+                    ):
+                        st.session_state["req_page"] = page_num - 1
+                        st.rerun()
+
+        self._render_pagination_controls(curr_p, total_p, key_suffix="top")
 
         st.markdown("---")
         for entry in filtered[start:end]:
-            self._render_row(entry, key_prefix=str(start))
+            self._render_row(
+                entry,
+                key_prefix=str(start),
+                filter_reasons=filter_results[entry.index].reasons,
+                highlight_reasons=highlight_results[entry.index].reasons if h_active else [],
+            )
+            
+        if filtered[start:end]:
+            st.markdown("---")
+            self._render_pagination_controls(curr_p, total_p, key_suffix="bottom")
