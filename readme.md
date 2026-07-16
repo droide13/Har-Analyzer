@@ -27,6 +27,18 @@ streamlit run app.py
 
 ---
 
+---
+
+## Filename Generator
+
+Alongside HAR analysis, the app includes a standalone **filename generator**
+for standardizing `.har` captures *before* you record them. Switch to it via
+the mode control at the top of the page — no file upload required.
+
+Given a domain and a few dropdown selections (interaction type, cookie
+handling, visit type, and optional free-text context), it produces a
+filename in the form:
+
 ## Search Functionality
 
 The Network Log tab supports two independent query fields: a **Filter** query
