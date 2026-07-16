@@ -46,7 +46,7 @@ class OverviewTab:
         st.markdown("### Metrics Summary")
 
         total = len(entries)
-        # FIX 1: Treat negative sizes (-1 from cache/unknown) as 0
+        # Treat negative sizes (-1 from cache/unknown) as 0
         bandwidth = sum(max(0, e.body_size) + max(0, e.headers_size) for e in entries)
         domains = len({e.domain for e in entries if e.domain})
         avg_latency = (
@@ -91,7 +91,7 @@ class OverviewTab:
             domain = e.domain.lower() if e.domain else "unknown"
             base = _get_base_domain(domain)
             
-            # FIX 2: Safeguard against -1 cached values here as well
+            # Safeguard against -1 cached values here as well
             size = max(0, e.body_size) + max(0, e.headers_size)
 
             if base not in domain_map:
