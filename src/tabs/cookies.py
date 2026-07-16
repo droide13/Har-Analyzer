@@ -38,4 +38,4 @@ class CookiesTab:
         c3.metric("Missing HttpOnly Protection", missing_httponly, delta_color="inverse")
 
         st.markdown("#### Complete Cookie Registry Matrix")
-        st.dataframe(records, use_container_width=True)
+        st.dataframe(records, height=700)
