@@ -24,12 +24,27 @@ class RequestsTab:
         title = f"{emoji} {status_text} **{entry.method}** {entry.url.replace('[', '\\[').replace(']', '\\]')}{badge_text}"
 
         with st.expander(title, key=f"expander_{entry.index}"):
-            req_tab, qp_tab, res_tab, body_tab = st.tabs([
-                "Request Headers", "Query & Cookies", "Response Headers", "Response Body"
-            ])
-            with req_tab:
+            # Dynamically build the tab names based on the HTTP method
+            tab_names = ["Request Headers"]
+            if entry.method == "POST":
+                tab_names.append("Post data")
+            tab_names.extend(["Query & Cookies", "Response Headers", "Response Body"])
+            
+            # Render the tabs and map them to a dictionary
+            # st.tabs returns list[DeltaGenerator], zip maps str -> DeltaGenerator
+            tabs = dict(zip(tab_names, st.tabs(tab_names)))
+            
+            # Populate tabs safely
+            with tabs["Request Headers"]:
                 st.json({str(h.get("name", "")): str(h.get("value", "")) for h in entry.req_headers})
-            with qp_tab:
+                
+            if "Post data" in tabs:
+                with tabs["Post data"]:
+                    if entry.req_body:
+                        st.json(entry.req_body)
+                    else:
+                        st.info("No POST body found.")
+            with tabs["Query & Cookies"]:
                 col1, col2 = st.columns(2)
                 with col1:
                     st.markdown("#### Query Parameters")
@@ -43,9 +58,9 @@ class RequestsTab:
                         })
                     else:
                         st.caption("No cookie data.")
-            with res_tab:
+            with tabs["Response Headers"]:
                 st.json({str(h.get("name", "")): str(h.get("value", "")) for h in entry.res_headers})
-            with body_tab:
+            with tabs["Response Body"]:
                 content = cast(dict[str, Any], response.get("content", {}) or {})
                 st.caption(f"MIME Type: {content.get('mimeType', 'Unknown')}")
                 st.text_area("Content", value=str(content.get("text", "No body content.")), height=200, key=f"body_{key_prefix}_{entry.index}", disabled=True)
