@@ -1,4 +1,4 @@
-# HAR Visualizer
+# HAR Analyzer
 
 A fast, highly modular, and strictly typed Streamlit application to parse, filter, and audit HTTP Archive (`.har`) files.
 

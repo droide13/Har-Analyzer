@@ -5,7 +5,7 @@ from models import load_parsed_entries
 from tabs import Tab, RequestsTab, OverviewTab, CookiesTab, IdentifiersTab
 
 def main() -> None:
-    st.title("HAR Visualizer")
+    st.title("HAR Analyzer")
     
     uploaded_file = st.file_uploader(
         "Upload your HTTP Archive document below (.har)", 
