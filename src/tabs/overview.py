@@ -172,7 +172,7 @@ class OverviewTab:
                 .properties(height=dynamic_height)
             )
             
-            st.altair_chart(chart, use_container_width=True)
+            st.altair_chart(chart)
 
         # 4. Dropdown Selector (Alphabetically ordered)
         def format_domain_option(domain_name: str) -> str:
@@ -225,6 +225,5 @@ class OverviewTab:
                     "Requests": st.column_config.NumberColumn("Requests", format="%d"),
                     "Size": st.column_config.TextColumn("Total Size"),
                 },
-                use_container_width=True,
                 hide_index=True,
             )

@@ -39,7 +39,7 @@ def _render_section(
         }
         for tk in identifiers
     ]
-    st.dataframe(summary_rows, use_container_width=True)
+    st.dataframe(summary_rows)
 
     for tk in identifiers:
         _render_value_expander(tk)
@@ -57,7 +57,7 @@ def _render_value_expander(tk: TrackedKey) -> None:
             }
             for v in sorted(tk.values.values(), key=lambda x: x.appearances, reverse=True)
         ]
-        st.dataframe(value_rows, use_container_width=True)
+        st.dataframe(value_rows)
 
 
 class IdentifiersTab:
@@ -73,6 +73,13 @@ class IdentifiersTab:
             "session, tracking, or auth token \u2014 rather than an ordinary "
             "low-cardinality param like `sort` or `lang`."
         )
+        
+        with st.expander("Common noise keys", expanded=False):
+            st.markdown("""
+                `page`, `limit`, `offset`, `sort`, `order`, `q`, `query`, `lang`, `locale`,
+                `cache`, `v`, `version`, `format`, `type`, `action`, `utm_source`,
+                `utm_medium`, `utm_campaign`, `utm_term`, `utm_content`
+            """)
 
         if not entries:
             st.warning("No entries available to analyze.")

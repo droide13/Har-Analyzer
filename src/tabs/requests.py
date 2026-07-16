@@ -43,8 +43,7 @@ class RequestsTab:
                 "Previous",
                 disabled=(curr_p == 0),
                 key=f"btn_prev_{key_suffix}",
-                icon=":material/chevron_left:",
-                use_container_width=True,
+                icon=":material/chevron_left:"
             ):
                 st.session_state["req_page"] = curr_p - 1
                 st.rerun()
@@ -55,8 +54,7 @@ class RequestsTab:
                 "Next",
                 disabled=(curr_p >= total_p - 1),
                 key=f"btn_next_{key_suffix}",
-                icon=":material/chevron_right:",
-                use_container_width=True,
+                icon=":material/chevron_right:"
             ):
                 st.session_state["req_page"] = curr_p + 1
                 st.rerun()
@@ -211,8 +209,7 @@ class RequestsTab:
                         str(page_num),
                         key=f"jump_page_{page_num}",
                         type="primary" if is_current else "secondary",
-                        disabled=is_current,
-                        use_container_width=True,
+                        disabled=is_current
                     ):
                         st.session_state["req_page"] = page_num - 1
                         st.rerun()
