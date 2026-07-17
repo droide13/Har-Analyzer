@@ -6,6 +6,9 @@
 # Virtual environment
 /.venv
 
+# Notes
+notes.txt
+
 # Python
 __pycache__/
 *.py[cod]
