@@ -57,6 +57,7 @@ class ParsedEntry:
     """Immutable, indexed representation of a singular HAR entry transaction."""
 
     index: int
+    started_date_time: str
     method: str
     url: str
     domain: str
@@ -149,6 +150,7 @@ def load_parsed_entries(file_bytes: bytes) -> list[ParsedEntry]:
             ParsedEntry(
                 index=i,
                 method=str(request.get("method", "")).upper(),
+                started_date_time=str(entry.get("startedDateTime", "")),
                 url=str(request.get("url", "")),
                 domain=get_domain(str(request.get("url", ""))),
                 status=str(response.get("status", "")),

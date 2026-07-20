@@ -1,7 +1,7 @@
 """Package initialization to expose tab components cleanly."""
 
 from .cookies import CookiesTab
-from .history.history import HistoryTab
+from .history import HistoryTab
 from .identifiers.identifiers import IdentifiersTab
 from .networklog import NetworkLogTab
 from .overview import OverviewTab

@@ -84,7 +84,7 @@ def encode_variants(value: str, encodings: set[str]) -> dict[str, str]:
     return variants
 
 
-def _collect_reasons(
+def collect_reasons(
     entry: ParsedEntry,
     attrs: Sequence[str],
     term: str,
@@ -130,16 +130,16 @@ def match_term(
                     reasons.append(MatchReason(term=value, attr="status", encoding=None))
             else:
                 variants = encode_variants(value, encodings)
-                reasons = _collect_reasons(entry, FIELD_MAP[field_name], value, variants)
+                reasons = collect_reasons(entry, FIELD_MAP[field_name], value, variants)
         else:
             attrs = FIELD_MAP.get(default_field.lower(), FIELD_MAP["any"])
             variants = encode_variants(term, encodings)
-            reasons = _collect_reasons(entry, attrs, term, variants)
+            reasons = collect_reasons(entry, attrs, term, variants)
     else:
         # Default fallback standard search
         attrs = FIELD_MAP.get(default_field.lower(), FIELD_MAP["any"])
         variants = encode_variants(term, encodings)
-        reasons = _collect_reasons(entry, attrs, term, variants)
+        reasons = collect_reasons(entry, attrs, term, variants)
 
     matched = bool(reasons)
     if is_negated:

@@ -5,7 +5,7 @@ import streamlit as st
 from core.models import load_parsed_entries
 from core.protocols import Tab
 from tabs import CookiesTab, IdentifiersTab, NetworkLogTab, OverviewTab, QueryParamsTab
-from tabs.history.history import HistoryTab
+from tabs.history import HistoryTab
 
 # Import the parsing utility from the naming domain
 from tabs.naming.naming import get_attrs_from_har_name
