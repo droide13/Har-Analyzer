@@ -4,7 +4,8 @@ import streamlit as st
 
 from models import load_parsed_entries
 from naming_ui import render_naming_tool
-from tabs import CookiesTab, IdentifiersTab, OverviewTab, RequestsTab, Tab
+from tabs import CookiesTab, IdentifiersTab, OverviewTab, QueryParamsTab,RequestsTab, Tab
+from tabs.history import HistoryTab
 
 st.set_page_config(
     page_title="HAR Visualizer",
@@ -34,7 +35,9 @@ def render_analyzer() -> None:
             RequestsTab(),
             OverviewTab(),
             CookiesTab(),
+            QueryParamsTab(),
             IdentifiersTab(),
+            HistoryTab(),
         ]
 
         tab_layouts = st.tabs([t.title for t in tabs_to_render])
