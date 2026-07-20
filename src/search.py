@@ -7,7 +7,7 @@ import shlex
 from dataclasses import dataclass, field
 from typing import Callable, Sequence
 
-from models import ParsedEntry, FIELD_MAP
+from models import FIELD_MAP, ParsedEntry
 
 # Checkbox label -> function turning raw bytes into the encoded/hashed string.
 ENCODERS: dict[str, Callable[[bytes], str]] = {
@@ -26,6 +26,7 @@ ENCODING_OPTIONS: list[str] = list(ENCODERS.keys())
 @dataclass(frozen=True)
 class MatchReason:
     """Explains a single match: which term hit which field, plain or encoded."""
+
     term: str
     attr: str
     encoding: str | None  # None means a plain-text match
@@ -34,6 +35,7 @@ class MatchReason:
 @dataclass
 class MatchResult:
     """Outcome of matching an entry against a query."""
+
     matched: bool
     reasons: list[MatchReason] = field(default_factory=list[MatchReason])
 

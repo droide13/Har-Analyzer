@@ -10,18 +10,39 @@ import math
 from collections import Counter
 from dataclasses import dataclass, field
 from typing import Any, Callable
+
 from models import ParsedEntry
 
-COMMON_NOISE_KEYS: frozenset[str] = frozenset({
-    "page", "limit", "offset", "sort", "order", "q", "query", "lang",
-    "locale", "cache", "v", "version", "format", "type", "action",
-    "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",
-})
+COMMON_NOISE_KEYS: frozenset[str] = frozenset(
+    {
+        "page",
+        "limit",
+        "offset",
+        "sort",
+        "order",
+        "q",
+        "query",
+        "lang",
+        "locale",
+        "cache",
+        "v",
+        "version",
+        "format",
+        "type",
+        "action",
+        "utm_source",
+        "utm_medium",
+        "utm_campaign",
+        "utm_term",
+        "utm_content",
+    }
+)
 
 
 @dataclass(slots=True)
 class ValueOccurrence:
     """One distinct value seen for a key, with count + domains it appeared on."""
+
     value: str
     appearances: int = 0
     domains: set[str] = field(default_factory=set[str])
@@ -34,6 +55,7 @@ class ValueOccurrence:
 @dataclass(slots=True)
 class TrackedKey:
     """Aggregated info for one param/cookie name across the whole HAR."""
+
     key: str
     total_appearances: int = 0
     values: dict[str, ValueOccurrence] = field(default_factory=dict[str, ValueOccurrence])

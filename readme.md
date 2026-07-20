@@ -11,8 +11,10 @@ A fast, simple, highly modular, and strictly typed Streamlit application to pars
 python -m venv .venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
-# Install dependencies and run
-pip install streamlit
+# Install dependencies (for developement pip install -r requirements-dev.txt)
+pip install -r requirements.txt
+cd src
+# Run streamlit app
 streamlit run app.py
 
 ```

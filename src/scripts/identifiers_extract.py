@@ -41,10 +41,7 @@ def extract_identifiers(
 
             unique_values_count = len(values_list)
 
-            if (
-                total_appearances >= min_appearances
-                and unique_values_count <= max_unique_values
-            ):
+            if total_appearances >= min_appearances and unique_values_count <= max_unique_values:
                 unique_domains: Set[str] = set()
                 extracted_values: List[OutputValueItem] = []
 
@@ -114,10 +111,10 @@ if __name__ == "__main__":
             input_file_path=SOURCE_PATH,
             output_file_path=DESTINATION_PATH,
             min_appearances=15,
-            max_unique_values=3
+            max_unique_values=3,
         )
         print("Processing complete. Check your destination path.")
-        
+
         pass
     except FileNotFoundError as e:
         print(f"Error: Could not locate the file specified. {e}")

@@ -1,7 +1,9 @@
 """Tab class for detecting stable identifiers across query params and cookies."""
 
 from typing import Any
+
 import streamlit as st
+
 from models import ParsedEntry
 from tabs.identifiers_core import (
     TrackedKey,
@@ -73,7 +75,7 @@ class IdentifiersTab:
             "session, tracking, or auth token \u2014 rather than an ordinary "
             "low-cardinality param like `sort` or `lang`."
         )
-        
+
         with st.expander("Common noise keys", expanded=False):
             st.markdown("""
                 `page`, `limit`, `offset`, `sort`, `order`, `q`, `query`, `lang`, `locale`,
@@ -87,7 +89,9 @@ class IdentifiersTab:
 
         search_col, sort_col, exclude_col = st.columns([2, 1, 1])
         name_query = search_col.text_input("Search key name", placeholder="e.g. sess, token, sid")
-        sort_by = sort_col.selectbox("Sort by", ["Appearances", "Entropy", "Avg length", "Unique values"])
+        sort_by = sort_col.selectbox(
+            "Sort by", ["Appearances", "Entropy", "Avg length", "Unique values"]
+        )
         exclude_common = exclude_col.checkbox("Exclude common noise keys", value=True)
 
         c1, c2 = st.columns(2)
@@ -96,7 +100,9 @@ class IdentifiersTab:
 
         c3, c4 = st.columns(2)
         min_avg_length = c3.slider("Minimum avg value length", min_value=0, max_value=64, value=8)
-        min_avg_entropy = c4.slider("Minimum avg entropy (bits/char)", min_value=0.0, max_value=6.0, value=2.5, step=0.1)
+        min_avg_entropy = c4.slider(
+            "Minimum avg entropy (bits/char)", min_value=0.0, max_value=6.0, value=2.5, step=0.1
+        )
 
         filters: dict[str, Any] = {
             "min_appearances": min_appearances,

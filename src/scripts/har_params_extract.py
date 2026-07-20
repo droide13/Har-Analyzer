@@ -20,17 +20,18 @@ from __future__ import annotations
 
 import json
 import sys
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from typing import Any, Dict, List, Optional
-
 
 # --------------------------------------------------------------------------
 # Data structures
 # --------------------------------------------------------------------------
 
+
 @dataclass
 class RequestRef:
     """A single request in which a given param/cookie value showed up."""
+
     connection_id: str
     method: str
     url: str
@@ -39,6 +40,7 @@ class RequestRef:
 @dataclass
 class CookieRequestRef(RequestRef):
     """Same as RequestRef but with cookie-specific security flags."""
+
     domain: Optional[str] = None
     path: Optional[str] = None
     http_only: Optional[bool] = None
@@ -50,6 +52,7 @@ class CookieRequestRef(RequestRef):
 @dataclass
 class ValueOccurrence:
     """One distinct value seen for a param/cookie, and where it showed up."""
+
     value: str
     appearances: int = 0
     requests: List[RequestRef] = field(default_factory=list[RequestRef])
@@ -58,6 +61,7 @@ class ValueOccurrence:
 @dataclass
 class TrackedValue:
     """Aggregated info for one param/cookie name across the whole HAR."""
+
     key: str
     appearances: int = 0
     values: List[ValueOccurrence] = field(default_factory=list[ValueOccurrence])
@@ -76,15 +80,14 @@ class PostDataEntry:
 # Core extraction logic
 # --------------------------------------------------------------------------
 
+
 def load_har(path: str) -> Dict[str, Any]:
     """Load and return the raw HAR JSON structure."""
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
 
 
-def _find_or_create_value(
-    values: List[ValueOccurrence], value: str
-) -> ValueOccurrence:
+def _find_or_create_value(values: List[ValueOccurrence], value: str) -> ValueOccurrence:
     """Return the existing ValueOccurrence for `value`, creating one if needed."""
     for existing in values:
         if existing.value == value:
@@ -206,6 +209,7 @@ def extract_post_data(entries: List[Dict[str, Any]]) -> List[PostDataEntry]:
 # --------------------------------------------------------------------------
 # Assembly
 # --------------------------------------------------------------------------
+
 
 def build_output(
     entries: List[Dict[str, Any]],

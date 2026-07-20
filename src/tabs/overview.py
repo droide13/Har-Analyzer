@@ -1,19 +1,24 @@
 """Overview panel with charts summarizing status, metrics, and domain/subdomain distribution."""
 
 from typing import TypedDict
+
 import altair as alt
 import pandas as pd
 import streamlit as st
+
 from models import ParsedEntry, format_bytes
+
 
 class SubdomainMetric(TypedDict):
     requests: int
     bytes: int
 
+
 class RootDomainMetric(TypedDict):
     requests: int
     bytes: int
     subdomains: dict[str, SubdomainMetric]
+
 
 class SubdomainRow(TypedDict):
     Subdomain: str
@@ -49,9 +54,7 @@ class OverviewTab:
         # Treat negative sizes (-1 from cache/unknown) as 0
         bandwidth = sum(max(0, e.body_size) + max(0, e.headers_size) for e in entries)
         domains = len({e.domain for e in entries if e.domain})
-        avg_latency = (
-            sum(e.time_ms for e in entries) / total if total > 0 else 0.0
-        )
+        avg_latency = sum(e.time_ms for e in entries) / total if total > 0 else 0.0
 
         col1, col2, col3, col4 = st.columns(4)
         col1.metric("Requests", f"{total:,}")
@@ -90,7 +93,7 @@ class OverviewTab:
         for e in entries:
             domain = e.domain.lower() if e.domain else "unknown"
             base = _get_base_domain(domain)
-            
+
             # Safeguard against -1 cached values here as well
             size = max(0, e.body_size) + max(0, e.headers_size)
 
@@ -147,14 +150,16 @@ class OverviewTab:
         # 3. Dynamic Domain Chart
         unit_label = "Total Requests" if sort_by == "Requests" else "Total Bytes"
         st.markdown(f"#### Top {chart_limit} Domains by {unit_label}")
-        
-        chart_df = pd.DataFrame([
-            {
-                "Domain": d[0],
-                "Value": d[1]["requests"] if sort_by == "Requests" else d[1]["bytes"]
-            }
-            for d in sorted_domains[:chart_limit]
-        ])
+
+        chart_df = pd.DataFrame(
+            [
+                {
+                    "Domain": d[0],
+                    "Value": d[1]["requests"] if sort_by == "Requests" else d[1]["bytes"],
+                }
+                for d in sorted_domains[:chart_limit]
+            ]
+        )
 
         if not chart_df.empty:
             dynamic_height = 100 + (len(chart_df) * 30)
@@ -167,11 +172,11 @@ class OverviewTab:
                     # FIX 3: Enforce domainMin=0 to completely block the axis from sliding left
                     x=alt.X("Value:Q", title=unit_label, scale=alt.Scale(domainMin=0)),
                     y=alt.Y("Domain:N", sort="-x", title="Domain"),
-                    tooltip=["Domain", "Value"]
+                    tooltip=["Domain", "Value"],
                 )
                 .properties(height=dynamic_height)
             )
-            
+
             st.altair_chart(chart)
 
         # 4. Dropdown Selector (Alphabetically ordered)
@@ -215,7 +220,7 @@ class OverviewTab:
             )
 
             st.markdown(f"#### Subdomains of `{selected_root}` (Sorted by {sort_by})")
-            
+
             # Displays human-friendly Size, but uses Bytes internally for sorting
             st.dataframe(
                 sub_table_data,

@@ -1,7 +1,9 @@
 """Interface boundaries that guarantee tab interchangeability."""
 
 from typing import Protocol
+
 from models import ParsedEntry
+
 
 class Tab(Protocol):
     @property
