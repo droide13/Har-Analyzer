@@ -1,11 +1,10 @@
 """Main tab responsible for rendering interactive network transaction rows."""
 
-from typing import Any, cast
-
 import streamlit as st
 
-from core.models import METHOD_ORDER, SCOPE_OPTIONS, ParsedEntry, list_to_safe_dict
-from tabs.networklog.search import ENCODING_OPTIONS, MatchReason, entry_matches
+from core.models import METHOD_ORDER, SCOPE_OPTIONS, ParsedEntry
+from tabs.shared.search import ENCODING_OPTIONS, MatchReason, entry_matches
+from tabs.shared.entry_render import Badge, render_entry_expander
 
 _ATTR_LABELS: dict[str, str] = {
     "url": "URL",
@@ -34,7 +33,31 @@ def _reason_summary(reasons: list[MatchReason]) -> str:
     return ", ".join(sorted({_format_reason(r) for r in reasons}))
 
 
-class RequestsTab:
+def _build_badges(
+    entry: ParsedEntry,
+    filter_reasons: list[MatchReason],
+    highlight_reasons: list[MatchReason],
+) -> list[Badge]:
+    """Cookie-count badge, filter-match badge, and highlight-match badge for one row."""
+    badges: list[Badge] = []
+
+    cookie_bits: list[str] = []
+    if entry.req_cookies:
+        cookie_bits.append(f"ReqCookies: {len(entry.req_cookies)}")
+    if entry.res_cookies:
+        cookie_bits.append(f"SetCookies: {len(entry.res_cookies)}")
+    if cookie_bits:
+        badges.append((" | ".join(cookie_bits), "blue"))
+
+    if filter_reasons:
+        badges.append((f"Matched via: {_reason_summary(filter_reasons)}", "blue"))
+    if highlight_reasons:
+        badges.append((f"Highlighted via: {_reason_summary(highlight_reasons)}", "orange"))
+
+    return badges
+
+
+class NetworkLogTab:
     @property
     def title(self) -> str:
         return "Network Log"
@@ -72,95 +95,8 @@ class RequestsTab:
         filter_reasons: list[MatchReason],
         highlight_reasons: list[MatchReason],
     ) -> None:
-
-        response = cast(dict[str, Any], entry.raw.get("response", {}) or {})
-        status_color = (
-            "green" if entry.status.startswith(("2", "3")) else ("red" if entry.status else "grey")
-        )
-        emoji = "🟢" if entry.status.startswith(("2", "3")) else ("🔴" if entry.status else "⚪")
-        status_text = f":{status_color}[[{entry.status or '—'}]]"
-
-        badges: list[str] = []
-        if entry.req_cookies:
-            badges.append(f"ReqCookies: {len(entry.req_cookies)}")
-        if entry.res_cookies:
-            badges.append(f"SetCookies: {len(entry.res_cookies)}")
-        badge_text = f" :blue-background[{' | '.join(badges)}]" if badges else ""
-
-        match_text = (
-            f" :blue-background[Matched via: {_reason_summary(filter_reasons)}]"
-            if filter_reasons
-            else ""
-        )
-        highlight_text = (
-            f" :orange-background[Highlighted via: {_reason_summary(highlight_reasons)}]"
-            if highlight_reasons
-            else ""
-        )
-
-        title = (
-            f"{emoji} {status_text} **{entry.method}** "
-            f"{entry.url.replace('[', '\\[').replace(']', '\\]')}"
-            f"{badge_text}{match_text}{highlight_text}"
-        )
-
-        with st.expander(title, key=f"expander_{entry.index}"):
-            # Dynamically build the tab names based on the HTTP method
-            tab_names = ["Request Headers"]
-            if entry.method == "POST":
-                tab_names.append("Post data")
-            tab_names.extend(["Query & Cookies", "Response Headers", "Response Body"])
-
-            # Render the tabs and map them to a dictionary
-            # st.tabs returns list[DeltaGenerator], zip maps str -> DeltaGenerator
-            tabs = dict(zip(tab_names, st.tabs(tab_names)))
-
-            # Populate tabs safely
-            with tabs["Request Headers"]:
-                st.json(
-                    {str(h.get("name", "")): str(h.get("value", "")) for h in entry.req_headers}
-                )
-
-            if "Post data" in tabs:
-                with tabs["Post data"]:
-                    if entry.req_body:
-                        st.json(entry.req_body)
-                    else:
-                        st.info("No POST body found.")
-            with tabs["Query & Cookies"]:
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.markdown("#### Query Parameters")
-                    (
-                        st.json(list_to_safe_dict(entry.query_params))
-                        if entry.query_params
-                        else st.caption("No parameters.")
-                    )
-                with col2:
-                    st.markdown("#### Cookie Metadata")
-                    if entry.req_cookies or entry.res_cookies:
-                        st.json(
-                            {
-                                "Sent Cookies": list_to_safe_dict(entry.req_cookies),
-                                "Set Cookies": list_to_safe_dict(entry.res_cookies),
-                            }
-                        )
-                    else:
-                        st.caption("No cookie data.")
-            with tabs["Response Headers"]:
-                st.json(
-                    {str(h.get("name", "")): str(h.get("value", "")) for h in entry.res_headers}
-                )
-            with tabs["Response Body"]:
-                content = cast(dict[str, Any], response.get("content", {}) or {})
-                st.caption(f"MIME Type: {content.get('mimeType', 'Unknown')}")
-                st.text_area(
-                    "Content",
-                    value=str(content.get("text", "No body content.")),
-                    height=200,
-                    key=f"body_{key_prefix}_{entry.index}",
-                    disabled=True,
-                )
+        badges = _build_badges(entry, filter_reasons, highlight_reasons)
+        render_entry_expander(entry, key_prefix, badges)
 
     def render(self, entries: list[ParsedEntry]) -> None:
         st.markdown("### Filter, Query & Highlight Controls")

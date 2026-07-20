@@ -5,7 +5,7 @@ from .cookies import CookiesTab
 from .history.history import HistoryTab
 from .overview import OverviewTab
 from .query_params import QueryParamsTab
-from .networklog.requests import RequestsTab
+from .networklog import NetworkLogTab
 
-__all__ = ["RequestsTab", "OverviewTab", "CookiesTab",
+__all__ = ["NetworkLogTab", "OverviewTab", "CookiesTab",
            "QueryParamsTab","IdentifiersTab", "HistoryTab"]

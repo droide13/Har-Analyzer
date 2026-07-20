@@ -5,7 +5,7 @@ import streamlit as st
 from core.models import load_parsed_entries
 from core.protocols import Tab
 from tabs.naming.naming_ui import render_naming_tool
-from tabs import CookiesTab, IdentifiersTab, OverviewTab, QueryParamsTab,RequestsTab
+from tabs import CookiesTab, IdentifiersTab, OverviewTab, QueryParamsTab,NetworkLogTab
 from tabs.history.history import HistoryTab
 
 st.set_page_config(
@@ -33,7 +33,7 @@ def render_analyzer() -> None:
 
         # Tabs config - Simply add new tab classes directly to this list!
         tabs_to_render: list[Tab] = [
-            RequestsTab(),
+            NetworkLogTab(),
             OverviewTab(),
             CookiesTab(),
             QueryParamsTab(),
