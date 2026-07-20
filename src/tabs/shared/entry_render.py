@@ -7,7 +7,9 @@ Callers supply their own badges and can inject extra leading tabs (e.g. a
 """
 
 from typing import Any, Callable, cast
+
 import streamlit as st
+
 from core.models import ParsedEntry, list_to_safe_dict
 
 Badge = tuple[str, str]  # (text, style) where style is "blue" or "orange"
@@ -17,7 +19,7 @@ def status_emoji_and_color(status: str) -> tuple[str, str]:
     """Emoji + color name for a status code, shared across tabs."""
     is_ok = status.startswith(("2", "3"))
     color = "green" if is_ok else ("red" if status else "grey")
-    emoji = "\U0001F7E2" if is_ok else ("\U0001F534" if status else "\u26aa")
+    emoji = "\U0001f7e2" if is_ok else ("\U0001f534" if status else "\u26aa")
     return emoji, color
 
 
@@ -54,10 +56,12 @@ def _render_query_and_cookies_tab(entry: ParsedEntry) -> None:
     with col2:
         st.markdown("#### Cookie Metadata")
         if entry.req_cookies or entry.res_cookies:
-            st.json({
-                "Sent Cookies": list_to_safe_dict(entry.req_cookies),
-                "Set Cookies": list_to_safe_dict(entry.res_cookies),
-            })
+            st.json(
+                {
+                    "Sent Cookies": list_to_safe_dict(entry.req_cookies),
+                    "Set Cookies": list_to_safe_dict(entry.res_cookies),
+                }
+            )
         else:
             st.caption("No cookie data.")
 

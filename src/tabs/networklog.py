@@ -3,8 +3,8 @@
 import streamlit as st
 
 from core.models import METHOD_ORDER, SCOPE_OPTIONS, ParsedEntry
-from tabs.shared.search import ENCODING_OPTIONS, MatchReason, entry_matches
 from tabs.shared.entry_render import Badge, render_entry_expander
+from tabs.shared.search import ENCODING_OPTIONS, MatchReason, entry_matches
 
 _ATTR_LABELS: dict[str, str] = {
     "url": "URL",
@@ -144,8 +144,10 @@ class NetworkLogTab:
             # Define how many columns you want per row
             COLS_PER_ROW = 4
             selected_encodings: set[str] = set()
-            
-            with st.expander("Encodings & Hashes for term matching (all applyed by default)", expanded=False):
+
+            with st.expander(
+                "Encodings & Hashes for term matching (all applyed by default)", expanded=False
+            ):
                 # Iterate through options in chunk sizes of COLS_PER_ROW
                 for i in range(0, len(ENCODING_OPTIONS), COLS_PER_ROW):
                     chunk = ENCODING_OPTIONS[i : i + COLS_PER_ROW]
@@ -157,7 +159,7 @@ class NetworkLogTab:
                             # defaulting value=False ase there are many options
                             if st.checkbox(name, value=True, key=f"req_enc_{name}"):
                                 selected_encodings.add(name)
-                            
+
         page_size = int(
             st.number_input(
                 "Results per page", min_value=10, max_value=500, value=50, step=10, key="req_size"

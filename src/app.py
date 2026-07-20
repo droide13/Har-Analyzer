@@ -4,9 +4,9 @@ import streamlit as st
 
 from core.models import load_parsed_entries
 from core.protocols import Tab
-from tabs.naming.naming_ui import render_naming_tool
-from tabs import CookiesTab, IdentifiersTab, OverviewTab, QueryParamsTab,NetworkLogTab
+from tabs import CookiesTab, IdentifiersTab, NetworkLogTab, OverviewTab, QueryParamsTab
 from tabs.history.history import HistoryTab
+from tabs.naming.naming_ui import render_naming_tool
 
 st.set_page_config(
     page_title="HAR Visualizer",
@@ -46,14 +46,13 @@ def render_analyzer() -> None:
             with layout:
                 tab_module.render(entries)
 
-    except Exception as exc: # pylint: disable=broad-except
+    except Exception as exc:  # pylint: disable=broad-except
         st.error(f"Execution Error: {exc}")
         st.exception(exc)
 
 
 def main() -> None:
-    """Main function to render the application, divided in two toggles, har analyzer and har naming
-    """
+    """Main function to render the application, divided in two toggles, har analyzer and har naming"""
     st.title("HAR Analyzer")
 
     mode = st.segmented_control(

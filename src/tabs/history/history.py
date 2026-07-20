@@ -1,7 +1,9 @@
 """Tab class for tracing a key or value's dissemination and changes over time."""
 
 from typing import Any
+
 import streamlit as st
+
 from core.models import ParsedEntry
 from tabs.history.history_core import (
     Occurrence,

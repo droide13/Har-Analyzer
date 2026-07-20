@@ -10,6 +10,7 @@ Two search modes:
 
 from dataclasses import dataclass
 from typing import Any
+
 from core.models import ParsedEntry
 
 BODY_PREVIEW_LENGTH = 120
@@ -18,6 +19,7 @@ BODY_PREVIEW_LENGTH = 120
 @dataclass(slots=True)
 class Occurrence:
     """A single sighting of a key/value pair in one HAR entry."""
+
     entry_index: int
     method: str
     host: str
@@ -44,9 +46,7 @@ def _mark_changes(occurrences: list[Occurrence]) -> None:
     """Flag each occurrence whose value differs from the prior occurrence of the same key."""
     previous_value: str | None = None
     for occ in occurrences:
-        occ.changed_from_previous = (
-            previous_value is not None and occ.value != previous_value
-        )
+        occ.changed_from_previous = previous_value is not None and occ.value != previous_value
         previous_value = occ.value
 
 
@@ -68,10 +68,17 @@ def find_key_occurrences(entries: list[ParsedEntry], key: str) -> list[Occurrenc
     for e in entries:
         for qp in e.query_params:
             if str(qp.get("name", "")) == key:
-                occurrences.append(Occurrence(
-                    e.index, e.method, e.domain, e.url,
-                    "Query Param", key, str(qp.get("value", "")),
-                ))
+                occurrences.append(
+                    Occurrence(
+                        e.index,
+                        e.method,
+                        e.domain,
+                        e.url,
+                        "Query Param",
+                        key,
+                        str(qp.get("value", "")),
+                    )
+                )
         occurrences.extend(_occurrences_from_cookies(e, e.req_cookies, key, "Request Cookie"))
         occurrences.extend(_occurrences_from_cookies(e, e.res_cookies, key, "Response Cookie"))
 
@@ -87,9 +94,7 @@ def _truncate(text: str) -> str:
     return text[:BODY_PREVIEW_LENGTH] + "..."
 
 
-def _matching_pairs(
-    items: list[dict[str, Any]], needle: str
-) -> list[tuple[str, str]]:
+def _matching_pairs(items: list[dict[str, Any]], needle: str) -> list[tuple[str, str]]:
     """Return (name, value) pairs from headers/params/cookies whose value contains needle."""
     pairs: list[tuple[str, str]] = []
     for item in items:
@@ -123,13 +128,17 @@ def _entry_body_matches(e: ParsedEntry, needle: str) -> list[Occurrence]:
     """Request/response body matches on one entry for a given search substring."""
     matches: list[Occurrence] = []
     if needle in e.req_body.lower():
-        matches.append(Occurrence(
-            e.index, e.method, e.domain, e.url, "Request Body", "(body)", _truncate(e.req_body)
-        ))
+        matches.append(
+            Occurrence(
+                e.index, e.method, e.domain, e.url, "Request Body", "(body)", _truncate(e.req_body)
+            )
+        )
     if needle in e.res_body.lower():
-        matches.append(Occurrence(
-            e.index, e.method, e.domain, e.url, "Response Body", "(body)", _truncate(e.res_body)
-        ))
+        matches.append(
+            Occurrence(
+                e.index, e.method, e.domain, e.url, "Response Body", "(body)", _truncate(e.res_body)
+            )
+        )
     return matches
 
 
@@ -156,8 +165,11 @@ def summarize(occurrences: list[Occurrence]) -> dict[str, Any]:
     """Aggregate stats for the metrics row: spread, hosts touched, sources involved."""
     if not occurrences:
         return {
-            "total": 0, "distinct_hosts": 0, "hosts": "",
-            "first_index": None, "last_index": None,
+            "total": 0,
+            "distinct_hosts": 0,
+            "hosts": "",
+            "first_index": None,
+            "last_index": None,
         }
 
     hosts = sorted({o.host for o in occurrences})

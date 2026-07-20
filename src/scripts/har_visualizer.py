@@ -179,12 +179,14 @@ def match_term(analyzed_entry: ParsedEntry, term: str, match_default_field: str)
                 matched = analyzed_entry.status.startswith(value[0])
             else:
                 attrs = FIELD_MAP[field]
-                matched = any(value.lower() in
-                              str(getattr(analyzed_entry, attr)).lower() for attr in attrs)
+                matched = any(
+                    value.lower() in str(getattr(analyzed_entry, attr)).lower() for attr in attrs
+                )
         else:
             attrs = FIELD_MAP.get(match_default_field.lower(), FIELD_MAP["any"])
-            matched = any(term.lower() in
-                          str(getattr(analyzed_entry, attr)).lower() for attr in attrs)
+            matched = any(
+                term.lower() in str(getattr(analyzed_entry, attr)).lower() for attr in attrs
+            )
     else:
         attrs = FIELD_MAP.get(match_default_field.lower(), FIELD_MAP["any"])
         matched = any(term.lower() in str(getattr(analyzed_entry, attr)).lower() for attr in attrs)
@@ -192,9 +194,9 @@ def match_term(analyzed_entry: ParsedEntry, term: str, match_default_field: str)
     return not matched if is_negated else matched
 
 
-def entry_matches(analyzed_entry: ParsedEntry,
-                  query: str, match_default_field: str,
-                  methods: set[str]) -> bool:
+def entry_matches(
+    analyzed_entry: ParsedEntry, query: str, match_default_field: str, methods: set[str]
+) -> bool:
     """Checks if an entry matches all conditions (Methods + Implicit AND terms)."""
     if methods and analyzed_entry.method not in methods:
         return False
@@ -217,14 +219,14 @@ METHOD_ORDER = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]
 
 
 def status_emoji(status: str) -> str:
-    """Returns emoji to represent http status"""    
+    """Returns emoji to represent http status"""
     return "🟢" if status.startswith(("2", "3")) else ("🔴" if status else "⚪")
 
 
 def render_entry(rendered_entry: ParsedEntry, key_prefix: str) -> None:
     """
     Render an entry with all its content
-    
+
     :param entry: The processed entry
     :type entry: ParsedEntry
     :param matched: If the entry has any matched field
@@ -238,8 +240,9 @@ def render_entry(rendered_entry: ParsedEntry, key_prefix: str) -> None:
 
     # 1. Stylize HTTP Status Color
     status_color = (
-        "green" if rendered_entry.status.startswith(("2", "3")) else 
-        ("red" if rendered_entry.status else "grey")
+        "green"
+        if rendered_entry.status.startswith(("2", "3"))
+        else ("red" if rendered_entry.status else "grey")
     )
     status_text = f":{status_color}[[{rendered_entry.status or '—'}]]"
 
@@ -258,8 +261,10 @@ def render_entry(rendered_entry: ParsedEntry, key_prefix: str) -> None:
     safe_url = rendered_entry.url.replace("[", "\\[").replace("]", "\\]")
 
     # Assemble header components
-    main_title = (f"{status_emoji(rendered_entry.status)} {status_text} "
-                  f"**{rendered_entry.method}** {safe_url}{cookie_badge_text}")
+    main_title = (
+        f"{status_emoji(rendered_entry.status)} {status_text} "
+        f"**{rendered_entry.method}** {safe_url}{cookie_badge_text}"
+    )
 
     title = main_title
 
@@ -271,8 +276,12 @@ def render_entry(rendered_entry: ParsedEntry, key_prefix: str) -> None:
         )
 
         with req_tab:
-            st.json({str(h.get("name", "")): str(h.get("value", "")) for
-                     h in rendered_entry.req_headers})
+            st.json(
+                {
+                    str(h.get("name", "")): str(h.get("value", ""))
+                    for h in rendered_entry.req_headers
+                }
+            )
 
         with qp_tab:
             entry_col1, entry_col2 = st.columns(2)
@@ -299,8 +308,12 @@ def render_entry(rendered_entry: ParsedEntry, key_prefix: str) -> None:
                     st.caption("No cookie data found.")
 
         with res_tab:
-            st.json({str(h.get("name", "")): str(h.get("value", "")) for
-                     h in rendered_entry.res_headers})
+            st.json(
+                {
+                    str(h.get("name", "")): str(h.get("value", ""))
+                    for h in rendered_entry.res_headers
+                }
+            )
 
         with body_tab:
             content = cast(dict[str, Any], response.get("content", {}) or {})
@@ -352,7 +365,7 @@ if uploaded_file is not None:
                     "- `cookie:session_id` (Request & Response cookies)\n"
                     "- `query:userId` (URL parameters)\n"
                     "- `url:login`, `method:POST`, `mime:json`, `body:token`\n\n"
-                    "**Allowed Fields:** `url`, `method`, `status`, `mime`, `reqheader`, `resheader`, `header`, `query`, `cookie`, `reqbody`, `resbody`, `body`, `any`" # pylint: disable=line-too-long
+                    "**Allowed Fields:** `url`, `method`, `status`, `mime`, `reqheader`, `resheader`, `header`, `query`, `cookie`, `reqbody`, `resbody`, `body`, `any`"  # pylint: disable=line-too-long
                 )
 
             scope_label = st.selectbox(
@@ -390,7 +403,7 @@ if uploaded_file is not None:
             match_count = sum(match_flags)
         else:
             match_flags = [False] * len(filtered_entries)
-            match_count = 0 # pylint: disable=invalid-name
+            match_count = 0  # pylint: disable=invalid-name
 
         # Pagination Reset Logic (tracks both filter + highlight changes)
         filter_signature = (filter_query, highlight_query, default_field, tuple(selected_methods))
@@ -473,5 +486,5 @@ if uploaded_file is not None:
                 key_prefix=str(start_idx),
             )
 
-    except Exception as exc: # pylint: disable=broad-except
+    except Exception as exc:  # pylint: disable=broad-except
         st.error(f"Error processing file: {exc}")

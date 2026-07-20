@@ -8,7 +8,7 @@ import urllib.parse
 from dataclasses import dataclass, field
 from typing import Callable, Sequence
 
-from core.models import ParsedEntry, FIELD_MAP
+from core.models import FIELD_MAP, ParsedEntry
 
 # Checkbox label -> function turning raw bytes into the encoded/hashed string.
 ENCODERS: dict[str, Callable[[bytes], str]] = {
@@ -20,24 +20,28 @@ ENCODERS: dict[str, Callable[[bytes], str]] = {
     # --- URL Encodings (Multi-Pass) ---
     "URL Encode": urllib.parse.quote_from_bytes,
     "Double URL Encode": lambda data: urllib.parse.quote(urllib.parse.quote_from_bytes(data)),
-    "Triple URL Encode": lambda data: urllib.parse.quote(urllib.parse.
-                                                         quote(urllib.parse.quote_from_bytes(data))), 
+    "Triple URL Encode": lambda data: urllib.parse.quote(
+        urllib.parse.quote(urllib.parse.quote_from_bytes(data))
+    ),
     # --- Standard Hashes (Hex Digests) ---
     "MD5": lambda data: hashlib.md5(data).hexdigest(),
     "SHA1": lambda data: hashlib.sha1(data).hexdigest(),
     "SHA256": lambda data: hashlib.sha256(data).hexdigest(),
-    "SHA512": lambda data: hashlib.sha512(data).hexdigest(),   
+    "SHA512": lambda data: hashlib.sha512(data).hexdigest(),
     # --- Hash then Encode (Raw Digest -> Base64) ---
     # Extremely common in API headers, tokens, and basic/custom auth signatures (e.g., Content-MD5)
     "MD5 -> Base64": lambda data: base64.b64encode(hashlib.md5(data).digest()).decode("ascii"),
-    "SHA256 -> Base64": lambda data: base64.b64encode(hashlib.sha256(data)
-                                                      .digest()).decode("ascii"),
+    "SHA256 -> Base64": lambda data: base64.b64encode(hashlib.sha256(data).digest()).decode(
+        "ascii"
+    ),
     # --- Encode then Hash (Encoded String -> Hash Digest) ---
     # Captures instances where applications hash an already-obfuscated or serialized string
-    "URL Encode -> MD5": lambda data: hashlib.md5(urllib.parse.quote_from_bytes(data)
-                                                  .encode("utf-8")).hexdigest(),
-    "URL Encode -> SHA256": lambda data: hashlib.sha256(urllib.parse.quote_from_bytes(data)
-                                                        .encode("utf-8")).hexdigest(),
+    "URL Encode -> MD5": lambda data: hashlib.md5(
+        urllib.parse.quote_from_bytes(data).encode("utf-8")
+    ).hexdigest(),
+    "URL Encode -> SHA256": lambda data: hashlib.sha256(
+        urllib.parse.quote_from_bytes(data).encode("utf-8")
+    ).hexdigest(),
     "Base64 -> MD5": lambda data: hashlib.md5(base64.b64encode(data)).hexdigest(),
     "Base64 -> SHA256": lambda data: hashlib.sha256(base64.b64encode(data)).hexdigest(),
 }
