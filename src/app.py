@@ -34,7 +34,7 @@ def display_filename_metadata(filename: str) -> None:
 
     # Render layout using the decoupled properties dictionary
     with st.container(border=True):
-        st.markdown(f"### 📋 Session Metadata: `{attrs['domain']}`")
+        st.markdown(f"### Session Metadata: `{attrs['domain']}`")
         col1, col2, col3, col4, col5 = st.columns(5)
         with col1:
             st.markdown(f"**Interaction Flow**\n\n{attrs['interaction']}")
@@ -45,7 +45,7 @@ def display_filename_metadata(filename: str) -> None:
         with col4:
             st.markdown(f"**Recorded Time**\n\n{attrs['timestamp']}")
         with col5:
-            st.markdown(f"**Extra:**({attrs['extra']})")
+            st.markdown(f"**Extra:**\n\n{attrs['extra'] if attrs['extra'] != "000" else "N/a"}")
 
 
 def render_analyzer() -> None:

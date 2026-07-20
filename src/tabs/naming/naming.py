@@ -92,20 +92,26 @@ def get_attrs_from_har_name(filename: str) -> dict[str, str] | None:
     Returns None if the filename doesn't match the structural pattern.
     """
     # Rebuilt mapping structures to explicitly satisfy C0206 via .items()
-    interact_map = {code: INTERACT_LABELS[key] for key, code in INTERACT_CODES.items()}
-    cookies_map = {code: COOKIES_LABELS[key] for key, code in COOKIES_CODES.items()}
-    visit_map = {code: VISIT_LABELS[key] for key, code in VISIT_CODES.items()}
+    interact_map = {
+        code: INTERACT_LABELS[key] for key, code in INTERACT_CODES.items()
+    }
+    cookies_map = {
+        code: COOKIES_LABELS[key] for key, code in COOKIES_CODES.items()
+    }
+    visit_map = {
+        code: VISIT_LABELS[key] for key, code in VISIT_CODES.items()
+    }
 
     interact_pattern = "|".join(interact_map.keys())
     cookies_pattern = "|".join(cookies_map.keys())
     visit_pattern = "|".join(visit_map.keys())
 
-    # Segmented regex configuration to satisfy C0301 (Max 100 char line limit)
+    # Changed rf"" to r"" on the extra block so {3} is treated as regex syntax
     pattern = (
         rf"^(?P<domain>.+)-interact-(?P<interact>{interact_pattern})"
         rf"-cookies-(?P<cookies>{cookies_pattern})"
         rf"-visit-(?P<visit>{visit_pattern})"
-        rf"-extra-(?P<extra>[A-Za-z0-9]{3})"
+        r"-extra-(?P<extra>[A-Za-z0-9]{3})"
         r"-(?P<yy>\d{2})-(?P<mm>\d{2})-(?P<dd>\d{2})-(?P<hh>\d{2})\.har$"
     )
 
