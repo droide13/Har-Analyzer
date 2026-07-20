@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-# Maps from internal key -> 3-letter filename code.
+# Naming variables
 INTERACT_CODES: dict[str, str] = {
     "load": "LOA",
     "navigate": "NAV",
@@ -24,6 +24,26 @@ VISIT_CODES: dict[str, str] = {
 }
 
 DEFAULT_VISIT: str = "first"
+
+INTERACT_LABELS: dict[str, str] = {
+    "load": "Load page",
+    "navigate": "Navigate",
+    "enter_email": "Enter email",
+    "sign_up": "Sign up",
+    "login": "Login",
+}
+
+COOKIES_LABELS: dict[str, str] = {
+    "accept": "Accept",
+    "deny": "Deny",
+    "ignore": "Ignore",
+}
+
+VISIT_LABELS: dict[str, str] = {
+    "first": "First visit (fresh state)",
+    "second": "Second visit (reuse existing cookies/state)",
+    "delete": "Delete cookies & reload (regenerate from scratch)",
+}
 
 
 def get_har_filename(

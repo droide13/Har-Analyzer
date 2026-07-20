@@ -1,29 +1,13 @@
-"""Streamlit UI for generating standardized .har test filenames."""
+"""Streamlit rendering for the HAR filename generator."""
 
 import streamlit as st
 
-from naming import get_har_filename
-
-# Human-readable labels shown in the UI, mapped back to internal keys.
-_INTERACT_LABELS: dict[str, str] = {
-    "load": "Load page",
-    "navigate": "Navigate",
-    "enter_email": "Enter email",
-    "sign_up": "Sign up",
-    "login": "Login",
-}
-
-_COOKIES_LABELS: dict[str, str] = {
-    "accept": "Accept",
-    "deny": "Deny",
-    "ignore": "Ignore",
-}
-
-_VISIT_LABELS: dict[str, str] = {
-    "first": "First visit (fresh state)",
-    "second": "Second visit (reuse existing cookies/state)",
-    "delete": "Delete cookies & reload (regenerate from scratch)",
-}
+from naming import (
+    COOKIES_LABELS,
+    INTERACT_LABELS,
+    VISIT_LABELS,
+    get_har_filename,
+)
 
 
 def _select_by_label(label: str, options: dict[str, str], key: str) -> str:
@@ -43,10 +27,10 @@ def render_naming_tool() -> None:
     col1, col2 = st.columns(2)
     with col1:
         domain = st.text_input("Domain under test", placeholder="domain.com", key="name_domain")
-        interact = _select_by_label("Interaction type", _INTERACT_LABELS, key="name_interact")
-        cookies = _select_by_label("Cookie handling", _COOKIES_LABELS, key="name_cookies")
+        interact = _select_by_label("Interaction type", INTERACT_LABELS, key="name_interact")
+        cookies = _select_by_label("Cookie handling", COOKIES_LABELS, key="name_cookies")
     with col2:
-        visit = _select_by_label("Visit type", _VISIT_LABELS, key="name_visit")
+        visit = _select_by_label("Visit type", VISIT_LABELS, key="name_visit")
         extra = st.text_input(
             "Extra context (optional)",
             placeholder="e.g. staging",
