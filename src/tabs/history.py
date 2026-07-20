@@ -13,6 +13,7 @@ from tabs.history_core import (
 
 
 def _rows_from_occurrences(occurrences: list[Occurrence]) -> list[dict[str, Any]]:
+    """Convert Occurrence records into dataframe-ready row dicts."""
     return [
         {
             "Order": o.entry_index,
@@ -29,6 +30,7 @@ def _rows_from_occurrences(occurrences: list[Occurrence]) -> list[dict[str, Any]
 
 
 def _render_results(occurrences: list[Occurrence]) -> None:
+    """Render the metrics row + timeline table for a set of occurrences."""
     if not occurrences:
         st.warning("No matching requests found.")
         return
@@ -48,11 +50,15 @@ def _render_results(occurrences: list[Occurrence]) -> None:
 
 
 class HistoryTab:
+    """Tab that traces a chosen key or value across every request in the HAR."""
+
     @property
     def title(self) -> str:
+        """Name rendered on the Streamlit tab bar."""
         return "History"
 
     def render(self, entries: list[ParsedEntry]) -> None:
+        """Render the search controls and resulting occurrence timeline."""
         st.markdown("### Value Dissemination & Change History")
         st.caption(
             "Trace every request that carries a given key or value, in order, "
@@ -83,5 +89,7 @@ class HistoryTab:
                 st.info("Enter a value to search for.")
                 return
 
-            occurrences = find_value_occurrences(entries, search_value, include_headers, include_body)
+            occurrences = find_value_occurrences(
+                entries, search_value, include_headers, include_body
+            )
             _render_results(occurrences)
