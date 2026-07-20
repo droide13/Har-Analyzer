@@ -96,11 +96,11 @@ class IdentifiersTab:
         exclude_common = exclude_col.checkbox("Exclude common noise keys", value=True)
 
         c1, c2 = st.columns(2)
-        min_appearances = c1.slider("Minimum appearances", min_value=1, max_value=200, value=10)
+        min_appearances = c1.slider("Minimum appearances", min_value=1, max_value=200, value=20)
         max_unique_values = c2.slider("Max unique values", min_value=1, max_value=20, value=5)
 
         c3, c4 = st.columns(2)
-        min_avg_length = c3.slider("Minimum avg value length", min_value=0, max_value=64, value=8)
+        min_avg_length = c3.slider("Minimum avg value length", min_value=0, max_value=64, value=20)
         min_avg_entropy = c4.slider(
             "Minimum avg entropy (bits/char)", min_value=0.0, max_value=6.0, value=2.5, step=0.1
         )
