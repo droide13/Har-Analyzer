@@ -1,5 +1,6 @@
 """Core logic for building standardized HAR test filenames."""
 
+import re
 from datetime import datetime
 
 # Naming variables
@@ -54,11 +55,7 @@ def get_har_filename(
     extra: str = "",
     now: datetime | None = None,
 ) -> str:
-    """Build the .har filename for a given test scenario.
-
-    Raises:
-        ValueError: if domain is empty or interact/cookies/visit is unrecognized.
-    """
+    """Build the .har filename for a given test scenario."""
     domain_clean = domain.strip()
     if not domain_clean:
         raise ValueError("Domain must not be empty.")
@@ -87,3 +84,42 @@ def get_har_filename(
         f"-extra-{extra_code}"
         f"-{timestamp}.har"
     )
+
+
+def get_attrs_from_har_name(filename: str) -> dict[str, str] | None:
+    """Parses a standardized HAR filename and returns human-readable attributes.
+
+    Returns None if the filename doesn't match the structural pattern.
+    """
+    # Rebuilt mapping structures to explicitly satisfy C0206 via .items()
+    interact_map = {code: INTERACT_LABELS[key] for key, code in INTERACT_CODES.items()}
+    cookies_map = {code: COOKIES_LABELS[key] for key, code in COOKIES_CODES.items()}
+    visit_map = {code: VISIT_LABELS[key] for key, code in VISIT_CODES.items()}
+
+    interact_pattern = "|".join(interact_map.keys())
+    cookies_pattern = "|".join(cookies_map.keys())
+    visit_pattern = "|".join(visit_map.keys())
+
+    # Segmented regex configuration to satisfy C0301 (Max 100 char line limit)
+    pattern = (
+        rf"^(?P<domain>.+)-interact-(?P<interact>{interact_pattern})"
+        rf"-cookies-(?P<cookies>{cookies_pattern})"
+        rf"-visit-(?P<visit>{visit_pattern})"
+        rf"-extra-(?P<extra>[A-Za-z0-9]{3})"
+        r"-(?P<yy>\d{2})-(?P<mm>\d{2})-(?P<dd>\d{2})-(?P<hh>\d{2})\.har$"
+    )
+
+    match = re.match(pattern, filename)
+    if not match:
+        return None
+
+    data = match.groupdict()
+
+    return {
+        "domain": data["domain"],
+        "interaction": interact_map.get(data["interact"], data["interact"]),
+        "cookies": cookies_map.get(data["cookies"], data["cookies"]),
+        "visit": visit_map.get(data["visit"], data["visit"]),
+        "extra": data["extra"].upper(),
+        "timestamp": f"20{data['yy']}-{data['mm']}-{data['dd']} @ {data['hh']}:00",
+    }
