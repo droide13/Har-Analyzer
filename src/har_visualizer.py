@@ -240,9 +240,8 @@ def render_entry(entry: ParsedEntry, matched: bool, highlight_mode: bool, key_pr
     safe_url = entry.url.replace("[", "\\[").replace("]", "\\]")
 
     # Assemble header components
-    main_title = (f"{status_emoji(entry.status)}"
-                  "{status_text} **{entry.method}** {safe_url}{cookie_badge_text}"
-                  )
+    main_title = (f"{status_emoji(entry.status)} {status_text} "
+                  f"**{entry.method}** {safe_url}{cookie_badge_text}")
 
     title = main_title
 
@@ -333,7 +332,7 @@ if uploaded_file is not None:
                     "- `cookie:session_id` (Request & Response cookies)\n"
                     "- `query:userId` (URL parameters)\n"
                     "- `url:login`, `method:POST`, `mime:json`, `body:token`\n\n"
-                    "**Allowed Fields:** `url`, `method`, `status`, `mime`, `reqheader`, `resheader`, `header`, `query`, `cookie`, `reqbody`, `resbody`, `body`, `any`" # pylint
+                    "**Allowed Fields:** `url`, `method`, `status`, `mime`, `reqheader`, `resheader`, `header`, `query`, `cookie`, `reqbody`, `resbody`, `body`, `any`"
                 )
 
             scope_label = st.selectbox(
