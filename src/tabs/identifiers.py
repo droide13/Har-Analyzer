@@ -65,6 +65,7 @@ def _render_value_expander(tk: TrackedKey) -> None:
 class IdentifiersTab:
     @property
     def title(self) -> str:
+        """Tab title"""
         return "Identifiers"
 
     def render(self, entries: list[ParsedEntry]) -> None:

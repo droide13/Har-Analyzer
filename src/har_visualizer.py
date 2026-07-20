@@ -77,9 +77,9 @@ def load_parsed_entries(file_bytes: bytes) -> list[ParsedEntry]:
     raw_entries = cast(list[dict[str, Any]], log_data.get("entries", []))
 
     parsed: list[ParsedEntry] = []
-    for i, entry in enumerate(raw_entries):
-        request = cast(dict[str, Any], entry.get("request", {}) or {})
-        response = cast(dict[str, Any], entry.get("response", {}) or {})
+    for i, raw_entry in enumerate(raw_entries):
+        request = cast(dict[str, Any], raw_entry.get("request", {}) or {})
+        response = cast(dict[str, Any], raw_entry.get("response", {}) or {})
         content = cast(dict[str, Any], response.get("content", {}) or {})
         post_data = cast(dict[str, Any], request.get("postData", {}) or {})
 
@@ -103,7 +103,7 @@ def load_parsed_entries(file_bytes: bytes) -> list[ParsedEntry]:
                 cookies_text=_cookies_to_text(req_cookies, res_cookies),
                 req_body=str(post_data.get("text", "") or ""),
                 res_body=str(content.get("text", "") or ""),
-                raw=entry,
+                raw=raw_entry,
                 req_headers=req_headers,
                 res_headers=res_headers,
                 query_params=query_params,
@@ -160,7 +160,7 @@ SCOPE_OPTIONS: dict[str, str] = {
 }
 
 
-def match_term(entry: ParsedEntry, term: str, default_field: str) -> bool:
+def match_term(analyzed_entry: ParsedEntry, term: str, match_default_field: str) -> bool:
     """Checks if a term matches the entry (supporting negation with `-`)."""
     is_negated = False
     if term.startswith("-") and len(term) > 1:
@@ -176,23 +176,27 @@ def match_term(entry: ParsedEntry, term: str, default_field: str) -> bool:
 
         if field in FIELD_MAP:
             if field == "status" and re.fullmatch(r"[1-5]xx", value.lower()):
-                matched = entry.status.startswith(value[0])
+                matched = analyzed_entry.status.startswith(value[0])
             else:
                 attrs = FIELD_MAP[field]
-                matched = any(value.lower() in str(getattr(entry, attr)).lower() for attr in attrs)
+                matched = any(value.lower() in
+                              str(getattr(analyzed_entry, attr)).lower() for attr in attrs)
         else:
-            attrs = FIELD_MAP.get(default_field.lower(), FIELD_MAP["any"])
-            matched = any(term.lower() in str(getattr(entry, attr)).lower() for attr in attrs)
+            attrs = FIELD_MAP.get(match_default_field.lower(), FIELD_MAP["any"])
+            matched = any(term.lower() in
+                          str(getattr(analyzed_entry, attr)).lower() for attr in attrs)
     else:
-        attrs = FIELD_MAP.get(default_field.lower(), FIELD_MAP["any"])
-        matched = any(term.lower() in str(getattr(entry, attr)).lower() for attr in attrs)
+        attrs = FIELD_MAP.get(match_default_field.lower(), FIELD_MAP["any"])
+        matched = any(term.lower() in str(getattr(analyzed_entry, attr)).lower() for attr in attrs)
 
     return not matched if is_negated else matched
 
 
-def entry_matches(entry: ParsedEntry, query: str, default_field: str, methods: set[str]) -> bool:
+def entry_matches(analyzed_entry: ParsedEntry,
+                  query: str, match_default_field: str,
+                  methods: set[str]) -> bool:
     """Checks if an entry matches all conditions (Methods + Implicit AND terms)."""
-    if methods and entry.method not in methods:
+    if methods and analyzed_entry.method not in methods:
         return False
     if not query:
         return True
@@ -202,7 +206,7 @@ def entry_matches(entry: ParsedEntry, query: str, default_field: str, methods: s
     except ValueError:
         terms = query.split()
 
-    return all(match_term(entry, term, default_field) for term in terms)
+    return all(match_term(analyzed_entry, term, match_default_field) for term in terms)
 
 
 # ---------------------------------------------------------------------------
@@ -213,74 +217,90 @@ METHOD_ORDER = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]
 
 
 def status_emoji(status: str) -> str:
+    """Returns emoji to represent http status"""    
     return "🟢" if status.startswith(("2", "3")) else ("🔴" if status else "⚪")
 
 
-def render_entry(entry: ParsedEntry, matched: bool, highlight_mode: bool, key_prefix: str) -> None:
-    response = cast(dict[str, Any], entry.raw.get("response", {}) or {})
+def render_entry(rendered_entry: ParsedEntry, key_prefix: str) -> None:
+    """
+    Render an entry with all its content
+    
+    :param entry: The processed entry
+    :type entry: ParsedEntry
+    :param matched: If the entry has any matched field
+    :type matched: bool
+    :param highlight_mode: Whether the entry is highlighted or not
+    :type highlight_mode: bool
+    :param key_prefix: Description
+    :type key_prefix: str
+    """
+    response = cast(dict[str, Any], rendered_entry.raw.get("response", {}) or {})
 
     # 1. Stylize HTTP Status Color
     status_color = (
-        "green" if entry.status.startswith(("2", "3")) else ("red" if entry.status else "grey")
+        "green" if rendered_entry.status.startswith(("2", "3")) else 
+        ("red" if rendered_entry.status else "grey")
     )
-    status_text = f":{status_color}[[{entry.status or '—'}]]"
+    status_text = f":{status_color}[[{rendered_entry.status or '—'}]]"
 
     # 2. Build Cookie & Set-Cookie Badge counts
     cookie_badges: list[str] = []
-    if entry.req_cookies:
-        cookie_badges.append(f"ReqCookies: {len(entry.req_cookies)}")
-    if entry.res_cookies:
-        cookie_badges.append(f"SetCookies: {len(entry.res_cookies)}")
+    if rendered_entry.req_cookies:
+        cookie_badges.append(f"ReqCookies: {len(rendered_entry.req_cookies)}")
+    if rendered_entry.res_cookies:
+        cookie_badges.append(f"SetCookies: {len(rendered_entry.res_cookies)}")
 
     cookie_badge_text = ""
     if cookie_badges:
         cookie_badge_text = f" :blue-background[{' | '.join(cookie_badges)}]"
 
     # Escape URL brackets to prevent markdown collision breaks
-    safe_url = entry.url.replace("[", "\\[").replace("]", "\\]")
+    safe_url = rendered_entry.url.replace("[", "\\[").replace("]", "\\]")
 
     # Assemble header components
-    main_title = (f"{status_emoji(entry.status)} {status_text} "
-                  f"**{entry.method}** {safe_url}{cookie_badge_text}")
+    main_title = (f"{status_emoji(rendered_entry.status)} {status_text} "
+                  f"**{rendered_entry.method}** {safe_url}{cookie_badge_text}")
 
     title = main_title
 
     # Pass key explicitly to enable targeted custom CSS styling
-    with st.expander(title, key=f"expander_{entry.index}"):
+    with st.expander(title, key=f"expander_{rendered_entry.index}"):
 
         req_tab, qp_tab, res_tab, body_tab = st.tabs(
             ["Request Headers", "Query & Cookies", "Response Headers", "Response Body"]
         )
 
         with req_tab:
-            st.json({str(h.get("name", "")): str(h.get("value", "")) for h in entry.req_headers})
+            st.json({str(h.get("name", "")): str(h.get("value", "")) for
+                     h in rendered_entry.req_headers})
 
         with qp_tab:
-            col1, col2 = st.columns(2)
-            with col1:
+            entry_col1, entry_col2 = st.columns(2)
+            with entry_col1:
                 st.markdown("#### Query Parameters")
-                if entry.query_params:
-                    st.json(_list_to_safe_dict(entry.query_params))
+                if rendered_entry.query_params:
+                    st.json(_list_to_safe_dict(rendered_entry.query_params))
                 else:
                     st.caption("No query parameters found in URL.")
-            with col2:
+            with entry_col2:
                 st.markdown("#### Cookie Metadata")
-                if entry.req_cookies or entry.res_cookies:
+                if rendered_entry.req_cookies or rendered_entry.res_cookies:
                     cookie_data: dict[str, dict[str, Any]] = {}
-                    if entry.req_cookies:
+                    if rendered_entry.req_cookies:
                         cookie_data["Request Cookies (sent to server)"] = _list_to_safe_dict(
-                            entry.req_cookies
+                            rendered_entry.req_cookies
                         )
-                    if entry.res_cookies:
+                    if rendered_entry.res_cookies:
                         cookie_data["Response Cookies (set by server)"] = _list_to_safe_dict(
-                            entry.res_cookies
+                            rendered_entry.res_cookies
                         )
                     st.json(cookie_data)
                 else:
                     st.caption("No cookie data found.")
 
         with res_tab:
-            st.json({str(h.get("name", "")): str(h.get("value", "")) for h in entry.res_headers})
+            st.json({str(h.get("name", "")): str(h.get("value", "")) for
+                     h in rendered_entry.res_headers})
 
         with body_tab:
             content = cast(dict[str, Any], response.get("content", {}) or {})
@@ -289,7 +309,7 @@ def render_entry(entry: ParsedEntry, matched: bool, highlight_mode: bool, key_pr
                 "Content",
                 value=str(content.get("text", "No body content.")),
                 height=250,
-                key=f"body_{key_prefix}_{entry.index}",
+                key=f"body_{key_prefix}_{rendered_entry.index}",
                 disabled=True,
             )
 
@@ -332,7 +352,7 @@ if uploaded_file is not None:
                     "- `cookie:session_id` (Request & Response cookies)\n"
                     "- `query:userId` (URL parameters)\n"
                     "- `url:login`, `method:POST`, `mime:json`, `body:token`\n\n"
-                    "**Allowed Fields:** `url`, `method`, `status`, `mime`, `reqheader`, `resheader`, `header`, `query`, `cookie`, `reqbody`, `resbody`, `body`, `any`"
+                    "**Allowed Fields:** `url`, `method`, `status`, `mime`, `reqheader`, `resheader`, `header`, `query`, `cookie`, `reqbody`, `resbody`, `body`, `any`" # pylint: disable=line-too-long
                 )
 
             scope_label = st.selectbox(
@@ -370,7 +390,7 @@ if uploaded_file is not None:
             match_count = sum(match_flags)
         else:
             match_flags = [False] * len(filtered_entries)
-            match_count = 0
+            match_count = 0 # pylint: disable=invalid-name
 
         # Pagination Reset Logic (tracks both filter + highlight changes)
         filter_signature = (filter_query, highlight_query, default_field, tuple(selected_methods))
@@ -410,7 +430,6 @@ if uploaded_file is not None:
                         border-radius: 8px !important;
                         transition: all 0.2s ease-in-out;
                     }}
-                    
                     /* Dynamic glow on hover */
                     .st-key-expander_{entry.index}:hover,
                     .st-key-expander_{entry.index} [data-testid="stExpander"]:hover {{
@@ -451,10 +470,8 @@ if uploaded_file is not None:
         ):
             render_entry(
                 entry,
-                matched=is_matched,
-                highlight_mode=highlight_active,
                 key_prefix=str(start_idx),
             )
 
-    except Exception as exc:
+    except Exception as exc: # pylint: disable=broad-except
         st.error(f"Error processing file: {exc}")

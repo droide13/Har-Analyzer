@@ -7,7 +7,7 @@ import shlex
 from dataclasses import dataclass, field
 from typing import Callable, Sequence
 
-from models import FIELD_MAP, ParsedEntry
+from models import ParsedEntry, FIELD_MAP
 
 # Checkbox label -> function turning raw bytes into the encoded/hashed string.
 ENCODERS: dict[str, Callable[[bytes], str]] = {
@@ -82,6 +82,7 @@ def match_term(
     default_field: str,
     encodings: set[str],
 ) -> tuple[bool, list[MatchReason]]:
+    """Match against a term in an entry"""
     is_negated = False
     # Identify and isolate negated query markers (e.g., -status:200)
     if term.startswith("-") and len(term) > 1:

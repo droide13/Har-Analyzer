@@ -42,12 +42,14 @@ def render_analyzer() -> None:
             with layout:
                 tab_module.render(entries)
 
-    except Exception as exc:
+    except Exception as exc: # pylint: disable=broad-except
         st.error(f"Execution Error: {exc}")
         st.exception(exc)
 
 
 def main() -> None:
+    """Main function to render the application, divided in two toggles, har analyzer and har naming
+    """
     st.title("HAR Analyzer")
 
     mode = st.segmented_control(
