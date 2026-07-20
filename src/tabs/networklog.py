@@ -141,14 +141,23 @@ class NetworkLogTab:
                     "Methods target", methods, default=[], key="req_methods"
                 )
 
-            st.markdown("#### Also match encoded/hashed forms of each term")
-            enc_cols = st.columns(len(ENCODING_OPTIONS))
+            # Define how many columns you want per row
+            COLS_PER_ROW = 4
             selected_encodings: set[str] = set()
-            for col, name in zip(enc_cols, ENCODING_OPTIONS):
-                with col:
-                    if st.checkbox(name, value=True, key=f"req_enc_{name}"):
-                        selected_encodings.add(name)
-
+            
+            with st.expander("Encodings & Hashes for term matching (all applyed by default)", expanded=False):
+                # Iterate through options in chunk sizes of COLS_PER_ROW
+                for i in range(0, len(ENCODING_OPTIONS), COLS_PER_ROW):
+                    chunk = ENCODING_OPTIONS[i : i + COLS_PER_ROW]
+                    # Create a fresh row of uniform columns
+                    cols = st.columns(COLS_PER_ROW)
+                    # Zip stops when the chunk runs out, leaving remaining columns clean and empty
+                    for col, name in zip(cols, chunk):
+                        with col:
+                            # defaulting value=False ase there are many options
+                            if st.checkbox(name, value=True, key=f"req_enc_{name}"):
+                                selected_encodings.add(name)
+                            
         page_size = int(
             st.number_input(
                 "Results per page", min_value=10, max_value=500, value=50, step=10, key="req_size"
