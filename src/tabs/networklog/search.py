@@ -7,7 +7,7 @@ import shlex
 from dataclasses import dataclass, field
 from typing import Callable, Sequence
 
-from models import ParsedEntry, FIELD_MAP
+from core.models import ParsedEntry, FIELD_MAP
 
 # Checkbox label -> function turning raw bytes into the encoded/hashed string.
 ENCODERS: dict[str, Callable[[bytes], str]] = {

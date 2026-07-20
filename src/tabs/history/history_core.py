@@ -10,7 +10,7 @@ Two search modes:
 
 from dataclasses import dataclass
 from typing import Any
-from models import ParsedEntry
+from core.models import ParsedEntry
 
 BODY_PREVIEW_LENGTH = 120
 

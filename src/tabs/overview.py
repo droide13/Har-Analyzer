@@ -6,7 +6,7 @@ import altair as alt
 import pandas as pd
 import streamlit as st
 
-from models import ParsedEntry, format_bytes
+from core.models import ParsedEntry, format_bytes
 
 
 class SubdomainMetric(TypedDict):

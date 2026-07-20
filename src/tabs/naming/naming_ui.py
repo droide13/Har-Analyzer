@@ -2,7 +2,7 @@
 
 import streamlit as st
 
-from naming import COOKIES_LABELS, INTERACT_LABELS, VISIT_LABELS, get_har_filename
+from tabs.naming.naming import COOKIES_LABELS, INTERACT_LABELS, VISIT_LABELS, get_har_filename
 
 
 def _select_by_label(label: str, options: dict[str, str], key: str) -> str:

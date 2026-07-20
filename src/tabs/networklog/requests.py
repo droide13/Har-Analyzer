@@ -4,8 +4,8 @@ from typing import Any, cast
 
 import streamlit as st
 
-from models import METHOD_ORDER, SCOPE_OPTIONS, ParsedEntry, list_to_safe_dict
-from search import ENCODING_OPTIONS, MatchReason, entry_matches
+from core.models import METHOD_ORDER, SCOPE_OPTIONS, ParsedEntry, list_to_safe_dict
+from tabs.networklog.search import ENCODING_OPTIONS, MatchReason, entry_matches
 
 _ATTR_LABELS: dict[str, str] = {
     "url": "URL",

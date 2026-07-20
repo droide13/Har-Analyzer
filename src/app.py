@@ -2,10 +2,11 @@
 
 import streamlit as st
 
-from models import load_parsed_entries
-from naming_ui import render_naming_tool
-from tabs import CookiesTab, IdentifiersTab, OverviewTab, QueryParamsTab,RequestsTab, Tab
-from tabs.history import HistoryTab
+from core.models import load_parsed_entries
+from core.protocols import Tab
+from tabs.naming.naming_ui import render_naming_tool
+from tabs import CookiesTab, IdentifiersTab, OverviewTab, QueryParamsTab,RequestsTab
+from tabs.history.history import HistoryTab
 
 st.set_page_config(
     page_title="HAR Visualizer",

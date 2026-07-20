@@ -2,8 +2,8 @@
 
 from typing import Any
 import streamlit as st
-from models import ParsedEntry
-from tabs.history_core import (
+from core.models import ParsedEntry
+from tabs.history.history_core import (
     Occurrence,
     collect_known_keys,
     find_key_occurrences,

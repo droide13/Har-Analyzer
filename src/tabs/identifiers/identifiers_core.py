@@ -11,7 +11,7 @@ from collections import Counter
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
-from models import ParsedEntry
+from core.models import ParsedEntry
 
 COMMON_NOISE_KEYS: frozenset[str] = frozenset(
     {

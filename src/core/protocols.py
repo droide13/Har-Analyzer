@@ -2,7 +2,7 @@
 
 from typing import Protocol
 
-from models import ParsedEntry
+from core.models import ParsedEntry
 
 
 class Tab(Protocol):

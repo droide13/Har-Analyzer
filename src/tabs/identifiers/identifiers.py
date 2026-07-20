@@ -4,8 +4,7 @@ from typing import Any
 
 import streamlit as st
 
-from models import ParsedEntry
-from tabs.identifiers_core import (
+from tabs.identifiers.identifiers_core import (
     TrackedKey,
     extract_tracked_keys,
     filter_identifiers,
@@ -13,6 +12,7 @@ from tabs.identifiers_core import (
     get_query_items,
     sort_identifiers,
 )
+from core.models import ParsedEntry
 
 
 def _render_section(

@@ -4,7 +4,7 @@ from typing import Any
 
 import streamlit as st
 
-from models import ParsedEntry
+from core.models import ParsedEntry
 
 
 def _describe_categorical(values: set[str]) -> str:
