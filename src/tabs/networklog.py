@@ -4,7 +4,7 @@ import streamlit as st
 
 from core.models import METHOD_ORDER, SCOPE_OPTIONS, ParsedEntry
 from tabs.shared.entry_render import Badge, render_entry_expander
-from tabs.shared.search import ENCODING_OPTIONS, MatchReason, entry_matches
+from tabs.shared.search import ENCODING_OPTIONS, MatchReason, entry_matches, dedupe_redundant_encodings
 
 _ATTR_LABELS: dict[str, str] = {
     "url": "URL",
@@ -23,14 +23,29 @@ _ATTR_LABELS: dict[str, str] = {
 def _attr_label(attr: str) -> str:
     return _ATTR_LABELS.get(attr, attr.replace("_", " ").title())
 
-
-def _format_reason(reason: MatchReason) -> str:
-    label = _attr_label(reason.attr)
-    return f"{label} ({reason.encoding})" if reason.encoding else label
+# Kept old method just in case
+# def _format_reason(reason: MatchReason) -> str:
+#     label = _attr_label(reason.attr)
+#     return f"{label} ({reason.encoding})" if reason.encoding else label
 
 
 def _reason_summary(reasons: list[MatchReason]) -> str:
-    return ", ".join(sorted({_format_reason(r) for r in reasons}))
+    """One entry per attribute, e.g. 'Res Headers (plain, MD5)' - collapses
+    redundant links of the URL-encoding chain and lists other encodings once."""
+    by_attr: dict[str, list[str]] = {}
+    for reason in reasons:
+        label = _attr_label(reason.attr)
+        form = reason.encoding or "plain"
+        by_attr.setdefault(label, [])
+        if form not in by_attr[label]:
+            by_attr[label].append(form)
+
+    parts: list[str] = []
+    for label in sorted(by_attr):
+        forms = dedupe_redundant_encodings(by_attr[label])
+        forms_sorted = sorted(forms, key=lambda f: (f != "plain", f))
+        parts.append(f"{label} ({', '.join(forms_sorted)})")
+    return ", ".join(parts)
 
 
 def _build_badges(

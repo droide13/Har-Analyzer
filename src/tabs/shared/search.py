@@ -49,6 +49,25 @@ ENCODERS: dict[str, Callable[[bytes], str]] = {
 # Stable, ordered list for populating UI checkboxes/multiselects.
 ENCODING_OPTIONS: list[str] = list(ENCODERS.keys())
 
+# URL encoding is a chain (plain -> single -> double -> triple): if a lower
+# link in the chain already matched, a higher one matching too just means the
+# value has no URL-unsafe characters to encode - it's a no-op, not a distinct
+# finding. Other encodings (hashes, Base64, Hex...) aren't chained
+_URL_ENCODE_CHAIN: list[str] = ["plain", "URL Encode", "Double URL Encode", "Triple URL Encode"]
+
+
+def dedupe_redundant_encodings(forms: list[str]) -> list[str]:
+    """Collapse a set of matched forms down to the least-encoded link of the
+    URL-encoding chain, keeping every non-chain form (hashes, Base64, ...) as-is."""
+    chain_hits = [f for f in forms if f in _URL_ENCODE_CHAIN]
+    other_hits = [f for f in forms if f not in _URL_ENCODE_CHAIN]
+
+    if not chain_hits:
+        return other_hits
+
+    earliest = min(chain_hits, key=_URL_ENCODE_CHAIN.index)
+    return [earliest, *other_hits]
+
 
 @dataclass(frozen=True)
 class MatchReason:
@@ -65,6 +84,26 @@ class MatchResult:
 
     matched: bool
     reasons: list[MatchReason] = field(default_factory=list[MatchReason])
+    
+# When a term matches a "specific" field, drop matches on the "broader" fields
+# it's known to be embedded in - they're the same substring, not a distinct hit.
+_OVERLAP_RULES: dict[str, list[str]] = {
+    "query_params_text": ["url"],
+    "cookies_text": ["req_headers_text", "res_headers_text"],
+}
+
+def dedupe_overlapping_reasons(reasons: list[MatchReason]) -> list[MatchReason]:
+    """Drop reasons on a broader field when the same term already matched via
+    a more specific field it's embedded in (e.g. a cookie value duplicated in
+    its Cookie/Set-Cookie header line, or a query string duplicated in the URL)."""
+    present_attrs = {r.attr for r in reasons}
+    broad_attrs_to_drop: set[str] = set()
+    for specific_attr, broad_attrs in _OVERLAP_RULES.items():
+        if specific_attr in present_attrs:
+            broad_attrs_to_drop.update(broad_attrs)
+    if not broad_attrs_to_drop:
+        return reasons
+    return [r for r in reasons if r.attr not in broad_attrs_to_drop]
 
 
 def encode_variants(value: str, encodings: set[str]) -> dict[str, str]:
@@ -140,6 +179,8 @@ def match_term(
         attrs = FIELD_MAP.get(default_field.lower(), FIELD_MAP["any"])
         variants = encode_variants(term, encodings)
         reasons = collect_reasons(entry, attrs, term, variants)
+        
+    reasons = dedupe_overlapping_reasons(reasons)
 
     matched = bool(reasons)
     if is_negated:

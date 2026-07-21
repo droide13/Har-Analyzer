@@ -3,8 +3,8 @@
 Groups every sighting of a key by name, orders sightings by their actual HAR
 timestamp (startedDateTime) to show first appearance and value drift over
 time, then - only when the user explicitly asks - reuses the literal
-matching primitives from core.search to find every other place in the HAR
-(headers, URL, bodies, other cookies) where any of those values reappear.
+matching primitives from tabs.shared.search to find every other place in the
+HAR (headers, URL, bodies, other cookies) where any of those values reappear.
 
 The dissemination scan is deliberately gated behind a button: it's an O(entries
 x values x encodings) substring scan and re-running it on every widget
@@ -15,12 +15,35 @@ from typing import cast
 
 import streamlit as st
 
-from tabs.shared.entry_render import Badge, render_entry_expander
 from core.models import FIELD_MAP, ParsedEntry
-from tabs.shared.search import ENCODING_OPTIONS, MatchReason, collect_reasons, encode_variants
+from tabs.shared.entry_render import Badge, render_entry_expander
+from tabs.shared.search import (
+    ENCODING_OPTIONS,
+    MatchReason,
+    collect_reasons,
+    dedupe_overlapping_reasons,
+    encode_variants,
+    dedupe_redundant_encodings
+)
 
 Occurrence = tuple[ParsedEntry, str, str]  # (entry, origin, value)
 DisseminationMatch = tuple[ParsedEntry, list[MatchReason]]
+
+_ATTR_LABELS: dict[str, str] = {
+    "url": "URL",
+    "domain": "Domain",
+    "method": "Method",
+    "req_headers_text": "Request Headers",
+    "res_headers_text": "Response Headers",
+    "req_body": "POST Data",
+    "res_body": "Response Body",
+    "cookies_text": "Cookies",
+    "query_params_text": "Query Params",
+}
+
+
+def _attr_label(attr: str) -> str:
+    return _ATTR_LABELS.get(attr, attr.replace("_", " ").title())
 
 
 def _collect_occurrences(entries: list[ParsedEntry]) -> dict[str, list[Occurrence]]:
@@ -35,7 +58,8 @@ def _collect_occurrences(entries: list[ParsedEntry]) -> dict[str, list[Occurrenc
             name = str(cookie.get("name", "")).strip()
             if name:
                 registry.setdefault(name, []).append(
-                    (entry, "cookie", str(cookie.get("value", ""))))
+                    (entry, "cookie", str(cookie.get("value", "")))
+                )
 
     # Order sightings by real timestamp when present (ISO 8601 sorts lexically),
     # falling back to file order for entries missing startedDateTime.
@@ -84,14 +108,19 @@ def _find_dissemination(
     values: list[str],
     encodings: set[str],
 ) -> list[DisseminationMatch]:
-    """Every entry where any of `values` (plain or encoded) appears anywhere."""
-    attrs = FIELD_MAP["any"]
+    """Every entry where any of `values` (plain or encoded) appears anywhere.
+
+    `domain` is excluded from the "any" sweep here for the same reason it's
+    excluded from Network Log's default search scope: it's always a substring
+    of `url`, so including it would just duplicate every URL hit.
+    """
+    attrs = [a for a in FIELD_MAP["any"] if a != "domain"]
     results: list[DisseminationMatch] = []
     for entry in entries:
         reasons: list[MatchReason] = []
         for value in values:
             variants = encode_variants(value, encodings)
-            reasons.extend(collect_reasons(entry, attrs, value, variants))
+            reasons.extend(dedupe_overlapping_reasons(collect_reasons(entry, attrs, value, variants)))
         if reasons:
             results.append((entry, reasons))
     return results
@@ -102,18 +131,31 @@ def _dissemination_badges(reasons: list[MatchReason]) -> list[Badge]:
     seen_attrs: dict[str, None] = {}
     for reason in reasons:
         seen_attrs.setdefault(reason.attr, None)
-    return [(attr.replace("_", " "), "orange") for attr in seen_attrs]
+    return [(_attr_label(attr), "orange") for attr in seen_attrs]
+
+
+def _reason_summary(reasons: list[MatchReason]) -> list[dict[str, str]]:
+    """One row per (field, value): collapses redundant links of the
+    URL-encoding chain and lists other matched forms alongside it."""
+    grouped: dict[tuple[str, str], list[str]] = {}
+    for reason in reasons:
+        key = (_attr_label(reason.attr), reason.term)
+        forms = grouped.setdefault(key, [])
+        form = reason.encoding or "plain"
+        if form not in forms:
+            forms.append(form)
+
+    rows: list[dict[str, str]] = []
+    for (field, value), forms in sorted(grouped.items()):
+        forms = dedupe_redundant_encodings(forms)
+        forms_sorted = sorted(forms, key=lambda f: (f != "plain", f))
+        rows.append({"Field": field, "Value": value, "Forms": ", ".join(forms_sorted)})
+    return rows
 
 
 def _render_matches_tab(reasons: list[MatchReason]) -> None:
     """Leading tab explaining which field(s)/encoding(s) matched for this entry."""
-    st.dataframe(
-        [
-            {"Value": reason.term, "Field": reason.attr, "Form": reason.encoding or "plain"}
-            for reason in reasons
-        ],
-        height=150,
-    )
+    st.dataframe(_reason_summary(reasons), height=150)
 
 
 def _aggregate_by_domain(matches: list[DisseminationMatch]) -> list[dict[str, object]]:
@@ -126,7 +168,7 @@ def _aggregate_by_domain(matches: list[DisseminationMatch]) -> list[dict[str, ob
         )
         bucket["Entries"] = cast(int, bucket["Entries"]) + 1
         for reason in reasons:
-            cast(set[str], bucket["_fields"]).add(reason.attr)
+            cast(set[str], bucket["_fields"]).add(_attr_label(reason.attr))
             cast(set[str], bucket["_values"]).add(reason.term)
 
     rows: list[dict[str, object]] = [

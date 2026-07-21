@@ -12,6 +12,7 @@ METHOD_ORDER: Final[list[str]] = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD
 
 FIELD_MAP: Final[dict[str, list[str]]] = {
     "url": ["url"],
+    "domain": ["domain"],
     "method": ["method"],
     "status": ["status"],
     "mime": ["mime"],
@@ -42,6 +43,7 @@ FIELD_MAP: Final[dict[str, list[str]]] = {
 SCOPE_OPTIONS: Final[dict[str, str]] = {
     "All fields": "any",
     "URL": "url",
+    "Domain": "domain",
     "Method": "method",
     "Status": "status",
     "Headers (req + res)": "header",
