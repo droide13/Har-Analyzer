@@ -84,11 +84,11 @@ class MatchResult:
 
     matched: bool
     reasons: list[MatchReason] = field(default_factory=list[MatchReason])
-    
+
 # When a term matches a "specific" field, drop matches on the "broader" fields
 # it's known to be embedded in - they're the same substring, not a distinct hit.
 _OVERLAP_RULES: dict[str, list[str]] = {
-    "query_params_text": ["url"],
+    "query_params_text": ["url", "req_headers_text", "res_headers_text"],
     "cookies_text": ["req_headers_text", "res_headers_text"],
 }
 
