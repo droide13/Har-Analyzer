@@ -73,13 +73,15 @@ class ParsedEntry:
     cookies_text: str
     req_body: str
     res_body: str
+    initiator_type: str
+    initiator_url: str
+    initiator_stack: list[dict[str, Any]]
     raw: dict[str, Any]
     req_headers: list[dict[str, Any]]
     res_headers: list[dict[str, Any]]
     query_params: list[dict[str, Any]]
     req_cookies: list[dict[str, Any]]
     res_cookies: list[dict[str, Any]]
-
 
 def get_domain(url: str) -> str:
     try:
@@ -126,6 +128,16 @@ def format_bytes(size_bytes: int) -> str:
     s = round(size_bytes / p, 2)
     return f"{s} {size_names[i]}"
 
+def flatten_initiator_stack(stack: dict[str, Any] | None) -> list[dict[str, Any]]:
+    """Flatten a (possibly chained, async) initiator call stack into one frame list."""
+    frames: list[dict[str, Any]] = []
+    current = stack
+    while current:
+        call_frames = cast(list[dict[str, Any]], current.get("callFrames") or [])
+        frames.extend(call_frames)
+        current = cast(dict[str, Any] | None, current.get("parent"))
+    return frames
+
 
 @st.cache_data(show_spinner=False)
 def load_parsed_entries(file_bytes: bytes) -> list[ParsedEntry]:
@@ -139,6 +151,7 @@ def load_parsed_entries(file_bytes: bytes) -> list[ParsedEntry]:
         response = cast(dict[str, Any], entry.get("response", {}) or {})
         content = cast(dict[str, Any], response.get("content", {}) or {})
         post_data = cast(dict[str, Any], request.get("postData", {}) or {})
+        initiator = cast(dict[str, Any], entry.get("_initiator", {}) or {})
 
         req_h = cast(list[dict[str, Any]], request.get("headers") or [])
         res_h = cast(list[dict[str, Any]], response.get("headers") or [])
@@ -149,8 +162,8 @@ def load_parsed_entries(file_bytes: bytes) -> list[ParsedEntry]:
         parsed.append(
             ParsedEntry(
                 index=i,
-                method=str(request.get("method", "")).upper(),
                 started_date_time=str(entry.get("startedDateTime", "")),
+                method=str(request.get("method", "")).upper(),
                 url=str(request.get("url", "")),
                 domain=get_domain(str(request.get("url", ""))),
                 status=str(response.get("status", "")),
@@ -165,6 +178,11 @@ def load_parsed_entries(file_bytes: bytes) -> list[ParsedEntry]:
                 cookies_text=cookies_to_text(req_c, res_c),
                 req_body=str(post_data.get("text", "") or ""),
                 res_body=str(content.get("text", "") or ""),
+                initiator_type=str(initiator.get("type", "other")),
+                initiator_url=str(initiator.get("url", "")),
+                initiator_stack=flatten_initiator_stack(
+                    cast(dict[str, Any] | None, initiator.get("stack"))
+                ),
                 raw=entry,
                 req_headers=req_h,
                 res_headers=res_h,

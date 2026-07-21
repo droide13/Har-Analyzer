@@ -50,7 +50,7 @@ def _build_badges(
         badges.append((" | ".join(cookie_bits), "blue"))
 
     if filter_reasons:
-        badges.append((f"Matched via: {_reason_summary(filter_reasons)}", "blue"))
+        badges.append((f"Filtered via: {_reason_summary(filter_reasons)}", "blue"))
     if highlight_reasons:
         badges.append((f"Highlighted via: {_reason_summary(highlight_reasons)}", "orange"))
 
@@ -96,7 +96,12 @@ class NetworkLogTab:
         highlight_reasons: list[MatchReason],
     ) -> None:
         badges = _build_badges(entry, filter_reasons, highlight_reasons)
-        render_entry_expander(entry, key_prefix, badges)
+        render_entry_expander(
+            entry,
+            key_prefix,
+            badges,
+            highlighted=bool(highlight_reasons),
+        )
 
     def render(self, entries: list[ParsedEntry]) -> None:
         st.markdown("### Filter, Query & Highlight Controls")
@@ -198,17 +203,6 @@ class NetworkLogTab:
         curr_p = st.session_state["req_page"]
 
         start, end = curr_p * page_size, (curr_p + 1) * page_size
-
-        if h_active:
-            css = [
-                f".st-key-expander_{e.index}, .st-key-expander_{e.index} [data-testid='stExpander'] "
-                f"{{ background-color: rgba(255, 170, 0, 0.04) !important; border: 2px solid #ffaa00 !important; "
-                f"border-left: 8px solid #ffaa00 !important; }}"
-                for e, match in zip(filtered[start:end], flags[start:end])
-                if match
-            ]
-            if css:
-                st.html(f"<style>{''.join(css)}</style>")
 
         st.write(
             f"Showing **{len(filtered)}** items (Matches: {sum(flags)} highlighted) out of {len(entries)} total entries."

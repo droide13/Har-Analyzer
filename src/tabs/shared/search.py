@@ -157,10 +157,14 @@ def entry_matches(
 ) -> MatchResult:
     """Evaluate whether an entry satisfies selected methods and tokenized search terms,
     returning both the verdict and which fields/encodings caused it."""
-    if methods and entry.method not in methods:
-        return MatchResult(matched=False)
+    method_reasons: list[MatchReason] = []
+    if methods:
+        if entry.method not in methods:
+            return MatchResult(matched=False)
+        method_reasons.append(MatchReason(term=entry.method, attr="method", encoding=None))
+
     if not query:
-        return MatchResult(matched=True)
+        return MatchResult(matched=True, reasons=method_reasons)
 
     try:
         terms = shlex.split(query)
@@ -169,7 +173,7 @@ def entry_matches(
         terms = query.split()
 
     active_encodings = encodings or set()
-    all_reasons: list[MatchReason] = []
+    all_reasons: list[MatchReason] = list(method_reasons)
     for term in terms:
         matched, reasons = match_term(entry, term, default_field, active_encodings)
         if not matched:

@@ -79,40 +79,87 @@ def _render_response_body_tab(entry: ParsedEntry, key_prefix: str) -> None:
     )
 
 
+def _render_initiator_tab(entry: ParsedEntry) -> None:
+    st.caption(f"Type: {entry.initiator_type}")
+    if entry.initiator_url:
+        st.text(f"Source URL: {entry.initiator_url}")
+    if not entry.initiator_stack:
+        st.caption("No JS call stack available for this request.")
+        return
+    st.dataframe(
+        [
+            {
+                "Function": frame.get("functionName") or "(anonymous)",
+                "URL": frame.get("url", ""),
+                "Line": frame.get("lineNumber", ""),
+                "Column": frame.get("columnNumber", ""),
+            }
+            for frame in entry.initiator_stack
+        ],
+        height=200,
+    )
+
+
 def render_entry_expander(
     entry: ParsedEntry,
     key_prefix: str,
     badges: list[Badge],
     leading_tabs: dict[str, Callable[[], None]] | None = None,
+    highlighted: bool = False,
 ) -> None:
-    """One expander for an entry: title/badges + optional extra tabs + standard detail tabs."""
+    """One expander for an entry: title/badges + optional extra tabs + standard detail tabs.
+
+    When `highlighted` is True, the whole expander gets a yellow outline so it
+    stands out in a long list, in addition to any badges in the title.
+    """
     title = render_title(entry, badges)
     leading_tabs = leading_tabs or {}
+    container_key = f"{key_prefix}_container_{entry.index}"
 
-    with st.expander(title, key=f"{key_prefix}_expander_{entry.index}"):
-        tab_names = list(leading_tabs.keys()) + ["Request Headers"]
-        if entry.method == "POST":
-            tab_names.append("Post data")
-        tab_names.extend(["Query & Cookies", "Response Headers", "Response Body"])
+    if highlighted:
+        st.markdown(
+            f"""
+            <style>
+            .st-key-{container_key} div[data-testid="stExpander"] {{
+                border: 2px solid #FFD400;
+                border-radius: 8px;
+                box-shadow: 0 0 6px rgba(255, 212, 0, 0.5);
+            }}
+            </style>
+            """,
+            unsafe_allow_html=True,
+        )
 
-        tabs = dict(zip(tab_names, st.tabs(tab_names)))
+    with st.container(key=container_key):
+        with st.expander(title, key=f"{key_prefix}_expander_{entry.index}"):
+            tab_names = list(leading_tabs.keys()) + ["Request Headers"]
+            if entry.method == "POST":
+                tab_names.append("Post data")
+            tab_names.extend(
+                ["Query & Cookies", "Response Headers", "Response Body", "Initiator"]
+            )
 
-        for name, render_fn in leading_tabs.items():
-            with tabs[name]:
-                render_fn()
+            tabs = dict(zip(tab_names, st.tabs(tab_names)))
 
-        with tabs["Request Headers"]:
-            _render_headers_tab(entry.req_headers)
+            for name, render_fn in leading_tabs.items():
+                with tabs[name]:
+                    render_fn()
 
-        if "Post data" in tabs:
-            with tabs["Post data"]:
-                _render_post_data_tab(entry)
+            with tabs["Request Headers"]:
+                _render_headers_tab(entry.req_headers)
 
-        with tabs["Query & Cookies"]:
-            _render_query_and_cookies_tab(entry)
+            if "Post data" in tabs:
+                with tabs["Post data"]:
+                    _render_post_data_tab(entry)
 
-        with tabs["Response Headers"]:
-            _render_headers_tab(entry.res_headers)
+            with tabs["Query & Cookies"]:
+                _render_query_and_cookies_tab(entry)
 
-        with tabs["Response Body"]:
-            _render_response_body_tab(entry, key_prefix)
+            with tabs["Response Headers"]:
+                _render_headers_tab(entry.res_headers)
+
+            with tabs["Response Body"]:
+                _render_response_body_tab(entry, key_prefix)
+
+            with tabs["Initiator"]:
+                _render_initiator_tab(entry)
