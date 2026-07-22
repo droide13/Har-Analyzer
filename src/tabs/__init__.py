@@ -6,6 +6,7 @@ from .identifiers.identifiers import IdentifiersTab
 from .networklog import NetworkLogTab
 from .overview import OverviewTab
 from .query_params import QueryParamsTab
+from .metadata.metadata_ui import MetadataTab
 
 __all__ = [
     "NetworkLogTab",
@@ -14,4 +15,5 @@ __all__ = [
     "QueryParamsTab",
     "IdentifiersTab",
     "HistoryTab",
+    "MetadataTab"
 ]

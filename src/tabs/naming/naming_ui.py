@@ -2,18 +2,13 @@
 
 import streamlit as st
 
+from tabs.shared.selectors import select_by_label
 from tabs.naming.naming import (
     COOKIES_LABELS,
     INTERACT_LABELS,
     VISIT_LABELS,
     get_har_filename,
 )
-
-
-def _select_by_label(label: str, options: dict[str, str], key: str) -> str:
-    """Render a selectbox showing human-friendly labels, return the internal key."""
-    choice = st.selectbox(label, list(options.values()), key=key)
-    return next(k for k, v in options.items() if v == choice)
 
 
 def render_naming_tool() -> None:
@@ -27,17 +22,17 @@ def render_naming_tool() -> None:
     col1, col2 = st.columns(2)
     with col1:
         domain = st.text_input("Domain under test", placeholder="domain.com", key="name_domain")
-        interact = _select_by_label("Interaction type", INTERACT_LABELS, key="name_interact")
-        cookies = _select_by_label("Cookie handling", COOKIES_LABELS, key="name_cookies")
+        interact = select_by_label("Interaction type", INTERACT_LABELS, key="name_interact")
+        cookies = select_by_label("Cookie handling", COOKIES_LABELS, key="name_cookies")
     with col2:
-        visit = _select_by_label("Visit type", VISIT_LABELS, key="name_visit")
+        visit = select_by_label("Visit type", VISIT_LABELS, key="name_visit")
         extra = st.text_input(
             "Extra context (optional)",
             placeholder="e.g. staging",
             max_chars=32,
             key="name_extra",
         )
-        st.caption("Only the first 3 letters of the extra text are used; blank defaults to '000'.")
+    st.caption("Only the first 3 letters of the extra text are used; blank defaults to '000'.")
 
     if not domain.strip():
         st.info("Enter a domain to generate the filename.")

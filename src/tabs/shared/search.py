@@ -179,8 +179,7 @@ def match_term(
         attrs = FIELD_MAP.get(default_field.lower(), FIELD_MAP["any"])
         variants = encode_variants(term, encodings)
         reasons = collect_reasons(entry, attrs, term, variants)
-        
-    reasons = dedupe_overlapping_reasons(reasons)
+        reasons = dedupe_overlapping_reasons(reasons)
 
     matched = bool(reasons)
     if is_negated:

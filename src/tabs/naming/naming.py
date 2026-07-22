@@ -1,7 +1,21 @@
-"""Core logic for building standardized HAR test filenames."""
+"""Core logic for building standardized HAR test filenames.
+
+Also home to :func:`derive_metadata_from_entries`, which reads the domain
+and capture date straight out of a parsed HAR's traffic instead of trusting
+a filename or "now". Both the pre-capture generator (``naming_ui.py``) and
+the post-capture standardizer (``tabs/metadata``) call the same
+:func:`get_har_filename` below, so the filename format is defined in
+exactly one place.
+"""
 
 import re
+from collections import Counter
+from dataclasses import dataclass
 from datetime import datetime
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from core.models import ParsedEntry
 
 # Naming variables
 INTERACT_CODES: dict[str, str] = {
@@ -47,6 +61,16 @@ VISIT_LABELS: dict[str, str] = {
 }
 
 
+@dataclass(frozen=True, slots=True)
+class DerivedHarMetadata:
+    """Domain/date facts read directly from a HAR's own traffic."""
+
+    domain: str
+    other_domains: list[str]
+    captured_at: datetime | None
+    entry_count: int
+
+
 def get_har_filename(
     domain: str,
     interact: str,
@@ -55,7 +79,13 @@ def get_har_filename(
     extra: str = "",
     now: datetime | None = None,
 ) -> str:
-    """Build the .har filename for a given test scenario."""
+    """Build the .har filename for a given test scenario.
+
+    ``now`` defaults to the current time (the pre-capture "generate a name
+    to save under" flow), but callers standardizing an existing capture
+    should pass the HAR's own derived timestamp instead -- see
+    :func:`derive_metadata_from_entries`.
+    """
     domain_clean = domain.strip()
     if not domain_clean:
         raise ValueError("Domain must not be empty.")
@@ -91,22 +121,14 @@ def get_attrs_from_har_name(filename: str) -> dict[str, str] | None:
 
     Returns None if the filename doesn't match the structural pattern.
     """
-    # Rebuilt mapping structures to explicitly satisfy C0206 via .items()
-    interact_map = {
-        code: INTERACT_LABELS[key] for key, code in INTERACT_CODES.items()
-    }
-    cookies_map = {
-        code: COOKIES_LABELS[key] for key, code in COOKIES_CODES.items()
-    }
-    visit_map = {
-        code: VISIT_LABELS[key] for key, code in VISIT_CODES.items()
-    }
+    interact_map = {code: INTERACT_LABELS[key] for key, code in INTERACT_CODES.items()}
+    cookies_map = {code: COOKIES_LABELS[key] for key, code in COOKIES_CODES.items()}
+    visit_map = {code: VISIT_LABELS[key] for key, code in VISIT_CODES.items()}
 
     interact_pattern = "|".join(interact_map.keys())
     cookies_pattern = "|".join(cookies_map.keys())
     visit_pattern = "|".join(visit_map.keys())
 
-    # Changed rf"" to r"" on the extra block so {3} is treated as regex syntax
     pattern = (
         rf"^(?P<domain>.+)-interact-(?P<interact>{interact_pattern})"
         rf"-cookies-(?P<cookies>{cookies_pattern})"
@@ -129,3 +151,54 @@ def get_attrs_from_har_name(filename: str) -> dict[str, str] | None:
         "extra": data["extra"].upper(),
         "timestamp": f"20{data['yy']}-{data['mm']}-{data['dd']} @ {data['hh']}:00",
     }
+
+
+def _parse_started_date_time(value: str) -> datetime | None:
+    """Parse a HAR entry's ISO-8601 ``startedDateTime`` into a datetime.
+
+    Returns ``None`` (rather than raising) on anything unparseable, so one
+    malformed entry can't blow up metadata derivation for the whole file.
+    """
+    text = value.strip()
+    if not text:
+        return None
+    if text.endswith("Z"):
+        text = text[:-1] + "+00:00"
+    try:
+        return datetime.fromisoformat(text)
+    except ValueError:
+        return None
+
+
+def derive_metadata_from_entries(entries: "list[ParsedEntry]") -> DerivedHarMetadata:
+    """Derive the primary domain and earliest capture time from real traffic.
+
+    The primary domain is whichever domain appears most often across
+    entries (typically the site under test, as opposed to third-party/CDN
+    domains that show up once or twice). Any other distinct domains seen
+    are returned too, so the UI can flag capture that touched multiple
+    sites and let the user confirm which one is "the" domain.
+    """
+    if not entries:
+        raise ValueError("Cannot derive metadata from an empty entry list.")
+
+    domain_counts = Counter(e.domain for e in entries if e.domain and e.domain != "unknown")
+    if not domain_counts:
+        raise ValueError("No usable domain found in this HAR's entries.")
+
+    primary_domain, _ = domain_counts.most_common(1)[0]
+    other_domains = sorted(d for d in domain_counts if d != primary_domain)
+
+    parsed_dates = [
+        parsed
+        for parsed in (_parse_started_date_time(e.started_date_time) for e in entries)
+        if parsed is not None
+    ]
+    captured_at = min(parsed_dates) if parsed_dates else None
+
+    return DerivedHarMetadata(
+        domain=primary_domain,
+        other_domains=other_domains,
+        captured_at=captured_at,
+        entry_count=len(entries),
+    )

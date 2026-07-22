@@ -2,11 +2,14 @@
 
 import json
 import math
-from dataclasses import dataclass
+from copy import deepcopy
+from dataclasses import dataclass, field
 from typing import Any, Final, cast
 from urllib.parse import urlparse
 
 import streamlit as st
+
+from core.app_version import get_app_version
 
 METHOD_ORDER: Final[list[str]] = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]
 
@@ -53,7 +56,6 @@ SCOPE_OPTIONS: Final[dict[str, str]] = {
     "MIME type": "mime",
 }
 
-
 @dataclass(frozen=True, slots=True)
 class ParsedEntry:
     """Immutable, indexed representation of a singular HAR entry transaction."""
@@ -84,6 +86,64 @@ class ParsedEntry:
     query_params: list[dict[str, Any]]
     req_cookies: list[dict[str, Any]]
     res_cookies: list[dict[str, Any]]
+
+
+@dataclass(frozen=True, slots=True)
+class HarAnalysis:
+    """Experiment-level metadata embedded into a HAR file's ``log._analysis``.
+
+    This is intentionally separate from ``ParsedEntry`` (which describes a
+    single request/response transaction). A ``HarAnalysis`` describes the
+    whole capture/experiment: what was being tested and how, plus any
+    free-text notes a human wants to attach to the file itself so the
+    context survives even if the file gets renamed or moved later.
+    """
+
+    domain: str
+    interact: str
+    cookies: str
+    visit: str
+    extra: str
+    captured_at: str
+    standardized_filename: str
+    description: str = ""
+    email_used: str = ""
+    notes: str = ""
+    tool_version: str = field(default_factory=get_app_version)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Serialize to the plain dict written into ``log._analysis``."""
+        return {
+            "tool_version": self.tool_version,
+            "domain": self.domain,
+            "interact": self.interact,
+            "cookies": self.cookies,
+            "visit": self.visit,
+            "extra": self.extra,
+            "captured_at": self.captured_at,
+            "standardized_filename": self.standardized_filename,
+            "description": self.description,
+            "email_used": self.email_used,
+            "notes": self.notes,
+        }
+
+    @staticmethod
+    def from_dict(data: dict[str, Any]) -> "HarAnalysis":
+        """Parse a previously embedded ``log._analysis`` dict back out."""
+        return HarAnalysis(
+            domain=str(data.get("domain", "")),
+            interact=str(data.get("interact", "")),
+            cookies=str(data.get("cookies", "")),
+            visit=str(data.get("visit", "")),
+            extra=str(data.get("extra", "")),
+            captured_at=str(data.get("captured_at", "")),
+            standardized_filename=str(data.get("standardized_filename", "")),
+            description=str(data.get("description", "")),
+            email_used=str(data.get("email_used", "")),
+            notes=str(data.get("notes", "")),
+            tool_version=str(data.get("tool_version", get_app_version())),
+        )
+
 
 def get_domain(url: str) -> str:
     try:
@@ -129,6 +189,7 @@ def format_bytes(size_bytes: int) -> str:
     p = math.pow(1024, i)
     s = round(size_bytes / p, 2)
     return f"{s} {size_names[i]}"
+
 
 def flatten_initiator_stack(stack: dict[str, Any] | None) -> list[dict[str, Any]]:
     """Flatten a (possibly chained, async) initiator call stack into one frame list."""
@@ -194,3 +255,41 @@ def load_parsed_entries(file_bytes: bytes) -> list[ParsedEntry]:
             )
         )
     return parsed
+
+
+def load_raw_har(file_bytes: bytes) -> dict[str, Any]:
+    """Load a HAR file's full JSON structure, unmodified and uncached.
+
+    Unlike :func:`load_parsed_entries` (which flattens each entry into a
+    ``ParsedEntry`` and is cached for the analysis UI), this keeps the
+    original top-level structure -- including ``log.creator``, ``log.pages``,
+    and any existing ``log._analysis`` -- so it can be edited and written
+    back out as a valid HAR file.
+    """
+    return cast(dict[str, Any], json.loads(file_bytes))
+
+
+def get_embedded_analysis(har_data: dict[str, Any]) -> HarAnalysis | None:
+    """Read back a previously embedded ``log._analysis``, if present."""
+    log_data = cast(dict[str, Any], har_data.get("log", {}) or {})
+    raw_analysis = log_data.get("_analysis")
+    if not isinstance(raw_analysis, dict):
+        return None
+    return HarAnalysis.from_dict(cast(dict[str, Any], raw_analysis))
+
+
+def embed_analysis(har_data: dict[str, Any], analysis: HarAnalysis) -> dict[str, Any]:
+    """Return a new HAR dict with ``log._analysis`` set to ``analysis``.
+
+    The input dict is left untouched (deep-copied) so callers can safely
+    compare "before" and "after" state, e.g. for an overwrite confirmation.
+    """
+    updated = deepcopy(har_data)
+    log_data = cast(dict[str, Any], updated.setdefault("log", {}))
+    log_data["_analysis"] = analysis.to_dict()
+    return updated
+
+
+def serialize_har(har_data: dict[str, Any]) -> bytes:
+    """Serialize a HAR dict back to downloadable JSON bytes."""
+    return json.dumps(har_data, indent=2, ensure_ascii=False).encode("utf-8")
