@@ -1,7 +1,8 @@
-"""Tab class for standardizing the currently 
-    loaded HAR file and embedding experiment metadata into it."""
+"""Tab class for standardizing the currently loaded HAR file and embedding metadata into it."""
 
 from datetime import datetime, time
+from typing import Any, cast
+from urllib.parse import urlparse
 
 import streamlit as st
 
@@ -21,21 +22,43 @@ from tabs.naming.naming import (
 )
 from tabs.shared.selectors import select_by_label
 
+
+def _extract_entry_domain(entry: Any) -> str | None:
+    """Extract domain/host from a ParsedEntry instance or dictionary."""
+    domain_val = cast(object, getattr(entry, "domain", None))
+    if isinstance(domain_val, str) and domain_val.strip():
+        return domain_val.strip().lower()
+
+    url_val = cast(object, getattr(entry, "url", None))
+    if url_val is None and isinstance(entry, dict) and "url" in entry:
+        url_val = cast(object, entry["url"])
+
+    if isinstance(url_val, str) and url_val.strip():
+        parsed = urlparse(url_val)
+        netloc = parsed.netloc or parsed.path.split("/")[0]
+        host = netloc.split(":")[0].strip().lower()
+        if host:
+            return host
+
+    return None
+
+
 class MetadataTab:
-    """Class to render the metadata tab"""
+    """Streamlit tab component for standardizing and embedding HAR metadata."""
+
     @property
     def title(self) -> str:
         """Name rendered on the Streamlit page tab selection bar."""
         return "Standardize & Tag"
 
     def render(self, entries: list[ParsedEntry]) -> None:
-        """Isolated UI layout logic for standardizing and tagging the currently loaded HAR file."""
+        """Isolated UI layout logic for standardizing and tagging the active HAR file."""
         st.subheader("Standardize & Tag Current HAR File")
         st.caption(
             "Modify and standardize metadata for the currently loaded HAR file. "
             "Domain and capture time are derived from the traffic itself, allowing "
             "you to confirm or override classification before generating an updated copy "
-            "with embedded `log._analysis` metadata."
+            "with embedded log._analysis metadata."
         )
 
         file_bytes = st.session_state.get("uploaded_file_bytes")
@@ -56,10 +79,43 @@ class MetadataTab:
             st.error(str(exc))
             return
 
+        # 1. Extract all unique domains in order of appearance from HAR requests
+        ordered_domains: list[str] = []
+        for entry in entries:
+            dom = _extract_entry_domain(entry)
+            if dom and dom not in ordered_domains:
+                ordered_domains.append(dom)
+
+        # The domain of the very first request in the HAR file is primary
+        first_request_domain = (
+            ordered_domains[0] if ordered_domains else derived.domain
+        )
+
+        # 2. Build domain choices list starting with the first request's domain
+        domain_options: list[str] = []
+        if first_request_domain:
+            domain_options.append(first_request_domain)
+
+        for dom in ordered_domains:
+            if dom not in domain_options:
+                domain_options.append(dom)
+
+        if derived.domain and derived.domain not in domain_options:
+            domain_options.append(derived.domain)
+
+        if derived.other_domains:
+            for dom in sorted(derived.other_domains):
+                if dom not in domain_options:
+                    domain_options.append(dom)
+
+        existing_analysis = get_embedded_analysis(har_data)
+
+        domain_options.append("Custom domain...")
+
         st.markdown("#### Detected from file contents")
         detect_col1, detect_col2 = st.columns(2)
         with detect_col1:
-            st.metric("Primary domain", derived.domain)
+            st.metric("Primary domain (first request)", first_request_domain)
         with detect_col2:
             captured_label = (
                 derived.captured_at.strftime("%Y-%m-%d %H:%M")
@@ -68,11 +124,12 @@ class MetadataTab:
             )
             st.metric("Earliest capture time", captured_label)
 
-        if derived.other_domains:
-            st.warning(
-                "Multiple domains appear in this capture -- also saw: "
-                f"{', '.join(derived.other_domains)}. Confirm the primary "
-                "domain below before continuing."
+        if len(domain_options) > 2:  # More than 1 domain + "Custom domain..."
+            total_detected = len(domain_options) - 1
+            st.info(
+                f"First request domain is `{first_request_domain}`. "
+                f"Found {total_detected} distinct domains in total — "
+                "use the dropdown below to select another domain if needed."
             )
 
         if derived.captured_at is None:
@@ -81,7 +138,6 @@ class MetadataTab:
                 "startedDateTime. Enter one manually below."
             )
 
-        existing_analysis = get_embedded_analysis(har_data)
         overwrite_confirmed = True
         if existing_analysis is not None:
             st.warning("This file already has embedded experiment metadata:")
@@ -95,23 +151,38 @@ class MetadataTab:
         st.markdown("#### Confirm classification")
         col1, col2 = st.columns(2)
 
-        default_domain = (
-            existing_analysis.domain
-            if existing_analysis and getattr(existing_analysis, "domain", None)
-            else derived.domain
-        )
-
         with col1:
-            domain = st.text_input("Domain", value=default_domain, key="meta_domain")
-            interact = select_by_label("Interaction type", INTERACT_LABELS, key="meta_interact")
-            cookies = select_by_label("Cookie handling", COOKIES_LABELS, key="meta_cookies")
+            selected_domain_opt = st.selectbox(
+                "Domain",
+                options=domain_options,
+                index=0,
+                key="meta_domain_select",
+                help="Defaults to the domain of the first request in the HAR file.",
+            )
+
+            if selected_domain_opt == "Custom domain...":
+                domain = st.text_input(
+                    "Custom Domain", value="", key="meta_domain_custom"
+                )
+            else:
+                domain = selected_domain_opt
+
+            interact = select_by_label(
+                "Interaction type", INTERACT_LABELS, key="meta_interact"
+            )
+            cookies = select_by_label(
+                "Cookie handling", COOKIES_LABELS, key="meta_cookies"
+            )
+
         with col2:
             visit = select_by_label("Visit type", VISIT_LABELS, key="meta_visit")
             extra = st.text_input(
                 "Extra context (optional)", max_chars=32, key="meta_extra"
             )
             default_dt = derived.captured_at or datetime.now()
-            capture_date = st.date_input("Capture date", value=default_dt.date(), key="meta_date")
+            capture_date = st.date_input(
+                "Capture date", value=default_dt.date(), key="meta_date"
+            )
             capture_hour = st.number_input(
                 "Capture hour (24h)",
                 min_value=0,
@@ -121,18 +192,24 @@ class MetadataTab:
             )
 
         st.markdown("#### Experiment notes")
-        st.caption("Written into log._analysis inside the file itself, not just the filename.")
+        st.caption(
+            "Written into log._analysis inside the file itself, not just the filename."
+        )
 
         default_desc = existing_analysis.description if existing_analysis else ""
         default_email = existing_analysis.email_used if existing_analysis else ""
         default_notes = existing_analysis.notes if existing_analysis else ""
 
-        description = st.text_area("Description", value=default_desc, key="meta_description")
-        email_used = st.text_input("Email used", value=default_email, key="meta_email")
+        description = st.text_area(
+            "Description", value=default_desc, key="meta_description"
+        )
+        email_used = st.text_input(
+            "Email used", value=default_email, key="meta_email"
+        )
         notes = st.text_area("Notes", value=default_notes, key="meta_notes")
 
         if not domain.strip():
-            st.info("Enter a domain to generate the filename.")
+            st.info("Enter or select a domain to generate the filename.")
             return
 
         if existing_analysis is not None and not overwrite_confirmed:
