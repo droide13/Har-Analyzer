@@ -18,19 +18,21 @@ _MODE_GENERATE = "Generate Filename"
 def main() -> None:
     """Main function to render the application divided into analyzer and naming tools."""
     st.title("HAR Analyzer")
-    mode = st.segmented_control(
-        "Mode",
-        options=[_MODE_ANALYZE, _MODE_GENERATE],
-        default=_MODE_ANALYZE,
-        label_visibility="collapsed",
-        key="app_mode",
-    )
-    st.divider()
+    ## Eliminate har naming mode, keep code for possible fallback
+    # mode = st.segmented_control(
+    #     "Mode",
+    #     options=[_MODE_ANALYZE, _MODE_GENERATE],
+    #     default=_MODE_ANALYZE,
+    #     label_visibility="collapsed",
+    #     key="app_mode",
+    # )
+    # st.divider()
 
-    if mode == _MODE_GENERATE:
-        render_naming_tool()
-    else:
-        render_analyzer()
+    # if mode == _MODE_GENERATE:
+    #     render_naming_tool()
+    # else:
+    #     render_analyzer()
+    render_analyzer()
 
 
 if __name__ == "__main__":
