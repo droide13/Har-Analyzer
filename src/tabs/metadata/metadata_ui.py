@@ -1,4 +1,6 @@
-"""Tab class for standardizing the currently loaded HAR file and embedding metadata into it."""
+"""The Standardize & Tag tab: lets you review the domain/time we detected from
+the loaded HAR file, fill in a few classification fields, and download a copy
+with that metadata embedded in log._analysis."""
 
 from datetime import datetime, time
 from typing import Any, cast
@@ -24,7 +26,7 @@ from tabs.shared.selectors import select_by_label
 
 
 def _extract_entry_domain(entry: Any) -> str | None:
-    """Extract domain/host from a ParsedEntry instance or dictionary."""
+    """Pull the domain/host out of an entry, whether it's a ParsedEntry or a plain dict."""
     domain_val = cast(object, getattr(entry, "domain", None))
     if isinstance(domain_val, str) and domain_val.strip():
         return domain_val.strip().lower()
@@ -44,15 +46,15 @@ def _extract_entry_domain(entry: Any) -> str | None:
 
 
 class MetadataTab:
-    """Streamlit tab component for standardizing and embedding HAR metadata."""
+    """The Standardize & Tag tab."""
 
     @property
     def title(self) -> str:
-        """Name rendered on the Streamlit page tab selection bar."""
+        """What shows up on the tab bar."""
         return "Standardize & Tag"
 
     def render(self, entries: list[ParsedEntry]) -> None:
-        """Isolated UI layout logic for standardizing and tagging the active HAR file."""
+        """Draws the tab: detected info up top, form in the middle, download at the bottom."""
         st.subheader("Standardize & Tag Current HAR File")
         st.caption(
             "Modify and standardize metadata for the currently loaded HAR file. "
@@ -79,19 +81,19 @@ class MetadataTab:
             st.error(str(exc))
             return
 
-        # 1. Extract all unique domains in order of appearance from HAR requests
+        # Walk the entries and collect every domain we see, in the order they show up.
         ordered_domains: list[str] = []
         for entry in entries:
             dom = _extract_entry_domain(entry)
             if dom and dom not in ordered_domains:
                 ordered_domains.append(dom)
 
-        # The domain of the very first request in the HAR file is primary
+        # Whatever domain the first request hit is our best guess at "the" domain.
         first_request_domain = (
             ordered_domains[0] if ordered_domains else derived.domain
         )
 
-        # 2. Build domain choices list starting with the first request's domain
+        # Build the dropdown list, first request's domain up top since that's usually right.
         domain_options: list[str] = []
         if first_request_domain:
             domain_options.append(first_request_domain)
@@ -109,7 +111,6 @@ class MetadataTab:
                     domain_options.append(dom)
 
         existing_analysis = get_embedded_analysis(har_data)
-
         domain_options.append("Custom domain...")
 
         st.markdown("#### Detected from file contents")
@@ -124,12 +125,12 @@ class MetadataTab:
             )
             st.metric("Earliest capture time", captured_label)
 
-        if len(domain_options) > 2:  # More than 1 domain + "Custom domain..."
+        if len(domain_options) > 2:  # more than one real domain, not counting "Custom domain..."
             total_detected = len(domain_options) - 1
             st.info(
                 f"First request domain is `{first_request_domain}`. "
-                f"Found {total_detected} distinct domains in total — "
-                "use the dropdown below to select another domain if needed."
+                f"Found {total_detected} distinct domains in total. "
+                "Use the dropdown below to select another domain if needed."
             )
 
         if derived.captured_at is None:
@@ -176,9 +177,7 @@ class MetadataTab:
 
         with col2:
             visit = select_by_label("Visit type", VISIT_LABELS, key="meta_visit")
-            extra = st.text_input(
-                "Extra context (optional)", max_chars=32, key="meta_extra"
-            )
+            extra = st.text_input("Extra context (optional)", key="meta_extra")
             default_dt = derived.captured_at or datetime.now()
             capture_date = st.date_input(
                 "Capture date", value=default_dt.date(), key="meta_date"
@@ -239,12 +238,20 @@ class MetadataTab:
         updated_har = embed_analysis(har_data, analysis)
         output_bytes = serialize_har(updated_har)
 
-        st.markdown("#### Result")
+        st.markdown("#### Standardized Output")
         st.code(filename, language="text")
+
         st.download_button(
-            "Download standardized .har",
+            "Download Standardized .har",
             data=output_bytes,
             file_name=filename,
             mime="application/json",
             key="meta_download",
+        )
+        st.caption(
+            "Note on browser save location: web browsers determine whether files "
+            "download directly or open a save dialog. To be prompted for a folder "
+            "path on every download, enable \"Ask where to save each file before "
+            "downloading\" in your browser's settings (for example, Chrome Settings "
+            "> Downloads)."
         )
