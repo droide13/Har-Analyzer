@@ -3,7 +3,9 @@
 import streamlit as st
 
 from core.analyzer import render_analyzer
-from tabs.naming.naming_ui import render_naming_tool
+
+## Eliminate har naming mode, keep code for possible fallback
+# from tabs.naming.naming_ui import render_naming_tool
 
 st.set_page_config(
     page_title="HAR Visualizer",
