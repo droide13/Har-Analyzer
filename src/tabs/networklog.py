@@ -4,7 +4,12 @@ import streamlit as st
 
 from core.models import METHOD_ORDER, SCOPE_OPTIONS, ParsedEntry
 from tabs.shared.entry_render import Badge, render_entry_expander
-from tabs.shared.search import ENCODING_OPTIONS, MatchReason, entry_matches, dedupe_redundant_encodings
+from tabs.shared.search import (
+    ENCODING_OPTIONS,
+    MatchReason,
+    dedupe_redundant_encodings,
+    entry_matches,
+)
 
 _ATTR_LABELS: dict[str, str] = {
     "url": "URL",
@@ -22,6 +27,7 @@ _ATTR_LABELS: dict[str, str] = {
 
 def _attr_label(attr: str) -> str:
     return _ATTR_LABELS.get(attr, attr.replace("_", " ").title())
+
 
 # Kept old method just in case
 # def _format_reason(reason: MatchReason) -> str:

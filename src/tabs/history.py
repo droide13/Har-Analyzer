@@ -22,8 +22,8 @@ from tabs.shared.search import (
     MatchReason,
     collect_reasons,
     dedupe_overlapping_reasons,
+    dedupe_redundant_encodings,
     encode_variants,
-    dedupe_redundant_encodings
 )
 
 Occurrence = tuple[ParsedEntry, str, str]  # (entry, origin, value)
@@ -120,7 +120,9 @@ def _find_dissemination(
         reasons: list[MatchReason] = []
         for value in values:
             variants = encode_variants(value, encodings)
-            reasons.extend(dedupe_overlapping_reasons(collect_reasons(entry, attrs, value, variants)))
+            reasons.extend(
+                dedupe_overlapping_reasons(collect_reasons(entry, attrs, value, variants))
+            )
         if reasons:
             results.append((entry, reasons))
     return results

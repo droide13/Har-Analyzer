@@ -2,13 +2,13 @@
 
 import streamlit as st
 
-from tabs.shared.selectors import select_by_label
 from tabs.naming.naming import (
     COOKIES_LABELS,
     INTERACT_LABELS,
     VISIT_LABELS,
     get_har_filename,
 )
+from tabs.shared.selectors import select_by_label
 
 
 def render_naming_tool() -> None:

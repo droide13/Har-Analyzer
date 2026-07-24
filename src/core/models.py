@@ -56,6 +56,7 @@ SCOPE_OPTIONS: Final[dict[str, str]] = {
     "MIME type": "mime",
 }
 
+
 @dataclass(frozen=True, slots=True)
 class ParsedEntry:
     """Immutable, indexed representation of a singular HAR entry transaction."""

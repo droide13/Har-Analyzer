@@ -89,9 +89,7 @@ class MetadataTab:
                 ordered_domains.append(dom)
 
         # Whatever domain the first request hit is our best guess at "the" domain.
-        first_request_domain = (
-            ordered_domains[0] if ordered_domains else derived.domain
-        )
+        first_request_domain = ordered_domains[0] if ordered_domains else derived.domain
 
         # Build the dropdown list, first request's domain up top since that's usually right.
         domain_options: list[str] = []
@@ -162,26 +160,18 @@ class MetadataTab:
             )
 
             if selected_domain_opt == "Custom domain...":
-                domain = st.text_input(
-                    "Custom Domain", value="", key="meta_domain_custom"
-                )
+                domain = st.text_input("Custom Domain", value="", key="meta_domain_custom")
             else:
                 domain = selected_domain_opt
 
-            interact = select_by_label(
-                "Interaction type", INTERACT_LABELS, key="meta_interact"
-            )
-            cookies = select_by_label(
-                "Cookie handling", COOKIES_LABELS, key="meta_cookies"
-            )
+            interact = select_by_label("Interaction type", INTERACT_LABELS, key="meta_interact")
+            cookies = select_by_label("Cookie handling", COOKIES_LABELS, key="meta_cookies")
 
         with col2:
             visit = select_by_label("Visit type", VISIT_LABELS, key="meta_visit")
             extra = st.text_input("Extra context (optional)", key="meta_extra")
             default_dt = derived.captured_at or datetime.now()
-            capture_date = st.date_input(
-                "Capture date", value=default_dt.date(), key="meta_date"
-            )
+            capture_date = st.date_input("Capture date", value=default_dt.date(), key="meta_date")
             capture_hour = st.number_input(
                 "Capture hour (24h)",
                 min_value=0,
@@ -191,20 +181,14 @@ class MetadataTab:
             )
 
         st.markdown("#### Experiment notes")
-        st.caption(
-            "Written into log._analysis inside the file itself, not just the filename."
-        )
+        st.caption("Written into log._analysis inside the file itself, not just the filename.")
 
         default_desc = existing_analysis.description if existing_analysis else ""
         default_email = existing_analysis.email_used if existing_analysis else ""
         default_notes = existing_analysis.notes if existing_analysis else ""
 
-        description = st.text_area(
-            "Description", value=default_desc, key="meta_description"
-        )
-        email_used = st.text_input(
-            "Email used", value=default_email, key="meta_email"
-        )
+        description = st.text_area("Description", value=default_desc, key="meta_description")
+        email_used = st.text_input("Email used", value=default_email, key="meta_email")
         notes = st.text_area("Notes", value=default_notes, key="meta_notes")
 
         if not domain.strip():
@@ -251,7 +235,7 @@ class MetadataTab:
         st.caption(
             "Note on browser save location: web browsers determine whether files "
             "download directly or open a save dialog. To be prompted for a folder "
-            "path on every download, enable \"Ask where to save each file before "
+            'path on every download, enable "Ask where to save each file before '
             "downloading\" in your browser's settings (for example, Chrome Settings "
             "> Downloads)."
         )

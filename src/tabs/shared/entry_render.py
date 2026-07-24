@@ -135,9 +135,7 @@ def render_entry_expander(
             tab_names = list(leading_tabs.keys()) + ["Request Headers"]
             if entry.method == "POST":
                 tab_names.append("Post data")
-            tab_names.extend(
-                ["Query & Cookies", "Response Headers", "Response Body", "Initiator"]
-            )
+            tab_names.extend(["Query & Cookies", "Response Headers", "Response Body", "Initiator"])
 
             tabs = dict(zip(tab_names, st.tabs(tab_names)))
 

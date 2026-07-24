@@ -19,9 +19,7 @@ from tabs.history import HistoryTab
 from tabs.naming.naming import derive_metadata_from_entries, get_attrs_from_har_name
 
 
-def display_filename_metadata(
-    filename: str, capture_date_str: str, analysis_date_str: str
-) -> None:
+def display_filename_metadata(filename: str, capture_date_str: str, analysis_date_str: str) -> None:
     """Renders structured metadata cards including traffic capture date and analysis date."""
     attrs = get_attrs_from_har_name(filename) or {}
     domain = attrs.get("domain", "Unknown Domain")
@@ -98,9 +96,7 @@ def render_analyzer() -> None:
         is_metadata_valid = bool(attrs) and has_embedded_analysis
 
         if is_metadata_valid:
-            display_filename_metadata(
-                uploaded_file.name, capture_date_str, analysis_date_str
-            )
+            display_filename_metadata(uploaded_file.name, capture_date_str, analysis_date_str)
         else:
             st.warning(
                 f"⚠️ **Metadata Notice:** `{uploaded_file.name}` does not follow the "
