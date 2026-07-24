@@ -6,6 +6,7 @@ Callers supply their own badges and can inject extra leading tabs (e.g. a
 "Matches" tab) without duplicating the standard Request/Response tab set.
 """
 
+import json
 from typing import Any, Callable, cast
 
 import streamlit as st
@@ -13,6 +14,8 @@ import streamlit as st
 from core.models import ParsedEntry, list_to_safe_dict
 
 Badge = tuple[str, str]  # (text, style) where style is "blue" or "orange"
+
+_TIMING_PHASES = ("blocked", "dns", "connect", "ssl", "send", "wait", "receive")
 
 
 def status_emoji_and_color(status: str) -> tuple[str, str]:
@@ -36,12 +39,35 @@ def render_title(entry: ParsedEntry, badges: list[Badge]) -> str:
     return f"{emoji} {status_text} **{entry.method}** {safe_url}{render_badges(badges)}"
 
 
+def _format_duration_ms(value: float) -> str:
+    """Format a HAR timing value in ms; HAR uses -1 for "not applicable"."""
+    return f"{value:.1f} ms" if value >= 0 else "\u2014"
+
+
 def _render_headers_tab(headers: list[dict[str, Any]]) -> None:
     st.json({str(h.get("name", "")): str(h.get("value", "")) for h in headers})
 
 
-def _render_post_data_tab(entry: ParsedEntry) -> None:
-    st.json(entry.req_body) if entry.req_body else st.info("No POST body found.")
+def _render_post_data_tab(entry: ParsedEntry, key_prefix: str) -> None:
+    """Request body: pretty-printed as JSON when it parses, raw text otherwise.
+
+    ``req_body`` is arbitrary request-payload text (JSON, form-encoded,
+    plain text, etc.), not guaranteed JSON, so it can't be handed to
+    ``st.json`` directly -- that raises on anything that isn't valid JSON.
+    """
+    if not entry.req_body:
+        st.info("No request body found.")
+        return
+    try:
+        st.json(json.loads(entry.req_body))
+    except (json.JSONDecodeError, TypeError):
+        st.text_area(
+            "Raw body",
+            value=entry.req_body,
+            height=200,
+            key=f"{key_prefix}_reqbody_{entry.index}",
+            disabled=True,
+        )
 
 
 def _render_query_and_cookies_tab(entry: ParsedEntry) -> None:
@@ -100,6 +126,58 @@ def _render_initiator_tab(entry: ParsedEntry) -> None:
     )
 
 
+def _render_timing_tab(entry: ParsedEntry) -> None:
+    """Per-phase timing breakdown (blocked/dns/connect/ssl/send/wait/receive)."""
+    timings = cast(dict[str, Any], entry.raw.get("timings", {}) or {})
+
+    st.caption(f"Started: {entry.started_date_time or 'Unknown'}")
+    st.caption(f"Total time: {_format_duration_ms(entry.time_ms)}")
+
+    rows = [
+        {"Phase": phase.capitalize(), "Duration": _format_duration_ms(float(timings[phase]))}
+        for phase in _TIMING_PHASES
+        if phase in timings
+    ]
+    if rows:
+        st.dataframe(rows, height=250, hide_index=True)
+    else:
+        st.caption("No timing breakdown available for this entry.")
+
+
+def _render_details_tab(entry: ParsedEntry) -> None:
+    """Connection, protocol, payload size, redirect, and cache metadata."""
+    request = cast(dict[str, Any], entry.raw.get("request", {}) or {})
+    response = cast(dict[str, Any], entry.raw.get("response", {}) or {})
+    cache = cast(dict[str, Any], entry.raw.get("cache", {}) or {})
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown("#### Connection")
+        st.json(
+            {
+                "Server IP": entry.raw.get("serverIPAddress") or "Unknown",
+                "Connection": entry.raw.get("connection") or "Unknown",
+                "Request HTTP Version": request.get("httpVersion", "Unknown"),
+                "Response HTTP Version": response.get("httpVersion", "Unknown"),
+            }
+        )
+    with col2:
+        st.markdown("#### Sizes & Redirect")
+        st.json(
+            {
+                "Request Headers Size": request.get("headersSize", -1),
+                "Request Body Size": request.get("bodySize", -1),
+                "Response Headers Size": entry.headers_size,
+                "Response Body Size": entry.body_size,
+                "Redirect URL": response.get("redirectURL") or None,
+            }
+        )
+
+    if cache:
+        st.markdown("#### Cache")
+        st.json(cache)
+
+
 def render_entry_expander(
     entry: ParsedEntry,
     key_prefix: str,
@@ -133,9 +211,18 @@ def render_entry_expander(
     with st.container(key=container_key):
         with st.expander(title, key=f"{key_prefix}_expander_{entry.index}"):
             tab_names = list(leading_tabs.keys()) + ["Request Headers"]
-            if entry.method == "POST":
+            if entry.req_body:
                 tab_names.append("Post data")
-            tab_names.extend(["Query & Cookies", "Response Headers", "Response Body", "Initiator"])
+            tab_names.extend(
+                [
+                    "Query & Cookies",
+                    "Response Headers",
+                    "Response Body",
+                    "Initiator",
+                    "Timing",
+                    "Details",
+                ]
+            )
 
             tabs = dict(zip(tab_names, st.tabs(tab_names)))
 
@@ -148,7 +235,7 @@ def render_entry_expander(
 
             if "Post data" in tabs:
                 with tabs["Post data"]:
-                    _render_post_data_tab(entry)
+                    _render_post_data_tab(entry, key_prefix)
 
             with tabs["Query & Cookies"]:
                 _render_query_and_cookies_tab(entry)
@@ -161,3 +248,9 @@ def render_entry_expander(
 
             with tabs["Initiator"]:
                 _render_initiator_tab(entry)
+
+            with tabs["Timing"]:
+                _render_timing_tab(entry)
+
+            with tabs["Details"]:
+                _render_details_tab(entry)
