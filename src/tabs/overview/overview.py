@@ -11,8 +11,8 @@ from ipwhois import IPWhois  # pyright: ignore[reportMissingTypeStubs]
 from core.models import ParsedEntry
 from tabs.naming.naming import get_attrs_from_har_name
 
-
 # --- Data Models / Type Definitions ---
+
 
 class SubdomainMetric(TypedDict):
     """Per-subdomain request count and total bandwidth."""
@@ -58,6 +58,7 @@ class OverviewSummary(TypedDict):
 
 # --- Domain Extraction Helpers ---
 
+
 def get_base_domain(domain: str) -> str:
     """Extracts the base/root domain (e.g. 'api.github.com' -> 'github.com')."""
     if not domain or domain == "unknown":
@@ -93,6 +94,7 @@ def get_first_party_domain(entries: list[ParsedEntry], filename: str | None = No
 
 
 # --- Aggregation Logic ---
+
 
 def calculate_overview_summary(entries: list[ParsedEntry]) -> OverviewSummary:
     """Calculates top-level summary metrics for requests, size, domains, and latency."""
@@ -155,6 +157,7 @@ def get_top_domains_df(
     domain_map: dict[str, RootDomainMetric], sort_by: str, limit: int
 ) -> pd.DataFrame:
     """Creates a pandas DataFrame of top domains according to sorting and limit rules."""
+
     def _root_sort_key(item: tuple[str, RootDomainMetric]) -> int:
         return item[1]["requests"] if sort_by == "Requests" else item[1]["bytes"]
 
@@ -197,6 +200,7 @@ def build_subdomain_table_data(
 
 
 # --- DNS & WHOIS Resolution Logic ---
+
 
 def _resolve_cname_chain(name: str, max_hops: int = 10) -> tuple[list[str], list[str]]:
     """Follow CNAME records until an A/AAAA record is found."""

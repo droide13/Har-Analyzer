@@ -152,9 +152,7 @@ class OverviewTab:
             # Subdomain DNS Resolution report
             if selected_root == first_party_root and first_party_root != "unknown":
                 st.markdown("---")
-                self._render_subdomain_resolution(
-                    first_party_root, list(data["subdomains"].keys())
-                )
+                self._render_subdomain_resolution(first_party_root, list(data["subdomains"].keys()))
 
     def _render_subdomain_resolution(self, first_party_root: str, subdomains: list[str]) -> None:
         """Opt-in DNS + WHOIS report UI."""
