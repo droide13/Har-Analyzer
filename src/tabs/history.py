@@ -191,7 +191,7 @@ class HistoryTab:
     @property
     def title(self) -> str:
         """Return tab title."""
-        return "History"
+        return "ID history & dissemination"
 
     def render(self, entries: list[ParsedEntry]) -> None:
         """Render the key picker, value timeline, and (on demand) dissemination results."""
