@@ -27,9 +27,10 @@ streamlit run app.py
 ├── app.py                     # Streamlit orchestrator
 ├── assets/                    # Static files (logo, etc.)
 ├── captures/                  # .har files, named via the filename generator convention
-├── output/                    # Generated artifacts (e.g. extracted identifiers as JSON)
-├── core/                      # Framework-agnostic foundations
+├── core/                      # Global components
 │   ├── models.py               # Caching HAR parser + ParsedEntry data type
+│   ├── analyzer.py             # Processing of the har file
+│   ├── app_version.py           # Getting the version of the project
 │   └── protocols.py             # Tab protocol every tab implements
 ├── tabs/                      # Self-contained, single-responsibility UI views
 │   ├── overview.py
@@ -37,15 +38,20 @@ streamlit run app.py
 │   ├── cookies.py
 │   ├── query_params.py
 │   ├── history.py              # Identifier dissemination tracing
-│   ├── identifiers/            # Identifier detection & scoring
+│   ├── identifiers/            # Identifier detection
 │   │   ├── identifiers.py        # UI
 │   │   └── identifiers_core.py   # Logic
+│   ├── metadata/               # Har medatadata processing
+│   │   ├── metadata_ui.py        # UI
+│   │   └── metadata.py           # Logic
 │   ├── naming/                 # Filename generator
 │   │   ├── naming_ui.py          # UI
 │   │   └── naming.py             # Logic
 │   └── shared/                 # Code reused across tabs
 │       ├── entry_render.py       # Shared expander UI for a HAR entry
-│       └── search.py             # Searching, tokenizing, matching engine
+│       ├── search.py             # Searching, tokenizing, matching engine
+│       └── selectors.py          # Select box helper
+        
 └── scripts/                   # Legacy standalone CLI utilities (superseded, see below)
     ├── har_naming.py
     ├── har_params_extract.py
