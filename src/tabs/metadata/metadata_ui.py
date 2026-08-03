@@ -1,21 +1,36 @@
 """The Standardize & Tag tab: lets you review the domain/time we detected from
 the loaded HAR file, fill in a few classification fields, and download a copy
-with that metadata embedded in log._analysis."""
+with that metadata embedded in log._analysis.
+
+Writing the metadata into the file is an explicit action (the "Generate
+standardized file" button), not a side effect of rendering. The resulting
+bytes/filename are frozen in ``st.session_state`` and that snapshot is what
+the download button serves - so the download can never disagree with what's
+on screen, regardless of reruns, ctrl-click, or anything else that re-renders
+the page after generation.
+"""
 
 from datetime import datetime, time
 from typing import Any, cast
-from urllib.parse import urlparse
 
 import streamlit as st
 
 from core.models import (
+    HarAnalysis,
     ParsedEntry,
     embed_analysis,
     get_embedded_analysis,
     load_raw_har,
     serialize_har,
 )
-from tabs.metadata.metadata import StandardizeInputs, build_standardized_result
+from tabs.metadata.metadata import (
+    StandardizeInputs,
+    analysis_table_rows,
+    build_signature,
+    build_standardized_result,
+    collect_domain_options,
+    is_custom_domain_choice,
+)
 from tabs.naming.naming import (
     COOKIES_LABELS,
     INTERACT_LABELS,
@@ -24,25 +39,9 @@ from tabs.naming.naming import (
 )
 from tabs.shared.selectors import select_by_label
 
-
-def _extract_entry_domain(entry: Any) -> str | None:
-    """Pull the domain/host out of an entry, whether it's a ParsedEntry or a plain dict."""
-    domain_val = cast(object, getattr(entry, "domain", None))
-    if isinstance(domain_val, str) and domain_val.strip():
-        return domain_val.strip().lower()
-
-    url_val = cast(object, getattr(entry, "url", None))
-    if url_val is None and isinstance(entry, dict) and "url" in entry:
-        url_val = cast(object, entry["url"])
-
-    if isinstance(url_val, str) and url_val.strip():
-        parsed = urlparse(url_val)
-        netloc = parsed.netloc or parsed.path.split("/")[0]
-        host = netloc.split(":")[0].strip().lower()
-        if host:
-            return host
-
-    return None
+_BYTES_KEY = "meta_generated_bytes"
+_FILENAME_KEY = "meta_generated_filename"
+_SIGNATURE_KEY = "meta_generated_signature"
 
 
 class MetadataTab:
@@ -51,7 +50,7 @@ class MetadataTab:
     @property
     def title(self) -> str:
         """What shows up on the tab bar."""
-        return "Standardize & Tag"
+        return "Metadata"
 
     def render(self, entries: list[ParsedEntry]) -> None:
         """Draws the tab: detected info up top, form in the middle, download at the bottom."""
@@ -59,12 +58,11 @@ class MetadataTab:
         st.caption(
             "Modify and standardize metadata for the currently loaded HAR file. "
             "Domain and capture time are derived from the traffic itself, allowing "
-            "you to confirm or override classification before generating an updated copy "
-            "with embedded log._analysis metadata."
+            "you to confirm or override classification before generating an updated "
+            "copy with embedded log._analysis metadata."
         )
 
         file_bytes = st.session_state.get("uploaded_file_bytes")
-
         if not file_bytes or not entries:
             st.warning("No active HAR file loaded. Please upload a file above.")
             return
@@ -81,72 +79,96 @@ class MetadataTab:
             st.error(str(exc))
             return
 
-        # Walk the entries and collect every domain we see, in the order they show up.
-        ordered_domains: list[str] = []
-        for entry in entries:
-            dom = _extract_entry_domain(entry)
-            if dom and dom not in ordered_domains:
-                ordered_domains.append(dom)
-
-        # Whatever domain the first request hit is our best guess at "the" domain.
-        first_request_domain = ordered_domains[0] if ordered_domains else derived.domain
-
-        # Build the dropdown list, first request's domain up top since that's usually right.
-        domain_options: list[str] = []
-        if first_request_domain:
-            domain_options.append(first_request_domain)
-
-        for dom in ordered_domains:
-            if dom not in domain_options:
-                domain_options.append(dom)
-
-        if derived.domain and derived.domain not in domain_options:
-            domain_options.append(derived.domain)
-
-        if derived.other_domains:
-            for dom in sorted(derived.other_domains):
-                if dom not in domain_options:
-                    domain_options.append(dom)
-
+        domain_options, first_request_domain = collect_domain_options(
+            entries, derived.domain, frozenset(derived.other_domains)
+        )
         existing_analysis = get_embedded_analysis(har_data)
-        domain_options.append("Custom domain...")
 
+        self._render_detected_section(
+            first_request_domain, derived.captured_at, len(domain_options)
+        )
+
+        overwrite_confirmed = True
+        if existing_analysis is not None:
+            st.markdown("#### Current metadata")
+            st.table(analysis_table_rows(existing_analysis))
+            overwrite_confirmed = st.checkbox(
+                "I want to overwrite this with new values below.",
+                value=False,
+                key="meta_overwrite_confirm",
+            )
+
+        inputs = self._render_form(
+            domain_options, derived.captured_at, existing_analysis, overwrite_confirmed
+        )
+        if inputs is None:
+            return  # folded: nothing more to do until the user opts in above
+
+        if not inputs.domain.strip():
+            st.info("Enter or select a domain to generate the filename.")
+            return
+
+        self._render_generate_and_download(har_data, file_bytes, inputs)
+
+    @staticmethod
+    def _render_detected_section(
+        first_request_domain: str, captured_at: datetime | None, option_count: int
+    ) -> None:
         st.markdown("#### Detected from file contents")
         detect_col1, detect_col2 = st.columns(2)
         with detect_col1:
             st.metric("Primary domain (first request)", first_request_domain)
         with detect_col2:
-            captured_label = (
-                derived.captured_at.strftime("%Y-%m-%d %H:%M")
-                if derived.captured_at is not None
-                else "Unknown"
-            )
+            captured_label = captured_at.strftime("%Y-%m-%d %H:%M") if captured_at else "Unknown"
             st.metric("Earliest capture time", captured_label)
 
-        if len(domain_options) > 2:  # more than one real domain, not counting "Custom domain..."
-            total_detected = len(domain_options) - 1
+        if option_count > 2:  # more than one real domain, excl. "Custom domain..."
             st.info(
                 f"First request domain is `{first_request_domain}`. "
-                f"Found {total_detected} distinct domains in total. "
+                f"Found {option_count - 1} distinct domains in total. "
                 "Use the dropdown below to select another domain if needed."
             )
 
-        if derived.captured_at is None:
+        if captured_at is None:
             st.error(
                 "Could not parse a capture timestamp from any entry's "
                 "startedDateTime. Enter one manually below."
             )
 
-        overwrite_confirmed = True
-        if existing_analysis is not None:
-            st.warning("This file already has embedded experiment metadata:")
-            st.json(existing_analysis.to_dict())
-            overwrite_confirmed = st.checkbox(
-                "Overwrite the existing metadata with the values below.",
-                value=True,
-                key="meta_overwrite_confirm",
+    @staticmethod
+    def _render_form(
+        domain_options: list[str],
+        derived_captured_at: datetime | None,
+        existing_analysis: HarAnalysis | None,
+        overwrite_confirmed: bool,
+    ) -> StandardizeInputs | None:
+        """Renders the classification form and returns the collected inputs.
+
+        When there's already metadata on the file, the form is tucked into a
+        collapsed expander so the tab doesn't hit you with a full re-fill form
+        just to look at a file you've already tagged. It only opens once you
+        check "overwrite" above, or you can expand it manually to peek.
+        Returns ``None`` if the form never rendered (folded + not opted in).
+        """
+        has_existing = existing_analysis is not None
+        if not has_existing:
+            return MetadataTab._render_form_fields(
+                domain_options, derived_captured_at, existing_analysis
             )
 
+        with st.expander("Edit metadata", expanded=overwrite_confirmed):
+            if not overwrite_confirmed:
+                st.caption('Check "I want to overwrite this" above to edit and regenerate.')
+            return MetadataTab._render_form_fields(
+                domain_options, derived_captured_at, existing_analysis
+            )
+
+    @staticmethod
+    def _render_form_fields(
+        domain_options: list[str],
+        derived_captured_at: datetime | None,
+        existing_analysis: HarAnalysis | None,
+    ) -> StandardizeInputs:
         st.markdown("#### Confirm classification")
         col1, col2 = st.columns(2)
 
@@ -158,19 +180,18 @@ class MetadataTab:
                 key="meta_domain_select",
                 help="Defaults to the domain of the first request in the HAR file.",
             )
-
-            if selected_domain_opt == "Custom domain...":
-                domain = st.text_input("Custom Domain", value="", key="meta_domain_custom")
-            else:
-                domain = selected_domain_opt
-
+            domain = (
+                st.text_input("Custom Domain", value="", key="meta_domain_custom")
+                if is_custom_domain_choice(selected_domain_opt)
+                else selected_domain_opt
+            )
             interact = select_by_label("Interaction type", INTERACT_LABELS, key="meta_interact")
             cookies = select_by_label("Cookie handling", COOKIES_LABELS, key="meta_cookies")
 
         with col2:
             visit = select_by_label("Visit type", VISIT_LABELS, key="meta_visit")
             extra = st.text_input("Extra context (optional)", key="meta_extra")
-            default_dt = derived.captured_at or datetime.now()
+            default_dt = derived_captured_at or datetime.now()
             capture_date = st.date_input("Capture date", value=default_dt.date(), key="meta_date")
             capture_hour = st.number_input(
                 "Capture hour (24h)",
@@ -191,17 +212,8 @@ class MetadataTab:
         email_used = st.text_input("Email used", value=default_email, key="meta_email")
         notes = st.text_area("Notes", value=default_notes, key="meta_notes")
 
-        if not domain.strip():
-            st.info("Enter or select a domain to generate the filename.")
-            return
-
-        if existing_analysis is not None and not overwrite_confirmed:
-            st.info("Confirm overwrite above to generate an updated file.")
-            return
-
         captured_at = datetime.combine(capture_date, time(hour=int(capture_hour)))
-
-        inputs = StandardizeInputs(
+        return StandardizeInputs(
             domain=domain,
             interact=interact,
             cookies=cookies,
@@ -213,22 +225,42 @@ class MetadataTab:
             notes=notes,
         )
 
-        try:
-            filename, analysis = build_standardized_result(inputs)
-        except ValueError as exc:
-            st.error(str(exc))
-            return
-
-        updated_har = embed_analysis(har_data, analysis)
-        output_bytes = serialize_har(updated_har)
+    @staticmethod
+    def _render_generate_and_download(
+        har_data: dict[str, Any], file_bytes: bytes, inputs: StandardizeInputs
+    ) -> None:
+        current_signature = build_signature(file_bytes, inputs)
 
         st.markdown("#### Standardized Output")
-        st.code(filename, language="text")
+        if st.button("Generate standardized file", key="meta_generate_btn", type="primary"):
+            try:
+                filename, analysis = build_standardized_result(inputs)
+            except ValueError as exc:
+                st.error(str(exc))
+                return
+            updated_har = embed_analysis(har_data, analysis)
+            st.session_state[_BYTES_KEY] = serialize_har(updated_har)
+            st.session_state[_FILENAME_KEY] = filename
+            st.session_state[_SIGNATURE_KEY] = current_signature
 
+        generated_bytes = cast(bytes | None, st.session_state.get(_BYTES_KEY))
+        generated_filename = cast(str | None, st.session_state.get(_FILENAME_KEY))
+
+        if generated_bytes is None or generated_filename is None:
+            st.info('Fill in the fields above and click "Generate standardized file".')
+            return
+
+        if st.session_state.get(_SIGNATURE_KEY) != current_signature:
+            st.warning(
+                "Form values changed since this file was generated. "
+                'Press "Generate standardized file" again to update the download.'
+            )
+
+        st.code(generated_filename, language="text")
         st.download_button(
             "Download Standardized .har",
-            data=output_bytes,
-            file_name=filename,
+            data=generated_bytes,
+            file_name=generated_filename,
             mime="application/json",
             key="meta_download",
         )

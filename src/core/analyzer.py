@@ -102,7 +102,7 @@ def render_analyzer() -> None:
                 f"⚠️ **Metadata Notice:** `{uploaded_file.name}` does not follow the "
                 "standardized naming pattern or lacks embedded `log._analysis` "
                 "metadata.\n\n"
-                "Please use the **Standardize & Tag** tab below to confirm "
+                "Please use the **Metadata** tab below to confirm "
                 "classification and export a standardized HAR file."
             )
 
