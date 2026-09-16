@@ -1,4 +1,4 @@
-# HAR Analyzer <img src="./assets/har_analyzer.png" alt="HAR Analyzer Logo" width="28" align="absmiddle">
+# HAR Analyzer <img src="./src/assets/har_analyzer.png" alt="HAR Analyzer Logo" width="28" align="absmiddle">
 
 A fast, simple, highly modular, and strictly typed Streamlit application to parse, filter, and audit HTTP Archive (`.har`) files — with a focus on tracing how identifiers (cookies, query-param tokens, session IDs) are captured and disseminated across a capture.
 
