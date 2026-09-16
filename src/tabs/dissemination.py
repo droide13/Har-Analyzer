@@ -46,6 +46,32 @@ def _attr_label(attr: str) -> str:
     return _ATTR_LABELS.get(attr, attr.replace("_", " ").title())
 
 
+def _chronological_key(entry: ParsedEntry) -> tuple[str, int]:
+    """Sort key putting entries in real time order.
+
+    ISO 8601 timestamps sort lexically, so the raw string is enough; file
+    order breaks ties and carries entries that have no startedDateTime.
+    """
+    return (entry.started_date_time or "", entry.index)
+
+
+def _render_encoding_picker() -> set[str]:
+    """Checkbox grid for the encodings, plus a check/uncheck-all toggle.
+
+    Cannot live inside an st.form: form widgets don't rerun until submit, so
+    the check-all toggle would never take effect while the user is choosing.
+    """
+    all_on = st.checkbox("Check/uncheck all", key="history_enc_all")
+    cols = st.columns(3)
+    return {
+        opt
+        for i, opt in enumerate(ENCODING_OPTIONS)
+        # The toggle is part of the key, so flipping it rebuilds the boxes
+        # with `all_on` as their default instead of restoring old state.
+        if cols[i % 3].checkbox(opt, value=all_on, key=f"history_enc::{opt}::{all_on}")
+    }
+
+
 def _collect_occurrences(entries: list[ParsedEntry]) -> dict[str, list[Occurrence]]:
     """Group every query-param/cookie sighting by key name."""
     registry: dict[str, list[Occurrence]] = {}
@@ -61,10 +87,8 @@ def _collect_occurrences(entries: list[ParsedEntry]) -> dict[str, list[Occurrenc
                     (entry, "cookie", str(cookie.get("value", "")))
                 )
 
-    # Order sightings by real timestamp when present (ISO 8601 sorts lexically),
-    # falling back to file order for entries missing startedDateTime.
     for occurrences in registry.values():
-        occurrences.sort(key=lambda occ: (occ[0].started_date_time or "", occ[0].index))
+        occurrences.sort(key=lambda occ: _chronological_key(occ[0]))
     return registry
 
 
@@ -113,6 +137,11 @@ def _find_dissemination(
     `domain` is excluded from the "any" sweep here for the same reason it's
     excluded from Network Log's default search scope: it's always a substring
     of `url`, so including it would just duplicate every URL hit.
+
+    Results come back in HAR timestamp order rather than file order, so the
+    matching entries read as a timeline that lines up with the one above.
+    Sorting here (rather than at render time) means the order is baked into
+    what goes in session state and survives re-renders without a re-scan.
     """
     attrs = [a for a in FIELD_MAP["any"] if a != "domain"]
     results: list[DisseminationMatch] = []
@@ -125,7 +154,7 @@ def _find_dissemination(
             )
         if reasons:
             results.append((entry, reasons))
-    return results
+    return sorted(results, key=lambda match: _chronological_key(match[0]))
 
 
 def _dissemination_badges(reasons: list[MatchReason]) -> list[Badge]:
@@ -185,13 +214,22 @@ def _aggregate_by_domain(matches: list[DisseminationMatch]) -> list[dict[str, ob
     return sorted(rows, key=lambda r: cast(int, r["Entries Hit"]), reverse=True)
 
 
+def _results_key(selected_key: str, encodings: set[str]) -> str:
+    """Session-state key for a scan, scoped to both the traced key and the encodings.
+
+    Including the encodings means ticking a new box invalidates the cached
+    results instead of silently leaving stale ones on screen.
+    """
+    return f"history_matches::{selected_key}::{'|'.join(sorted(encodings))}"
+
+
 class DisseminationTab:
     """Tab for tracing when and where a query-param/cookie key was disseminated."""
 
     @property
     def title(self) -> str:
         """Return tab title."""
-        return "ID history & dissemination"
+        return "Dissemination"
 
     def render(self, entries: list[ParsedEntry]) -> None:
         """Render the key picker, value timeline, and (on demand) dissemination results."""
@@ -242,27 +280,22 @@ class DisseminationTab:
         st.markdown("#### Dissemination")
         st.caption(
             "This scans every field of every entry and is not run automatically. "
-            "Choose optional encodings, then click Search."
+            "Tick any encoded/hashed forms to match as well, then click Search."
         )
 
-        with st.form(key="history_dissemination_form"):
-            encodings = st.multiselect(
-                "Also match encoded/hashed forms of the value(s)",
-                options=ENCODING_OPTIONS,
-                key="history_encodings",
-            )
-            search_clicked = st.form_submit_button("Search dissemination")
+        encodings = _render_encoding_picker()
+        search_clicked = st.button("Search dissemination", key="history_search")
 
-        results_key = f"history_matches::{selected_key}"
+        results_key = _results_key(selected_key, encodings)
         if search_clicked:
             with st.spinner("Scanning HAR entries..."):
                 st.session_state[results_key] = _find_dissemination(
-                    entries, distinct_values, set(encodings)
+                    entries, distinct_values, encodings
                 )
 
         matches = cast(list[DisseminationMatch] | None, st.session_state.get(results_key))
         if matches is None:
-            st.caption("No search run yet for this key.")
+            st.caption("No search run yet for this key and encoding selection.")
             return
         if not matches:
             st.info("No further dissemination found beyond the key's own occurrences.")
@@ -276,6 +309,7 @@ class DisseminationTab:
         st.dataframe(_aggregate_by_domain(matches), height=250)
 
         st.markdown("##### Matching Entries")
+        st.caption("Ordered by HAR timestamp, oldest first.")
         for entry, reasons in matches:
             render_entry_expander(
                 entry,
