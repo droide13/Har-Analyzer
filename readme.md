@@ -26,7 +26,7 @@ streamlit run app.py
 ## Project Structure
 
 ```bash
-.
+./src
 ├── app.py                     # Streamlit orchestrator
 ├── assets/                    # Static files (logo, etc.)
 ├── captures/                  # .har files, named via the filename generator convention
@@ -53,8 +53,7 @@ streamlit run app.py
 │   └── shared/                 # Code reused across tabs
 │       ├── entry_render.py       # Shared expander UI for a HAR entry
 │       ├── search.py             # Searching, tokenizing, matching engine
-│       └── selectors.py          # Select box helper
-        
+│       └── selectors.py          # Select box helper      
 └── scripts/                   # Legacy standalone CLI utilities (superseded, see below)
     ├── har_naming.py
     ├── har_params_extract.py
