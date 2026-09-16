@@ -6,7 +6,7 @@ import re
 import shlex
 import urllib.parse
 from dataclasses import dataclass, field
-from typing import Callable, Sequence
+from typing import Callable, Literal, Mapping, Sequence
 
 from core.models import FIELD_MAP, ParsedEntry
 
@@ -55,6 +55,22 @@ ENCODING_OPTIONS: list[str] = list(ENCODERS.keys())
 # finding. Other encodings (hashes, Base64, Hex...) aren't chained
 _URL_ENCODE_CHAIN: list[str] = ["plain", "URL Encode", "Double URL Encode", "Triple URL Encode"]
 
+# Which side of the exchange a cookie hit came from. Display only: matching
+# still runs against the single `cookies_text` attribute, so FIELD_MAP and the
+# overlap rules are untouched.
+CookieScope = Literal["sent", "received"]
+
+# The one place cookie direction is named. Used verbatim as the Scope column
+# in the Cookies tab, the Origin column in Dissemination, and the Field label
+# for a cookie hit in match summaries - change it here, it changes everywhere.
+COOKIE_LABELS: dict[CookieScope, str] = {
+    "sent": "Request Cookie",  # Cookie header on the request
+    "received": "Response Cookie",  # Set-Cookie header on the response
+}
+
+# The attribute whose hits can be attributed to a side.
+_COOKIE_ATTR = "cookies_text"
+
 
 def dedupe_redundant_encodings(forms: list[str]) -> list[str]:
     """Collapse a set of matched forms down to the least-encoded link of the
@@ -76,6 +92,9 @@ class MatchReason:
     term: str
     attr: str
     encoding: str | None  # None means a plain-text match
+    # Only set for `cookies_text` hits, and only to label them in the UI.
+    # None means "not a cookie hit, or the side couldn't be determined".
+    scope: CookieScope | None = None
 
 
 @dataclass
@@ -109,6 +128,52 @@ def dedupe_overlapping_reasons(reasons: list[MatchReason]) -> list[MatchReason]:
     return [r for r in reasons if r.attr not in broad_attrs_to_drop]
 
 
+def _cookies_contain(
+    cookies: Sequence[Mapping[str, object]],
+    needle: str,
+    fold_case: bool,
+) -> bool:
+    """Whether `needle` appears in any "name=value" pair of `cookies`."""
+    for cookie in cookies:
+        text = f"{cookie.get('name', '')}={cookie.get('value', '')}"
+        if fold_case:
+            text = text.lower()
+        if needle in text:
+            return True
+    return False
+
+
+def _scopes_for(
+    entry: ParsedEntry,
+    attr: str,
+    needle: str,
+    fold_case: bool,
+) -> list[CookieScope | None]:
+    """Sides to report for a hit on `attr`, one entry per reason to emit.
+
+    Non-cookie fields yield a single scopeless hit. A cookie value sitting on
+    both sides yields two - one per side - so a summary can union sides across
+    entries without ending up with a composite label next to its own parts.
+
+    [None] also covers a cookie hit on part of `cookies_text` that is neither a
+    name nor a value (a Path or Expires attribute, say); the UI shows plain
+    "Cookies" for those.
+    """
+    if attr != _COOKIE_ATTR:
+        return [None]
+
+    if fold_case:
+        needle = needle.lower()
+    sides: tuple[tuple[CookieScope, Sequence[Mapping[str, object]]], ...] = (
+        ("sent", entry.req_cookies),
+        ("received", entry.res_cookies),
+    )
+    matched: list[CookieScope | None] = [
+        scope for scope, cookies in sides if _cookies_contain(cookies, needle, fold_case)
+    ]
+    return matched or [None]
+
+
 def encode_variants(value: str, encodings: set[str]) -> dict[str, str]:
     """Return {encoding_name: transformed_value} for each selected encoding/hash."""
     if not value or not encodings:
@@ -138,10 +203,14 @@ def collect_reasons(
     for attr in attrs:
         text = str(getattr(entry, attr))
         if term.lower() in text.lower():
-            reasons.append(MatchReason(term=term, attr=attr, encoding=None))
+            # The plain check folds case, so the scope lookup must too.
+            for scope in _scopes_for(entry, attr, term, fold_case=True):
+                reasons.append(MatchReason(term=term, attr=attr, encoding=None, scope=scope))
         for name, variant in variants.items():
             if variant in text:
-                reasons.append(MatchReason(term=term, attr=attr, encoding=name))
+                # Encoded forms are matched verbatim, so the scope lookup is too.
+                for scope in _scopes_for(entry, attr, variant, fold_case=False):
+                    reasons.append(MatchReason(term=term, attr=attr, encoding=name, scope=scope))
     return reasons
 
 

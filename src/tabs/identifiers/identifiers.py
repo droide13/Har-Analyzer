@@ -1,12 +1,14 @@
 """Tab class for detecting stable identifiers across query params and cookies."""
 
-from typing import Any
+from typing import Any, Callable
 
 import streamlit as st
 
 from core.models import ParsedEntry
 from tabs.identifiers.identifiers_core import (
+    Item,
     TrackedKey,
+    ValueOccurrence,
     extract_tracked_keys,
     filter_identifiers,
     get_cookie_items,
@@ -15,9 +17,43 @@ from tabs.identifiers.identifiers_core import (
 )
 
 
+def _summary_row(tk: TrackedKey) -> dict[str, Any]:
+    """Row for the per-key table. First Seen As is omitted for query params,
+    which have no side, so that section doesn't carry an empty column."""
+    row: dict[str, Any] = {"Key": tk.key}
+    if tk.first_seen_as:
+        row["First Seen As"] = tk.first_seen_as
+    row.update(
+        {
+            "Appearances": tk.total_appearances,
+            "Unique Values": tk.unique_value_count,
+            "Avg Length": round(tk.avg_length, 1),
+            "Avg Entropy": round(tk.avg_entropy, 2),
+            "Domains": ", ".join(sorted(tk.all_domains)),
+        }
+    )
+    return row
+
+
+def _value_row(v: ValueOccurrence) -> dict[str, Any]:
+    """Row for the per-value table, with the side this exact value first appeared on."""
+    row: dict[str, Any] = {"Value": v.value}
+    if v.first_seen_as:
+        row["First Seen As"] = v.first_seen_as
+    row.update(
+        {
+            "Appearances": v.appearances,
+            "Length": len(v.value),
+            "Entropy": round(v.entropy, 2),
+            "Domains": ", ".join(sorted(v.domains)),
+        }
+    )
+    return row
+
+
 def _render_section(
     entries: list[ParsedEntry],
-    get_items: Any,
+    get_items: Callable[[ParsedEntry], list[Item]],
     section_label: str,
     sort_by: str,
     **filters: Any,
@@ -30,18 +66,7 @@ def _render_section(
         st.info(f"No matches in {section_label.lower()} at current filter settings.")
         return
 
-    summary_rows: list[dict[str, Any]] = [
-        {
-            "Key": tk.key,
-            "Appearances": tk.total_appearances,
-            "Unique Values": tk.unique_value_count,
-            "Avg Length": round(tk.avg_length, 1),
-            "Avg Entropy": round(tk.avg_entropy, 2),
-            "Domains": ", ".join(sorted(tk.all_domains)),
-        }
-        for tk in identifiers
-    ]
-    st.dataframe(summary_rows)
+    st.dataframe([_summary_row(tk) for tk in identifiers])
 
     for tk in identifiers:
         _render_value_expander(tk)
@@ -49,17 +74,12 @@ def _render_section(
 
 def _render_value_expander(tk: TrackedKey) -> None:
     with st.expander(f"Values for `{tk.key}`"):
-        value_rows: list[dict[str, Any]] = [
-            {
-                "Value": v.value,
-                "Appearances": v.appearances,
-                "Length": len(v.value),
-                "Entropy": round(v.entropy, 2),
-                "Domains": ", ".join(sorted(v.domains)),
-            }
-            for v in sorted(tk.values.values(), key=lambda x: x.appearances, reverse=True)
-        ]
-        st.dataframe(value_rows)
+        st.dataframe(
+            [
+                _value_row(v)
+                for v in sorted(tk.values.values(), key=lambda x: x.appearances, reverse=True)
+            ]
+        )
 
 
 class IdentifiersTab:
@@ -116,4 +136,8 @@ class IdentifiersTab:
 
         _render_section(entries, get_query_items, "Query Parameters", sort_by, **filters)
         st.divider()
+        st.caption(
+            "First Seen As marks where a cookie turned up first: a Response Cookie "
+            "was issued during this capture, a Request Cookie already existed."
+        )
         _render_section(entries, get_cookie_items, "Cookies", sort_by, **filters)

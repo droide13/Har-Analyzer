@@ -4,6 +4,10 @@ Combines four signals to separate real identifiers (session/tracking/auth
 tokens) from ordinary low-cardinality params (status, lang, sort order):
 appearance count, value cardinality, average value length, and Shannon
 entropy (randomness of characters in the value).
+
+Cookie sightings also carry which side of the exchange they came from, so a
+key or value can report whether it was first seen on a request (it predates
+the capture) or in a Set-Cookie response (it was issued during the capture).
 """
 
 import math
@@ -12,6 +16,11 @@ from dataclasses import dataclass, field
 from typing import Any, Callable
 
 from core.models import ParsedEntry
+from tabs.shared.search import COOKIE_LABELS
+
+# One sighting: the item dict plus which side it came from. Query params have
+# no side, so their scope is None.
+Item = tuple[str | None, dict[str, Any]]
 
 COMMON_NOISE_KEYS: frozenset[str] = frozenset(
     {
@@ -46,6 +55,8 @@ class ValueOccurrence:
     value: str
     appearances: int = 0
     domains: set[str] = field(default_factory=set[str])
+    # Which side this exact value was first seen on; None for query params.
+    first_seen_as: str | None = None
 
     @property
     def entropy(self) -> float:
@@ -59,6 +70,8 @@ class TrackedKey:
     key: str
     total_appearances: int = 0
     values: dict[str, ValueOccurrence] = field(default_factory=dict[str, ValueOccurrence])
+    # Which side this key was first seen on; None for query params.
+    first_seen_as: str | None = None
 
     @property
     def unique_value_count(self) -> int:
@@ -93,32 +106,47 @@ def shannon_entropy(value: str) -> float:
     return -sum((n / length) * math.log2(n / length) for n in counts.values())
 
 
-def get_query_items(entry: ParsedEntry) -> list[dict[str, Any]]:
-    return entry.query_params
+def get_query_items(entry: ParsedEntry) -> list[Item]:
+    return [(None, qp) for qp in entry.query_params]
 
 
-def get_cookie_items(entry: ParsedEntry) -> list[dict[str, Any]]:
-    return entry.req_cookies + entry.res_cookies
+def get_cookie_items(entry: ParsedEntry) -> list[Item]:
+    """Request cookies first: within one entry they are sent before the
+    response comes back, so this keeps first-seen ordering honest."""
+    return [
+        *((COOKIE_LABELS["sent"], c) for c in entry.req_cookies),
+        *((COOKIE_LABELS["received"], c) for c in entry.res_cookies),
+    ]
 
 
 def extract_tracked_keys(
     entries: list[ParsedEntry],
-    get_items: Callable[[ParsedEntry], list[dict[str, Any]]],
+    get_items: Callable[[ParsedEntry], list[Item]],
 ) -> dict[str, TrackedKey]:
     """Walk entries, grouping items by name -> distinct values -> domains/counts."""
     tracked: dict[str, TrackedKey] = {}
 
-    for entry in entries:
-        for item in get_items(entry):
+    # Time order, not file order, so "first seen" means the earliest sighting
+    # rather than whichever entry the capture tool happened to write first.
+    in_time_order = sorted(entries, key=lambda e: (e.started_date_time or "", e.index))
+
+    for entry in in_time_order:
+        for scope, item in get_items(entry):
             name = str(item.get("name", ""))
             value = str(item.get("value", ""))
             if not name:
                 continue
 
-            key_entry = tracked.setdefault(name, TrackedKey(key=name))
+            key_entry = tracked.get(name)
+            if key_entry is None:
+                key_entry = tracked[name] = TrackedKey(key=name, first_seen_as=scope)
             key_entry.total_appearances += 1
 
-            value_entry = key_entry.values.setdefault(value, ValueOccurrence(value=value))
+            value_entry = key_entry.values.get(value)
+            if value_entry is None:
+                value_entry = key_entry.values[value] = ValueOccurrence(
+                    value=value, first_seen_as=scope
+                )
             value_entry.appearances += 1
             value_entry.domains.add(entry.domain)
 
