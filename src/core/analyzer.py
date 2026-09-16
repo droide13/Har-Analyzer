@@ -57,7 +57,7 @@ def _extract_analysis_info(file_bytes: bytes) -> tuple[bool, str]:
                 return True, captured_at  # unparseable, show as-is
 
         if isinstance(captured_at, datetime):
-            return True, captured_at.strftime("%Y-%m-%d %H:%M")
+            return True, captured_at.astimezone().strftime("%Y-%m-%d %H:%M")
         if captured_at is not None:
             return True, str(captured_at)
 

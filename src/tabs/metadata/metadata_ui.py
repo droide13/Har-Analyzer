@@ -119,7 +119,11 @@ class MetadataTab:
         with detect_col1:
             st.metric("Primary domain (first request)", first_request_domain)
         with detect_col2:
-            captured_label = captured_at.strftime("%Y-%m-%d %H:%M") if captured_at else "Unknown"
+            # Show captured time with correct timezone, if no time found show unknown
+            if captured_at:
+                captured_label = captured_at.astimezone().strftime("%Y-%m-%d %H:%M")
+            else:
+                captured_label = "Unknown"
             st.metric("Capture time", captured_label)
 
         if option_count > 2:  # more than one real domain, excl. "Custom domain..."

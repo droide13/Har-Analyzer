@@ -73,11 +73,17 @@ streamlit run app.py
 ---
 ---
 
-## Filename Generator
+## File Standardizer
 
-Alongside HAR analysis, the app includes a standalone **filename generator** for standardizing `.har` captures *before* you record them. Switch to it via the mode control at the top of the page — no file upload required.
+Alongside HAR analysis, the app includes a standalone **file standardizer** for
+renaming `.har` captures *after* you record them. Upload a capture and fill in
+the required fields.
 
-Given a domain and a few dropdown selections (interaction type, cookie handling, visit type, and optional free-text context), it produces a standardized filename, matching the convention used by files in `captures/`.
+The capture time is detected automatically: the tool reads the timestamps of all
+entries in the file and uses the earliest one. HAR files store timestamps in UTC,
+and that UTC value is what appears in the generated filename. The time shown in
+the interface is the same instant converted to your local timezone, so the two
+will differ if you aren't on UTC.
 
 ---
 
