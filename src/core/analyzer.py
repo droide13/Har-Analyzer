@@ -15,7 +15,7 @@ from tabs import (
     OverviewTab,
     QueryParamsTab,
 )
-from tabs.history import HistoryTab
+from tabs.dissemination import DisseminationTab
 from tabs.naming.naming import get_attrs_from_har_name
 
 
@@ -124,7 +124,7 @@ def render_analyzer() -> None:
                 CookiesTab(),
                 QueryParamsTab(),
                 IdentifiersTab(),
-                HistoryTab(),
+                DisseminationTab(),
             ]
         else:
             tabs_to_render: list[Tab] = [
@@ -133,7 +133,7 @@ def render_analyzer() -> None:
                 CookiesTab(),
                 QueryParamsTab(),
                 IdentifiersTab(),
-                HistoryTab(),
+                DisseminationTab(),
                 MetadataTab(),
             ]
 

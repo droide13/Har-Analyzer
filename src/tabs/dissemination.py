@@ -185,7 +185,7 @@ def _aggregate_by_domain(matches: list[DisseminationMatch]) -> list[dict[str, ob
     return sorted(rows, key=lambda r: cast(int, r["Entries Hit"]), reverse=True)
 
 
-class HistoryTab:
+class DisseminationTab:
     """Tab for tracing when and where a query-param/cookie key was disseminated."""
 
     @property

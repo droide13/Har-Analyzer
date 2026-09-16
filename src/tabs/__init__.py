@@ -1,7 +1,7 @@
 """Package initialization to expose tab components cleanly."""
 
 from .cookies import CookiesTab
-from .history import HistoryTab
+from .dissemination import DisseminationTab
 from .identifiers.identifiers import IdentifiersTab
 from .metadata.metadata_ui import MetadataTab
 from .networklog import NetworkLogTab
@@ -14,6 +14,6 @@ __all__ = [
     "CookiesTab",
     "QueryParamsTab",
     "IdentifiersTab",
-    "HistoryTab",
+    "DisseminationTab",
     "MetadataTab",
 ]
