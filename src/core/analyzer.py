@@ -14,8 +14,9 @@ from tabs import (
     NetworkLogTab,
     OverviewTab,
     QueryParamsTab,
+    DisseminationTab
 )
-from tabs.dissemination import DisseminationTab
+
 from tabs.naming.naming import get_attrs_from_har_name
 
 

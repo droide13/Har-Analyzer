@@ -1,7 +1,7 @@
 """Package initialization to expose tab components cleanly."""
 
 from .cookies import CookiesTab
-from .dissemination import DisseminationTab
+from .dissemination.dissemination_ui import DisseminationTab
 from .identifiers.identifiers import IdentifiersTab
 from .metadata.metadata_ui import MetadataTab
 from .networklog import NetworkLogTab
