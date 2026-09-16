@@ -120,7 +120,7 @@ class MetadataTab:
             st.metric("Primary domain (first request)", first_request_domain)
         with detect_col2:
             captured_label = captured_at.strftime("%Y-%m-%d %H:%M") if captured_at else "Unknown"
-            st.metric("Earliest capture time", captured_label)
+            st.metric("Capture time", captured_label)
 
         if option_count > 2:  # more than one real domain, excl. "Custom domain..."
             st.info(
@@ -191,15 +191,13 @@ class MetadataTab:
         with col2:
             visit = select_by_label("Visit type", VISIT_LABELS, key="meta_visit")
             extra = st.text_input("Extra context (optional)", key="meta_extra")
-            default_dt = derived_captured_at or datetime.now()
-            capture_date = st.date_input("Capture date", value=default_dt.date(), key="meta_date")
-            capture_hour = st.number_input(
-                "Capture hour (24h)",
-                min_value=0,
-                max_value=23,
-                value=default_dt.hour,
-                key="meta_hour",
-            )
+
+            # If there is a date derived from the har file keep it, else let user choose
+            if derived_captured_at:
+                captured_at = derived_captured_at
+            else:
+                capture_date = st.datetime_input("Capture date", key="meta_date")
+                captured_at = capture_date
 
         st.markdown("#### Experiment notes")
         st.caption("Written into log._analysis inside the file itself, not just the filename.")
@@ -212,7 +210,7 @@ class MetadataTab:
         email_used = st.text_input("Email used", value=default_email, key="meta_email")
         notes = st.text_area("Notes", value=default_notes, key="meta_notes")
 
-        captured_at = datetime.combine(capture_date, time(hour=int(capture_hour)))
+
         return StandardizeInputs(
             domain=domain,
             interact=interact,

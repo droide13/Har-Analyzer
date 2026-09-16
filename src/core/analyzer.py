@@ -16,17 +16,17 @@ from tabs import (
     QueryParamsTab,
 )
 from tabs.history import HistoryTab
-from tabs.naming.naming import derive_metadata_from_entries, get_attrs_from_har_name
+from tabs.naming.naming import get_attrs_from_har_name
 
 
-def display_filename_metadata(filename: str, capture_date_str: str, analysis_date_str: str) -> None:
-    """Renders structured metadata cards including traffic capture date and analysis date."""
+def display_filename_metadata(filename: str, capture_date_str: str) -> None:
+    """Renders structured metadata cards"""
     attrs = get_attrs_from_har_name(filename) or {}
     domain = attrs.get("domain", "Unknown Domain")
 
     with st.container(border=True):
         st.markdown(f"### Session Metadata: `{domain}`")
-        col1, col2, col3, col4, col5, col6 = st.columns(6)
+        col1, col2, col3, col4, col5 = st.columns(5)
         with col1:
             st.markdown(f"**Interaction Flow**\n\n{attrs.get('interaction', 'N/A')}")
         with col2:
@@ -36,8 +36,6 @@ def display_filename_metadata(filename: str, capture_date_str: str, analysis_dat
         with col4:
             st.markdown(f"**Traffic Capture Date**\n\n{capture_date_str}")
         with col5:
-            st.markdown(f"**Metadata Analysis Date**\n\n{analysis_date_str}")
-        with col6:
             extra_val = attrs.get("extra", "000")
             st.markdown(f"**Extra Context**\n\n{extra_val if extra_val != '000' else 'N/A'}")
 
@@ -51,6 +49,13 @@ def _extract_analysis_info(file_bytes: bytes) -> tuple[bool, str]:
             return False, "Not Embedded"
 
         captured_at: Any = getattr(existing_analysis, "captured_at", None)
+        # Try parsing string
+        if isinstance(captured_at, str):
+            try:
+                captured_at = datetime.fromisoformat(captured_at.replace("Z", "+00:00"))
+            except ValueError:
+                return True, captured_at  # unparseable, show as-is
+
         if isinstance(captured_at, datetime):
             return True, captured_at.strftime("%Y-%m-%d %H:%M")
         if captured_at is not None:
@@ -79,37 +84,39 @@ def render_analyzer() -> None:
 
         entries = load_parsed_entries(file_bytes)
 
-        # 1. Capture date derived directly from HAR log traffic entries
-        capture_date_str = "Unknown"
-        try:
-            derived = derive_metadata_from_entries(entries)
-            if derived.captured_at:
-                capture_date_str = derived.captured_at.strftime("%Y-%m-%d %H:%M")
-        except Exception:  # pylint: disable=broad-exception-caught
-            pass
-
-        # 2. Analysis date derived from embedded log._analysis metadata
+        # Capture date derived from embedded log._analysis metadata
         has_embedded_analysis, analysis_date_str = _extract_analysis_info(file_bytes)
 
         # Validate filename convention and embedded experiment metadata
         attrs = get_attrs_from_har_name(uploaded_file.name)
-        is_metadata_valid = bool(attrs) and has_embedded_analysis
+        is_file_format_valid = True
+        error_s = ""
 
-        if is_metadata_valid:
-            display_filename_metadata(uploaded_file.name, capture_date_str, analysis_date_str)
+        # Check independently naming and metadata
+        if not bool(attrs):
+            is_file_format_valid = False
+            error_s = error_s + "- The file does not follow the naming pattern\n"
+
+        if not has_embedded_analysis:
+            is_file_format_valid = False
+            error_s = error_s + "- The file does not contain the analysis metadata\n"
+
+        if is_file_format_valid:
+            display_filename_metadata(uploaded_file.name, analysis_date_str)
+
         else:
             st.warning(
-                f"⚠️ **Metadata Notice:** `{uploaded_file.name}` does not follow the "
-                "standardized naming pattern or lacks embedded `log._analysis` "
-                "metadata.\n\n"
+                f"⚠️ **Metadata Notice:** `{uploaded_file.name}` contains format errors:\n"
+                + error_s + "\n" +
                 "Please use the **Metadata** tab below to confirm "
                 "classification and export a standardized HAR file."
             )
 
+
         st.divider()
 
         # Tab configuration: prioritize MetadataTab if metadata/naming is invalid
-        if not is_metadata_valid:
+        if not is_file_format_valid:
             tabs_to_render: list[Tab] = [
                 MetadataTab(),
                 NetworkLogTab(),
