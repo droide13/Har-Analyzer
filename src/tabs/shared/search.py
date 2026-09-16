@@ -91,6 +91,7 @@ class MatchResult:
 _OVERLAP_RULES: dict[str, list[str]] = {
     "query_params_text": ["url", "req_headers_text", "res_headers_text"],
     "cookies_text": ["req_headers_text", "res_headers_text"],
+    "url": ["req_headers_text"]
 }
 
 
