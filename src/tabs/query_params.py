@@ -5,6 +5,7 @@ from typing import Any
 import streamlit as st
 
 from core.models import ParsedEntry
+from tabs.shared.aggregation import describe_value, group_by_name
 
 
 def _describe_categorical(values: set[str]) -> str:
@@ -13,19 +14,9 @@ def _describe_categorical(values: set[str]) -> str:
     return "Mixed"
 
 
-def _describe_value(values: set[str]) -> str:
-    if len(values) == 1:
-        return next(iter(values)) or "(empty)"
-    return f"Multiple values ({len(values)})"
-
-
 def _aggregate(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    groups: dict[str, list[dict[str, Any]]] = {}
-    for r in records:
-        groups.setdefault(str(r["Name"]), []).append(r)
-
     aggregated: list[dict[str, Any]] = []
-    for name, items in groups.items():
+    for name, items in group_by_name(records).items():
         method_set: set[str] = {str(i["Method"]) for i in items}
         value_set: set[str] = {str(i["Value"]) for i in items}
         host_set: set[str] = {str(i["Host"]) for i in items}
@@ -34,7 +25,7 @@ def _aggregate(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
             {
                 "Name": name,
                 "Method": _describe_categorical(method_set),
-                "Value": _describe_value(value_set),
+                "Value": describe_value(value_set),
                 "Occurrences": len(items),
                 "Hosts": ", ".join(sorted(host_set)),
             }

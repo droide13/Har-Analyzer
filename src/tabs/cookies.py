@@ -5,6 +5,7 @@ from typing import Any
 import streamlit as st
 
 from core.models import ParsedEntry
+from tabs.shared.aggregation import describe_value, group_by_name
 from tabs.shared.search import COOKIE_LABELS
 
 
@@ -12,12 +13,6 @@ def _describe_flag(values: set[bool]) -> str:
     if len(values) == 1:
         return "Always" if next(iter(values)) else "Never"
     return "Mixed"
-
-
-def _describe_value(values: set[str]) -> str:
-    if len(values) == 1:
-        return next(iter(values)) or "(empty)"
-    return f"Multiple values ({len(values)})"
 
 
 def _collect(entries: list[ParsedEntry]) -> list[dict[str, Any]]:
@@ -52,12 +47,8 @@ def _collect(entries: list[ParsedEntry]) -> list[dict[str, Any]]:
 
 
 def _aggregate(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    groups: dict[str, list[dict[str, Any]]] = {}
-    for r in records:
-        groups.setdefault(str(r["Name"]), []).append(r)
-
     aggregated: list[dict[str, Any]] = []
-    for name, items in groups.items():
+    for name, items in group_by_name(records).items():
         secure_set: set[bool] = {bool(i["Secure"]) for i in items}
         httponly_set: set[bool] = {bool(i["HttpOnly"]) for i in items}
         value_set: set[str] = {str(i["Value"]) for i in items}
@@ -73,7 +64,7 @@ def _aggregate(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "Scope": ", ".join(sorted(scope_set)),
                 "Secure": _describe_flag(secure_set),
                 "HttpOnly": _describe_flag(httponly_set),
-                "Value": _describe_value(value_set),
+                "Value": describe_value(value_set),
                 "Occurrences": len(items),
                 "Hosts": ", ".join(sorted(host_set)),
             }
