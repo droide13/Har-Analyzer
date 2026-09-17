@@ -29,47 +29,42 @@ streamlit run app.py
 ./src
 ├── app.py                     # Streamlit orchestrator
 ├── assets/                    # Static files (logo, etc.)
-├── captures/                  # .har files, named via the filename generator convention
-├── core/                      # Global components
-│   ├── models.py               # Caching HAR parser + ParsedEntry data type
-│   ├── analyzer.py             # Processing of the har file
-│   ├── app_version.py           # Getting the version of the project
+├── core/                      # Pure parsing/typing layer
+│   ├── models.py                # Caching HAR parser + ParsedEntry / HarAnalysis data types
+│   ├── analyzer.py              # Upload flow + tab orchestration
+│   ├── app_version.py           # Reads the app version out of pyproject.toml
 │   └── protocols.py             # Tab protocol every tab implements
 ├── tabs/                      # Self-contained, single-responsibility UI views
-│   ├── overview.py
-│   ├── networklog.py
-│   ├── cookies.py
-│   ├── query_params.py
-│   ├── history.py              # Identifier dissemination tracing
-│   ├── identifiers/            # Identifier detection
-│   │   ├── identifiers.py        # UI
-│   │   └── identifiers_core.py   # Logic
-│   ├── metadata/               # Har medatadata processing
-│   │   ├── metadata_ui.py        # UI
-│   │   └── metadata.py           # Logic
-│   ├── naming/                 # Filename generator
-│   │   ├── naming_ui.py          # UI
-│   │   └── naming.py             # Logic
-│   └── shared/                 # Code reused across tabs
-│       ├── entry_render.py       # Shared expander UI for a HAR entry
-│       ├── search.py             # Searching, tokenizing, matching engine
-│       └── selectors.py          # Select box helper      
-└── scripts/                   # Legacy standalone CLI utilities (superseded, see below)
-    ├── har_naming.py
-    ├── har_params_extract.py
-    ├── har_visualizer.py
-    └── identifiers_extract.py
+│   ├── networklog.py            # Request/response browser + filter/highlight search
+│   ├── cookies.py                # Cookie registry + aggregation
+│   ├── query_params.py          # Query-param registry + aggregation
+│   ├── overview/                # HAR analytics: metrics, domain explorer, DNS/WHOIS
+│   │   ├── overview.py            # Logic
+│   │   └── overview_ui.py         # UI
+│   ├── dissemination/           # Identifier dissemination tracing
+│   │   ├── dissemination.py       # Logic
+│   │   └── dissemination_ui.py    # UI
+│   ├── identifiers/             # Stable identifier detection (entropy/cardinality scoring)
+│   │   ├── identifiers.py         # Logic
+│   │   └── identifiers_ui.py      # UI
+│   ├── metadata/                 # Standardize & tag a HAR file with embedded metadata
+│   │   ├── metadata.py            # Logic
+│   │   └── metadata_ui.py         # UI
+│   ├── naming/                   # Standardized filename format
+│   │   └── naming.py              # Logic (used by tabs/metadata)
+│   └── shared/                   # Code reused across tabs
+│       ├── entry_render.py        # Shared expander UI for a HAR entry
+│       ├── search.py              # Searching, tokenizing, matching engine
+│       └── selectors.py           # Select box helper
 ```
 
 * **`app.py`** — wires up all tabs and drives the page.
 * **`core/`** — parsing and typing that nothing in the UI layer depends on stylistically; every other module builds on top of `ParsedEntry`.
 * **`tabs/`** — one file (or sub-package, for anything with enough logic to warrant separating UI from core logic) per view. All tabs implement the `Tab` protocol from `core/protocols.py`: a `title` property and a `render(entries)` method.
 * **`tabs/shared/`** — logic used by *more than one* tab (currently the entry expander renderer and the search/matching engine), kept out of `core/` since it's Streamlit-facing rather than pure parsing.
-* **`captures/`** and **`output/`** — working directories for `.har` inputs and generated outputs; not part of the application code.
 
-> **Note on `scripts/`:** these were the original standalone CLI tools this project grew out of (filename generation, param extraction, identifier extraction, HAR visualization). All of that functionality now lives inside the Streamlit app itself (`naming/`, `query_params.py`, `identifiers/`, and the app as a whole, respectively). The scripts are kept for reference/legacy use but are no longer the primary interface — use the web app.
+> `captures/` and `output/` are optional local working folders you can create under `src/` to keep `.har` test inputs and generated outputs organized while you work. They're gitignored scratch space, not part of the application code, so they're left out of the tree above.
 
----
 ---
 
 ## File Standardizer
@@ -83,6 +78,23 @@ entries in the file and uses the earliest one. HAR files store timestamps in UTC
 and that UTC value is what appears in the generated filename. The time shown in
 the interface is the same instant converted to your local timezone, so the two
 will differ if you aren't on UTC.
+
+### Naming convention
+
+The standardizer generates (and the app parses) filenames of the form:
+
+```
+<domain>-interact-(LOA|NAV|EMA|SIG|LOG)-cookies-(ACC|DEN|IGN)-visit-(FIR|SEC|DEL)-extra-(3 LETTERS or 000)-yy-mm-dd-hh.har
+```
+
+| Segment    | Meaning                                                                                          | Codes                                                          |
+| ---------- | ------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| `interact` | load / navigate / enter email / sign up / login                                                   | `LOA` / `NAV` / `EMA` / `SIG` / `LOG`                          |
+| `cookies`  | accept / deny / ignore                                                                             | `ACC` / `DEN` / `IGN`                                          |
+| `visit`    | first visit (fresh) / second visit (reuse existing cookies or state) / delete cookies and reload  | `FIR` / `SEC` / `DEL`                                          |
+| `extra`    | free-text context, first 3 letters uppercased, or `000` if omitted                                 | any 3 letters, or `000`                                        |
+
+This single format is defined in one place in code — `tabs/naming/naming.py`'s `get_har_filename` (building it) and `get_attrs_from_har_name` (parsing it back) — and used by both the standardizer and the Analyzer's own file-format check.
 
 ---
 
@@ -104,7 +116,7 @@ Lists every query-string parameter across the capture, either as a raw registry 
 
 Same idea as Query Params but for cookies, split by scope (sent vs. `Set-Cookie` received), and flags security posture per name: whether `Secure`/`HttpOnly` were always set, never set, or mixed.
 
-### History (Dissemination Tracing)
+### Dissemination
 
 Traces a single query-param or cookie key across the whole capture — not just where it's *named*, but where its *value* shows up anywhere else in the traffic.
 
@@ -118,7 +130,7 @@ Traces a single query-param or cookie key across the whole capture — not just 
 
 **How to use it:**
 
-1. Open the History tab and pick a key from the dropdown (ordered by how often it appears).
+1. Open the Dissemination tab and pick a key from the dropdown (ordered by how often it appears).
 2. Review the timeline to see first appearance and any value changes.
 3. Optionally select encoded/hashed forms to match against (same Base64/MD5/SHA1/etc. options as the main search).
 4. Click **Search dissemination** to run the scan.
@@ -142,7 +154,7 @@ The Network Log tab supports two independent query fields: a **Filter** query (d
 
 Additionally, each search term can be checked against **encoded or hashed forms** of itself (Base64, Base32, Hex, URL-encoding — single/double/triple pass, MD5, SHA1, SHA256, SHA512, and common hash-then-encode / encode-then-hash combinations) via the checkboxes above the query fields. This surfaces matches even when the plaintext only appears in encoded form somewhere in the traffic (e.g. a token that shows up Base64-encoded in a cookie). Matched entries display a badge indicating which field and encoding produced the match.
 
-The same matching engine (`tabs/shared/search.py`) powers the History tab's dissemination scan.
+The same matching engine (`tabs/shared/search.py`) powers the Dissemination tab's scan.
 
 ---
 
@@ -168,13 +180,13 @@ class PerformanceTab:
         # Write your custom Streamlit UI code here!
 ```
 
-For anything with enough logic to warrant separating UI from core logic (see `identifiers/` or `naming/`), make it a sub-package instead:
+For anything with enough logic to warrant separating UI from core logic (see `identifiers/`, `metadata/`, `dissemination/`, or `overview/`), make it a sub-package instead, following the `<name>.py` (logic) / `<name>_ui.py` (UI) convention:
 
 ```bash
 tabs/performance/
 ├── __init__.py
-├── performance.py        # UI
-└── performance_core.py   # Logic
+├── performance.py      # Logic
+└── performance_ui.py   # UI
 ```
 
 ### 2. Expose It in the Package
@@ -193,12 +205,13 @@ Add it to the `tabs_to_render` list inside `app.py`:
 
 ```python
 tabs_to_render: list[Tab] = [
-    OverviewTab(),
     NetworkLogTab(),
-    QueryParamsTab(),
+    OverviewTab(),
     CookiesTab(),
-    HistoryTab(),
+    QueryParamsTab(),
     IdentifiersTab(),
+    DisseminationTab(),
+    MetadataTab(),
     PerformanceTab(),  # Added!
 ]
 ```
