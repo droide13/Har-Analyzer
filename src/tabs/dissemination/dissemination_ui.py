@@ -21,6 +21,7 @@ from typing import cast
 
 import streamlit as st
 
+from core.har_time import format_started_date_time
 from core.models import ParsedEntry
 from tabs.dissemination.dissemination import (
     DisseminationMatch,
@@ -159,10 +160,18 @@ class DisseminationTab:
         col1, col2, col3 = st.columns(3)
         col1.metric("Sightings", len(occurrences))
         col2.metric("Distinct Values", len(values))
-        col3.metric("Source", " & ".join(origins))
+        with col3:
+            # st.metric truncates long values with an ellipsis; "Request Cookie
+            # & Response Cookie" doesn't fit, so this is plain markdown instead.
+            st.markdown("Source")
+            st.markdown(f"**{' & '.join(origins)}**")
 
         first_entry, first_origin, first_value = occurrences[0]
-        when = first_entry.started_date_time or f"entry #{first_entry.index} (no timestamp)"
+        when = (
+            format_started_date_time(first_entry.started_date_time)
+            if first_entry.started_date_time
+            else f"entry #{first_entry.index} (no timestamp)"
+        )
         st.info(
             f"First seen as a **{first_origin}** at {when} "
             f"({first_entry.method} {first_entry.domain}) "

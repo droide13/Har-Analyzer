@@ -12,6 +12,7 @@ bodies, other cookies) where any of those values reappear.
 
 from dataclasses import dataclass, field
 
+from core.har_time import format_started_date_time
 from core.models import FIELD_MAP, ParsedEntry
 from tabs.shared.entry_render import Badge
 from tabs.shared.search import (
@@ -77,9 +78,14 @@ def value_timeline(occurrences: list[Occurrence]) -> list[dict[str, object]]:
     previous_value: str | None = None
     for entry, origin, value in occurrences:
         changed = previous_value is not None and value != previous_value
+        started = (
+            format_started_date_time(entry.started_date_time)
+            if entry.started_date_time
+            else f"(no timestamp, entry #{entry.index})"
+        )
         rows.append(
             {
-                "Started": entry.started_date_time or f"(no timestamp, entry #{entry.index})",
+                "Started": started,
                 "Origin": origin,
                 "Method": entry.method,
                 "Host": entry.domain,

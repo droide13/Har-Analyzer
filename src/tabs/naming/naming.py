@@ -13,6 +13,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import TYPE_CHECKING
 
+from core.har_time import parse_started_date_time
+
 if TYPE_CHECKING:
     from core.models import ParsedEntry
 
@@ -152,23 +154,6 @@ def get_attrs_from_har_name(filename: str) -> dict[str, str] | None:
     }
 
 
-def _parse_started_date_time(value: str) -> datetime | None:
-    """Parse a HAR entry's ISO-8601 ``startedDateTime`` into a datetime.
-
-    Returns ``None`` (rather than raising) on anything unparseable, so one
-    malformed entry can't blow up metadata derivation for the whole file.
-    """
-    text = value.strip()
-    if not text:
-        return None
-    if text.endswith("Z"):
-        text = text[:-1] + "+00:00"
-    try:
-        return datetime.fromisoformat(text)
-    except ValueError:
-        return None
-
-
 def derive_metadata_from_entries(entries: "list[ParsedEntry]") -> DerivedHarMetadata:
     """Derive the primary domain and earliest capture time from real traffic.
 
@@ -190,7 +175,7 @@ def derive_metadata_from_entries(entries: "list[ParsedEntry]") -> DerivedHarMeta
 
     parsed_dates = [
         parsed
-        for parsed in (_parse_started_date_time(e.started_date_time) for e in entries)
+        for parsed in (parse_started_date_time(e.started_date_time) for e in entries)
         if parsed is not None
     ]
     captured_at = min(parsed_dates) if parsed_dates else None

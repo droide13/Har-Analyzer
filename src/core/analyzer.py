@@ -1,10 +1,10 @@
 """Core analysis orchestrator for processing HAR files and rendering UI tabs."""
 
-from datetime import datetime
 from typing import Any
 
 import streamlit as st
 
+from core.har_time import format_started_date_time
 from core.models import get_embedded_analysis, load_parsed_entries, load_raw_har
 from core.protocols import Tab
 from tabs import (
@@ -49,15 +49,8 @@ def _extract_analysis_info(file_bytes: bytes) -> tuple[bool, str]:
             return False, "Not Embedded"
 
         captured_at: Any = getattr(existing_analysis, "captured_at", None)
-        # Try parsing string
         if isinstance(captured_at, str):
-            try:
-                captured_at = datetime.fromisoformat(captured_at.replace("Z", "+00:00"))
-            except ValueError:
-                return True, captured_at  # unparseable, show as-is
-
-        if isinstance(captured_at, datetime):
-            return True, captured_at.astimezone().strftime("%Y-%m-%d %H:%M")
+            return True, format_started_date_time(captured_at, "%Y-%m-%d %H:%M")
         if captured_at is not None:
             return True, str(captured_at)
 
