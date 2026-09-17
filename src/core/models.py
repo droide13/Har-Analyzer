@@ -58,7 +58,7 @@ SCOPE_OPTIONS: Final[dict[str, str]] = {
 
 
 @dataclass(frozen=True, slots=True)
-class ParsedEntry:
+class ParsedEntry:  # pylint: disable=too-many-instance-attributes
     """Immutable, indexed representation of a singular HAR entry transaction."""
 
     index: int
@@ -90,7 +90,7 @@ class ParsedEntry:
 
 
 @dataclass(frozen=True, slots=True)
-class HarAnalysis:
+class HarAnalysis:  # pylint: disable=too-many-instance-attributes
     """Experiment-level metadata embedded into a HAR file's ``log._analysis``.
 
     This is intentionally separate from ``ParsedEntry`` (which describes a
@@ -147,27 +147,32 @@ class HarAnalysis:
 
 
 def get_domain(url: str) -> str:
+    """Netloc of a URL, or "unknown" if it can't be parsed."""
     try:
         return urlparse(url).netloc or "unknown"
-    except Exception:
+    except Exception:  # pylint: disable=broad-exception-caught
         return "unknown"
 
 
 def headers_to_text(headers: list[dict[str, Any]]) -> str:
+    """Flatten a HAR header list into "name: value" lines."""
     return "\n".join(f"{h.get('name', '')}: {h.get('value', '')}" for h in headers)
 
 
 def query_params_to_text(query_params: list[dict[str, Any]]) -> str:
+    """Flatten a HAR query-string list into "name: value" lines."""
     return "\n".join(f"{q.get('name', '')}: {q.get('value', '')}" for q in query_params)
 
 
 def cookies_to_text(req_cookies: list[dict[str, Any]], res_cookies: list[dict[str, Any]]) -> str:
+    """Flatten request/response cookies into "[Req]"/"[Res]" tagged lines."""
     req_lines = [f"[Req] {c.get('name', '')}: {c.get('value', '')}" for c in req_cookies]
     res_lines = [f"[Res] {c.get('name', '')}: {c.get('value', '')}" for c in res_cookies]
     return "\n".join(req_lines + res_lines)
 
 
 def list_to_safe_dict(items: list[dict[str, Any]]) -> dict[str, Any]:
+    """Collapse a name/value item list into a dict, keeping repeats as lists."""
     result: dict[str, Any] = {}
     for item in items:
         name = str(item.get("name", ""))
@@ -183,6 +188,7 @@ def list_to_safe_dict(items: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 def format_bytes(size_bytes: int) -> str:
+    """Human-readable size, e.g. "1.5 KB"."""
     if size_bytes <= 0:
         return "0 B"
     size_names = ("B", "KB", "MB", "GB")
@@ -205,6 +211,7 @@ def flatten_initiator_stack(stack: dict[str, Any] | None) -> list[dict[str, Any]
 
 @st.cache_data(show_spinner=False)
 def load_parsed_entries(file_bytes: bytes) -> list[ParsedEntry]:
+    """Load a HAR file's bytes and parse its entries, cached per file."""
     har_data = cast(dict[str, Any], json.loads(file_bytes))
     log_data = cast(dict[str, Any], har_data.get("log", {}))
     raw_entries = cast(list[dict[str, Any]], log_data.get("entries", []))

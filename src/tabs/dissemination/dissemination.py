@@ -15,10 +15,10 @@ from dataclasses import dataclass, field
 from core.models import FIELD_MAP, ParsedEntry
 from tabs.shared.entry_render import Badge
 from tabs.shared.search import (
+    COOKIE_LABELS,
     MatchReason,
     collect_reasons,
     dedupe_overlapping_reasons,
-    COOKIE_LABELS,
     dedupe_redundant_encodings,
     encode_variants,
 )
@@ -72,7 +72,9 @@ def collect_occurrences(entries: list[ParsedEntry]) -> Registry:
         for qp in entry.query_params:
             name = str(qp.get("name", "")).strip()
             if name:
-                registry.setdefault(name, []).append((entry, "Query Param", str(qp.get("value", ""))))
+                registry.setdefault(name, []).append(
+                    (entry, "Query Param", str(qp.get("value", "")))
+                )
         # Walked per side rather than as one merged list, so a sighting
         # records which side of the exchange the cookie came from.
         for origin, cookies in (

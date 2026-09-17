@@ -148,9 +148,7 @@ class DisseminationTab:
             st.success("No query parameters or cookies found to trace.")
             return
 
-        selected_key = st.selectbox(
-            "Key to trace", key_options(registry), key="history_key_select"
-        )
+        selected_key = st.selectbox("Key to trace", key_options(registry), key="history_key_select")
         if not selected_key:
             return
 

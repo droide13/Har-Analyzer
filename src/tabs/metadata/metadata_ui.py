@@ -10,7 +10,7 @@ on screen, regardless of reruns, ctrl-click, or anything else that re-renders
 the page after generation.
 """
 
-from datetime import datetime, time
+from datetime import datetime
 from typing import Any, cast
 
 import streamlit as st
@@ -213,7 +213,6 @@ class MetadataTab:
         description = st.text_area("Description", value=default_desc, key="meta_description")
         email_used = st.text_input("Email used", value=default_email, key="meta_email")
         notes = st.text_area("Notes", value=default_notes, key="meta_notes")
-
 
         return StandardizeInputs(
             domain=domain,

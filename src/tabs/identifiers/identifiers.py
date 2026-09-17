@@ -60,6 +60,7 @@ class ValueOccurrence:
 
     @property
     def entropy(self) -> float:
+        """Shannon entropy of this value's characters."""
         return shannon_entropy(self.value)
 
 
@@ -75,22 +76,26 @@ class TrackedKey:
 
     @property
     def unique_value_count(self) -> int:
+        """Number of distinct values seen for this key."""
         return len(self.values)
 
     @property
     def avg_length(self) -> float:
+        """Mean value length across all distinct values."""
         if not self.values:
             return 0.0
         return sum(len(v.value) for v in self.values.values()) / len(self.values)
 
     @property
     def avg_entropy(self) -> float:
+        """Mean Shannon entropy across all distinct values."""
         if not self.values:
             return 0.0
         return sum(v.entropy for v in self.values.values()) / len(self.values)
 
     @property
     def all_domains(self) -> set[str]:
+        """Union of every domain any value of this key was seen on."""
         result: set[str] = set()
         for v in self.values.values():
             result |= v.domains
@@ -107,6 +112,7 @@ def shannon_entropy(value: str) -> float:
 
 
 def get_query_items(entry: ParsedEntry) -> list[Item]:
+    """This entry's query params as scopeless items."""
     return [(None, qp) for qp in entry.query_params]
 
 
@@ -153,7 +159,7 @@ def extract_tracked_keys(
     return tracked
 
 
-def filter_identifiers(
+def filter_identifiers(  # pylint: disable=too-many-arguments,too-many-positional-arguments
     tracked: dict[str, TrackedKey],
     min_appearances: int,
     max_unique_values: int,
@@ -185,6 +191,7 @@ def filter_identifiers(
 
 
 def sort_identifiers(identifiers: list[TrackedKey], sort_by: str) -> list[TrackedKey]:
+    """Sort identifiers descending by the chosen metric."""
     sort_keys: dict[str, Callable[[TrackedKey], float]] = {
         "Appearances": lambda tk: tk.total_appearances,
         "Entropy": lambda tk: tk.avg_entropy,

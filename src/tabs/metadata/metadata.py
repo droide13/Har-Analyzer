@@ -20,9 +20,11 @@ _CUSTOM_DOMAIN_LABEL = "Custom domain..."
 
 
 @dataclass(frozen=True, slots=True)
-class StandardizeInputs:
+class StandardizeInputs:  # pylint: disable=too-many-instance-attributes
     """User-confirmed values needed to standardize and tag one HAR file."""
 
+    # Mirrors HarAnalysis's fields on purpose: this is the raw form input,
+    # HarAnalysis is the validated record built from it.
     domain: str
     interact: str
     cookies: str

@@ -5,6 +5,7 @@ import streamlit as st
 
 from core.models import ParsedEntry, format_bytes
 from tabs.overview.overview import (
+    RootDomainMetric,
     build_domain_map,
     build_subdomain_table_data,
     calculate_overview_summary,
@@ -55,18 +56,8 @@ class OverviewTab:
             st.markdown("#### Status Codes")
             st.bar_chart(get_status_counts(entries))
 
-    def _render_domain_explorer(self, entries: list[ParsedEntry]) -> None:
-        """Root/subdomain traffic breakdown, defaulting to the first-party domain."""
-        st.markdown("### Domain and Subdomain Explorer")
-
-        domain_map = build_domain_map(entries)
-        domain_options = sorted(domain_map.keys())
-
-        if not domain_options:
-            st.info("No domain logs available.")
-            return
-
-        # 1. Controls
+    def _render_domain_chart(self, domain_map: dict[str, RootDomainMetric]) -> str:
+        """Sort/limit controls plus the top-domains bar chart; returns the chosen sort field."""
         ctrl_col1, ctrl_col2 = st.columns([1, 1])
         with ctrl_col1:
             sort_by = st.radio(
@@ -84,7 +75,6 @@ class OverviewTab:
                 step=5,
             )
 
-        # 2. Dynamic Domain Chart
         unit_label = "Total Requests" if sort_by == "Requests" else "Total Bytes"
         st.markdown(f"#### Top {chart_limit} Domains by {unit_label}")
 
@@ -106,7 +96,22 @@ class OverviewTab:
 
             st.altair_chart(chart)
 
-        # 3. Dropdown Selector
+        return sort_by
+
+    def _render_domain_explorer(self, entries: list[ParsedEntry]) -> None:
+        """Root/subdomain traffic breakdown, defaulting to the first-party domain."""
+        st.markdown("### Domain and Subdomain Explorer")
+
+        domain_map = build_domain_map(entries)
+        domain_options = sorted(domain_map.keys())
+
+        if not domain_options:
+            st.info("No domain logs available.")
+            return
+
+        sort_by = self._render_domain_chart(domain_map)
+
+        # Dropdown Selector
         def format_domain_option(domain_name: str) -> str:
             metrics = domain_map[domain_name]
             return f"{domain_name} ({metrics['requests']} reqs | {format_bytes(metrics['bytes'])})"

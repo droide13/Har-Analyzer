@@ -74,11 +74,10 @@ def _render_query_and_cookies_tab(entry: ParsedEntry) -> None:
     col1, col2 = st.columns(2)
     with col1:
         st.markdown("#### Query Parameters")
-        (
+        if entry.query_params:
             st.json(list_to_safe_dict(entry.query_params))
-            if entry.query_params
-            else st.caption("No parameters.")
-        )
+        else:
+            st.caption("No parameters.")
     with col2:
         st.markdown("#### Cookie Metadata")
         if entry.req_cookies or entry.res_cookies:

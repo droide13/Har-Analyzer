@@ -2,10 +2,9 @@
 
 Also home to :func:`derive_metadata_from_entries`, which reads the domain
 and capture date straight out of a parsed HAR's traffic instead of trusting
-a filename or "now". Both the pre-capture generator (``naming_ui.py``) and
-the post-capture standardizer (``tabs/metadata``) call the same
-:func:`get_har_filename` below, so the filename format is defined in
-exactly one place.
+a filename or "now". The post-capture standardizer (``tabs/metadata``) calls
+:func:`get_har_filename` below, so the filename format is defined in exactly
+one place.
 """
 
 import re
@@ -71,7 +70,7 @@ class DerivedHarMetadata:
     entry_count: int
 
 
-def get_har_filename(
+def get_har_filename(  # pylint: disable=too-many-arguments,too-many-positional-arguments
     domain: str,
     interact: str,
     cookies: str,

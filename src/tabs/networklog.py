@@ -79,8 +79,11 @@ def _build_badges(
 
 
 class NetworkLogTab:
+    """Tab for browsing and searching the full request/response log."""
+
     @property
     def title(self) -> str:
+        """Return tab title."""
         return "Network Log"
 
     def _render_pagination_controls(self, curr_p: int, total_p: int, key_suffix: str) -> None:
@@ -124,13 +127,14 @@ class NetworkLogTab:
             highlighted=bool(highlight_reasons),
         )
 
-    def render(self, entries: list[ParsedEntry]) -> None:
-        st.markdown("### Filter, Query & Highlight Controls")
-
+    def _render_search_controls(
+        self, entries: list[ParsedEntry]
+    ) -> tuple[str, str, str, list[str], set[str], int]:
+        """Filter/highlight inputs, scope + method selectors, encoding checkboxes, page size."""
         with st.expander("Learn How to Search (Negations, Field Filters, etc.)", expanded=False):
             st.markdown("""
             You can type raw words or build highly advanced filter terms inside the fields below:
-            
+
             * **Free Text:** Searches the default field scope selected in the dropdown (e.g., `api/v1`).
             * **Negation (`-`):** Exclude items by adding a minus symbol before a term (e.g., `-status:200` or `-google`).
             * **Force Target Fields:** Bypass the dropdown mapping by prefixes:
@@ -168,17 +172,17 @@ class NetworkLogTab:
                 )
 
             # Define how many columns you want per row
-            COLS_PER_ROW = 4
+            cols_per_row = 4
             selected_encodings: set[str] = set()
 
             with st.expander(
                 "Encodings & Hashes for term matching (all applyed by default)", expanded=False
             ):
-                # Iterate through options in chunk sizes of COLS_PER_ROW
-                for i in range(0, len(ENCODING_OPTIONS), COLS_PER_ROW):
-                    chunk = ENCODING_OPTIONS[i : i + COLS_PER_ROW]
+                # Iterate through options in chunk sizes of cols_per_row
+                for i in range(0, len(ENCODING_OPTIONS), cols_per_row):
+                    chunk = ENCODING_OPTIONS[i : i + cols_per_row]
                     # Create a fresh row of uniform columns
-                    cols = st.columns(COLS_PER_ROW)
+                    cols = st.columns(cols_per_row)
                     # Zip stops when the chunk runs out, leaving remaining columns clean and empty
                     for col, name in zip(cols, chunk):
                         with col:
@@ -190,6 +194,36 @@ class NetworkLogTab:
             st.number_input(
                 "Results per page", min_value=10, max_value=500, value=50, step=10, key="req_size"
             )
+        )
+
+        return f_query, h_query, df_field, selected_m, selected_encodings, page_size
+
+    def _render_highlight_jump(self, flags: list[bool], page_size: int, curr_p: int) -> None:
+        """Buttons to jump directly to each page containing a highlighted match."""
+        matched_pages = sorted({(i // page_size) + 1 for i, is_hit in enumerate(flags) if is_hit})
+        st.caption(
+            f"Highlighted matches appear on {len(matched_pages)} page(s): jump directly below."
+        )
+
+        jump_cols = st.columns(min(len(matched_pages), 12))
+        for i, page_num in enumerate(matched_pages):
+            with jump_cols[i % len(jump_cols)]:
+                is_current = page_num - 1 == curr_p
+                if st.button(
+                    str(page_num),
+                    key=f"jump_page_{page_num}",
+                    type="primary" if is_current else "secondary",
+                    disabled=is_current,
+                ):
+                    st.session_state["req_page"] = page_num - 1
+                    st.rerun()
+
+    def render(self, entries: list[ParsedEntry]) -> None:
+        """Render search controls, paginated results, and highlight-jump navigation."""
+        st.markdown("### Filter, Query & Highlight Controls")
+
+        f_query, h_query, df_field, selected_m, selected_encodings, page_size = (
+            self._render_search_controls(entries)
         )
 
         filter_results = {
@@ -226,29 +260,12 @@ class NetworkLogTab:
         start, end = curr_p * page_size, (curr_p + 1) * page_size
 
         st.write(
-            f"Showing **{len(filtered)}** items (Matches: {sum(flags)} highlighted) out of {len(entries)} total entries."
+            f"Showing **{len(filtered)}** items (Matches: {sum(flags)} highlighted) "
+            f"out of {len(entries)} total entries."
         )
 
         if h_active and sum(flags):
-            matched_pages = sorted(
-                {(i // page_size) + 1 for i, is_hit in enumerate(flags) if is_hit}
-            )
-            st.caption(
-                f"Highlighted matches appear on {len(matched_pages)} page(s): jump directly below."
-            )
-
-            jump_cols = st.columns(min(len(matched_pages), 12))
-            for i, page_num in enumerate(matched_pages):
-                with jump_cols[i % len(jump_cols)]:
-                    is_current = page_num - 1 == curr_p
-                    if st.button(
-                        str(page_num),
-                        key=f"jump_page_{page_num}",
-                        type="primary" if is_current else "secondary",
-                        disabled=is_current,
-                    ):
-                        st.session_state["req_page"] = page_num - 1
-                        st.rerun()
+            self._render_highlight_jump(flags, page_size, curr_p)
 
         self._render_pagination_controls(curr_p, total_p, key_suffix="top")
 

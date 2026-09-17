@@ -83,12 +83,15 @@ def _render_value_expander(tk: TrackedKey) -> None:
 
 
 class IdentifiersTab:
+    """Tab for detecting stable identifiers across query params and cookies."""
+
     @property
     def title(self) -> str:
         """Tab title"""
         return "Identifiers"
 
     def render(self, entries: list[ParsedEntry]) -> None:
+        """Render the filter controls and per-key/value identifier tables."""
         st.markdown("### Stable Identifier Detection")
         st.caption(
             "Flags query params and cookies that appear often, take on few "

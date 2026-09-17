@@ -9,14 +9,13 @@ from core.models import get_embedded_analysis, load_parsed_entries, load_raw_har
 from core.protocols import Tab
 from tabs import (
     CookiesTab,
+    DisseminationTab,
     IdentifiersTab,
     MetadataTab,
     NetworkLogTab,
     OverviewTab,
     QueryParamsTab,
-    DisseminationTab
 )
-
 from tabs.naming.naming import get_attrs_from_har_name
 
 
@@ -108,11 +107,11 @@ def render_analyzer() -> None:
         else:
             st.warning(
                 f"⚠️ **Metadata Notice:** `{uploaded_file.name}` contains format errors:\n"
-                + error_s + "\n" +
-                "Please use the **Metadata** tab below to confirm "
+                + error_s
+                + "\n"
+                + "Please use the **Metadata** tab below to confirm "
                 "classification and export a standardized HAR file."
             )
-
 
         st.divider()
 
