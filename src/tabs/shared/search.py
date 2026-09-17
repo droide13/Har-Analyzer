@@ -6,6 +6,7 @@ import re
 import shlex
 import urllib.parse
 from dataclasses import dataclass, field
+from functools import lru_cache
 from typing import Callable, Literal, Mapping, Sequence
 
 from core.models import FIELD_MAP, ParsedEntry
@@ -208,10 +209,8 @@ def _scopes_for(
     return matched or [None]
 
 
-def encode_variants(value: str, encodings: set[str]) -> dict[str, str]:
-    """Return {encoding_name: transformed_value} for each selected encoding/hash."""
-    if not value or not encodings:
-        return {}
+@lru_cache(maxsize=512)
+def _encode_variants_cached(value: str, encodings: tuple[str, ...]) -> dict[str, str]:
     raw = value.encode("utf-8", errors="ignore")
     variants: dict[str, str] = {}
     for name in encodings:
@@ -223,6 +222,19 @@ def encode_variants(value: str, encodings: set[str]) -> dict[str, str]:
         except ValueError:
             continue
     return variants
+
+
+def encode_variants(value: str, encodings: set[str]) -> dict[str, str]:
+    """Return {encoding_name: transformed_value} for each selected encoding/hash.
+
+    Depends only on `value` and `encodings`, never on which entry is being
+    checked - cached so a scan over many entries (Network Log's filter/highlight,
+    which calls this once per entry) hashes each value once instead of once per
+    entry.
+    """
+    if not value or not encodings:
+        return {}
+    return _encode_variants_cached(value, tuple(sorted(encodings)))
 
 
 def collect_reasons(

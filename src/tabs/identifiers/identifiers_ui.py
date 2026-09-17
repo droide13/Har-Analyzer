@@ -90,8 +90,15 @@ class IdentifiersTab:
         """Tab title"""
         return "Identifiers"
 
+    @st.fragment
     def render(self, entries: list[ParsedEntry]) -> None:
-        """Render the filter controls and per-key/value identifier tables."""
+        """Render the filter controls and per-key/value identifier tables.
+
+        Wrapped in st.fragment: the "Search key name" box below is a live
+        text_input, and st.tabs renders every tab's body on every run, so
+        without this every keystroke here would also re-run Network Log,
+        Cookies, Query Params, Overview and Dissemination for no reason.
+        """
         st.markdown("### Stable Identifier Detection")
         st.caption(
             "Flags query params and cookies that appear often, take on few "

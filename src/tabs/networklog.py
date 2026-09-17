@@ -196,8 +196,16 @@ class NetworkLogTab:
                     st.session_state["req_page"] = page_num - 1
                     st.rerun()
 
+    @st.fragment
     def render(self, entries: list[ParsedEntry]) -> None:
-        """Render search controls, paginated results, and highlight-jump navigation."""
+        """Render search controls, paginated results, and highlight-jump navigation.
+
+        Wrapped in st.fragment: st.tabs renders every tab's body on every run,
+        so without this, every keystroke in the filter/highlight boxes below
+        (plain text_input, not a form - they need to react live) would also
+        re-run Cookies, Query Params, Identifiers, Overview and Dissemination
+        for no reason. The fragment confines the rerun to this tab.
+        """
         st.markdown("### Filter, Query & Highlight Controls")
 
         f_query, h_query, df_field, selected_m, selected_encodings, page_size = (
