@@ -36,7 +36,7 @@ from tabs.dissemination.dissemination import (
     value_timeline,
 )
 from tabs.shared.entry_render import render_entry_expander
-from tabs.shared.search import ENCODING_OPTIONS
+from tabs.shared.search import ENCODING_OPTIONS, entry_matches
 
 Signature = tuple[str, tuple[str, ...]]  # (traced key, chosen encodings)
 
@@ -118,12 +118,39 @@ def _render_dissemination(entries: list[ParsedEntry], key: str, values: list[str
 
     st.markdown("##### Matching Entries")
     st.caption("Ordered by HAR timestamp, oldest first.")
-    for entry, reasons in matches:
+    fcol, hcol = st.columns(2)
+    with fcol:
+        filter_query = st.text_input(
+            "Narrow these matches (discards)",
+            value="",
+            placeholder="e.g. domain:example.com, status:200",
+            key="history_match_filter",
+        )
+    with hcol:
+        highlight_query = st.text_input(
+            "Highlight within matches (keeps all)",
+            value="",
+            placeholder="e.g. cookie, status:200",
+            key="history_match_highlight",
+        )
+
+    visible = (
+        [(e, r) for e, r in matches if entry_matches(e, filter_query, "any", set()).matched]
+        if filter_query.strip()
+        else matches
+    )
+    if not visible:
+        st.info("No matches for this filter.")
+
+    h_active = bool(highlight_query.strip())
+    for entry, reasons in visible:
+        is_highlighted = h_active and entry_matches(entry, highlight_query, "any", set()).matched
         render_entry_expander(
             entry,
             key_prefix="history",
             badges=dissemination_badges(reasons),
             leading_tabs={"Matches": lambda r=reasons: _render_matches_tab(r)},
+            highlighted=is_highlighted,
         )
 
 
