@@ -13,7 +13,7 @@ import streamlit as st
 
 from core.models import ParsedEntry, list_to_safe_dict
 
-Badge = tuple[str, str]  # (text, style) where style is "blue" or "orange"
+Badge = tuple[str, str]  # (text, style) where style is a Streamlit color name
 
 _TIMING_PHASES = ("blocked", "dns", "connect", "ssl", "send", "wait", "receive")
 

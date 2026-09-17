@@ -21,39 +21,12 @@ from tabs.shared.search import (
     dedupe_overlapping_reasons,
     dedupe_redundant_encodings,
     encode_variants,
+    reason_label,
 )
 
 Occurrence = tuple[ParsedEntry, str, str]  # (entry, origin, value)
 DisseminationMatch = tuple[ParsedEntry, list[MatchReason]]
 Registry = dict[str, list[Occurrence]]
-
-_ATTR_LABELS: dict[str, str] = {
-    "url": "URL",
-    "domain": "Domain",
-    "method": "Method",
-    "req_headers_text": "Request Headers",
-    "res_headers_text": "Response Headers",
-    "req_body": "POST Data",
-    "res_body": "Response Body",
-    "cookies_text": "Cookies",
-    "query_params_text": "Query Params",
-}
-
-
-def attr_label(attr: str) -> str:
-    """Human-readable name for a ParsedEntry attribute."""
-    return _ATTR_LABELS.get(attr, attr.replace("_", " ").title())
-
-
-def reason_label(reason: MatchReason) -> str:
-    """Field name for display; a cookie hit names its side instead of "Cookies".
-
-    Matching is still per-attribute, so these are two labels over the one
-    `cookies_text` field.
-    """
-    if reason.scope is not None:
-        return COOKIE_LABELS[reason.scope]
-    return attr_label(reason.attr)
 
 
 def chronological_key(entry: ParsedEntry) -> tuple[str, int]:

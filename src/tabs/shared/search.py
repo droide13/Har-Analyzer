@@ -71,6 +71,29 @@ COOKIE_LABELS: dict[CookieScope, str] = {
 # The attribute whose hits can be attributed to a side.
 _COOKIE_ATTR = "cookies_text"
 
+# Human-readable name for each ParsedEntry attribute a match can hit. Keys
+# must match FIELD_MAP's attribute names exactly (e.g. "req_headers_text",
+# not "req_headers") - the single place this mapping lives, so networklog.py
+# and dissemination.py can't drift apart on it again.
+ATTR_LABELS: dict[str, str] = {
+    "url": "URL",
+    "domain": "Domain",
+    "method": "Method",
+    "status": "Status",
+    "mime": "MIME Type",
+    "req_headers_text": "Request Headers",
+    "res_headers_text": "Response Headers",
+    "req_body": "POST Data",
+    "res_body": "Response Body",
+    "cookies_text": "Cookies",
+    "query_params_text": "Query Params",
+}
+
+
+def attr_label(attr: str) -> str:
+    """Human-readable name for a ParsedEntry attribute."""
+    return ATTR_LABELS.get(attr, attr.replace("_", " ").title())
+
 
 def dedupe_redundant_encodings(forms: list[str]) -> list[str]:
     """Collapse a set of matched forms down to the least-encoded link of the
@@ -95,6 +118,17 @@ class MatchReason:
     # Only set for `cookies_text` hits, and only to label them in the UI.
     # None means "not a cookie hit, or the side couldn't be determined".
     scope: CookieScope | None = None
+
+
+def reason_label(reason: MatchReason) -> str:
+    """Field name for display; a cookie hit names its side instead of "Cookies".
+
+    Matching is still per-attribute, so these are two labels over the one
+    `cookies_text` field.
+    """
+    if reason.scope is not None:
+        return COOKIE_LABELS[reason.scope]
+    return attr_label(reason.attr)
 
 
 @dataclass
@@ -228,29 +262,31 @@ def match_term(
         term = term[1:]
 
     term = term.strip("'\"")
-    reasons: list[MatchReason] = []
 
-    # Route field-specific searches (e.g., url:google, cookies:sid)
-    # Exclude normal http(s) protocols so direct URL searches don't break
+    # Route field-specific searches (e.g., url:google, cookies:sid).
+    # Exclude normal http(s) protocols so direct URL searches don't break.
+    field_name: str | None = None
+    value = term
     if ":" in term and not term.startswith(("http:", "https:")):
-        field_name, value = term.split(":", 1)
-        field_name = field_name.lower()
-        if field_name in FIELD_MAP:
-            if field_name == "status" and re.fullmatch(r"[1-5]xx", value.lower()):
-                if entry.status.startswith(value[0]):
-                    reasons.append(MatchReason(term=value, attr="status", encoding=None))
-            else:
-                variants = encode_variants(value, encodings)
-                reasons = collect_reasons(entry, FIELD_MAP[field_name], value, variants)
+        prefix, remainder = term.split(":", 1)
+        if prefix.lower() in FIELD_MAP:
+            field_name = prefix.lower()
+            value = remainder
+
+    if field_name is not None:
+        reasons: list[MatchReason] = []
+        if field_name == "status" and re.fullmatch(r"[1-5]xx", value.lower()):
+            if entry.status.startswith(value[0]):
+                reasons.append(MatchReason(term=value, attr="status", encoding=None))
         else:
-            attrs = FIELD_MAP.get(default_field.lower(), FIELD_MAP["any"])
-            variants = encode_variants(term, encodings)
-            reasons = collect_reasons(entry, attrs, term, variants)
+            variants = encode_variants(value, encodings)
+            reasons = collect_reasons(entry, FIELD_MAP[field_name], value, variants)
     else:
-        # Default fallback standard search
+        # Default fallback standard search (includes an unrecognized field
+        # prefix, e.g. "foo:bar" - searched as the literal string "foo:bar").
         attrs = FIELD_MAP.get(default_field.lower(), FIELD_MAP["any"])
-        variants = encode_variants(term, encodings)
-        reasons = collect_reasons(entry, attrs, term, variants)
+        variants = encode_variants(value, encodings)
+        reasons = collect_reasons(entry, attrs, value, variants)
         reasons = dedupe_overlapping_reasons(reasons)
 
     matched = bool(reasons)

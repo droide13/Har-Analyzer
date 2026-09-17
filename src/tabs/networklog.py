@@ -9,38 +9,16 @@ from tabs.shared.search import (
     MatchReason,
     dedupe_redundant_encodings,
     entry_matches,
+    reason_label,
 )
-
-_ATTR_LABELS: dict[str, str] = {
-    "url": "URL",
-    "method": "Method",
-    "status": "Status",
-    "req_headers": "Request Headers",
-    "res_headers": "Response Headers",
-    "req_body": "POST Data",
-    "res_body": "Response Body",
-    "req_cookies": "Request Cookies",
-    "res_cookies": "Response Cookies",
-    "query_params": "Query Params",
-}
-
-
-def _attr_label(attr: str) -> str:
-    return _ATTR_LABELS.get(attr, attr.replace("_", " ").title())
-
-
-# Kept old method just in case
-# def _format_reason(reason: MatchReason) -> str:
-#     label = _attr_label(reason.attr)
-#     return f"{label} ({reason.encoding})" if reason.encoding else label
 
 
 def _reason_summary(reasons: list[MatchReason]) -> str:
-    """One entry per attribute, e.g. 'Res Headers (plain, MD5)' - collapses
+    """One entry per field, e.g. 'Response Headers (plain, MD5)' - collapses
     redundant links of the URL-encoding chain and lists other encodings once."""
     by_attr: dict[str, list[str]] = {}
     for reason in reasons:
-        label = _attr_label(reason.attr)
+        label = reason_label(reason)
         form = reason.encoding or "plain"
         by_attr.setdefault(label, [])
         if form not in by_attr[label]:
@@ -68,7 +46,7 @@ def _build_badges(
     if entry.res_cookies:
         cookie_bits.append(f"SetCookies: {len(entry.res_cookies)}")
     if cookie_bits:
-        badges.append((" | ".join(cookie_bits), "blue"))
+        badges.append((" | ".join(cookie_bits), "gray"))
 
     if filter_reasons:
         badges.append((f"Filtered via: {_reason_summary(filter_reasons)}", "blue"))
