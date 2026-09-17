@@ -42,11 +42,11 @@ def _build_badges(
 
     cookie_bits: list[str] = []
     if entry.req_cookies:
-        cookie_bits.append(f"ReqCookies: {len(entry.req_cookies)}")
+        cookie_bits.append(f"{len(entry.req_cookies)}↑")  # sent by browser
     if entry.res_cookies:
-        cookie_bits.append(f"SetCookies: {len(entry.res_cookies)}")
+        cookie_bits.append(f"{len(entry.res_cookies)}↓")  # set by server
     if cookie_bits:
-        badges.append((" | ".join(cookie_bits), "gray"))
+        badges.append((f"\U0001f36a {' '.join(cookie_bits)}", "gray"))
 
     if filter_reasons:
         badges.append((f"Filtered via: {_reason_summary(filter_reasons)}", "blue"))
