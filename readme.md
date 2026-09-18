@@ -1,69 +1,77 @@
-# HAR Analyzer <img src="./src/assets/har_analyzer.png" alt="HAR Analyzer Logo" width="28" align="absmiddle">
+# HAR Analyzer
 
-A fast, simple, highly modular, and strictly typed Streamlit application to parse, filter, and audit HTTP Archive (`.har`) files — with a focus on tracing how identifiers (cookies, query-param tokens, session IDs) are captured and disseminated across a capture.
+A fast, strictly typed tool to parse, filter, and audit HTTP Archive (`.har`) files — with a focus on tracing how identifiers (cookies, query-param tokens, session IDs) are captured and disseminated across a capture.
+
+A FastAPI backend (Python) does the parsing/analysis; a React + TypeScript frontend renders it. Originally a single Streamlit app — rewritten for performance on large captures and richer interactive graphs. Feature-for-feature parity with the original: same 7 tabs, same search syntax, same naming convention.
 
 ---
 
 ## Setup & Use
 
+Backend and frontend run as two separate local processes.
+
 ```bash
-# Initialize and activate virtual environment
+# Backend (FastAPI)
+cd backend
 python -m venv .venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-
-# Install dependencies (for development: pip install -r requirements-dev.txt)
-pip install -r requirements.txt
-
-# Change to source directory
-cd src
-
-# Run the Streamlit app
-streamlit run app.py
+pip install -r requirements.txt   # or requirements-dev.txt for dev (adds pytest, black, isort, pylint)
+uvicorn app.main:app --reload --port 8000
 ```
+
+```bash
+# Frontend (React + Vite), in a second terminal
+cd frontend
+npm install
+npm run dev   # http://localhost:5173 -- proxies /api/* to the backend on :8000
+```
+
+Open http://localhost:5173 and upload a `.har` file.
 
 ---
 
 ## Project Structure
 
 ```bash
-./src
-├── app.py                     # Streamlit orchestrator
-├── assets/                    # Static files (logo, etc.)
-├── core/                      # Pure parsing/typing layer
-│   ├── models.py                # Caching HAR parser + ParsedEntry / HarAnalysis data types
-│   ├── analyzer.py              # Upload flow + tab orchestration
-│   ├── app_version.py           # Reads the app version out of pyproject.toml
-│   └── protocols.py             # Tab protocol every tab implements
-├── tabs/                      # Self-contained, single-responsibility UI views
-│   ├── networklog.py            # Request/response browser + filter/highlight search
-│   ├── cookies.py                # Cookie registry + aggregation
-│   ├── query_params.py          # Query-param registry + aggregation
-│   ├── overview/                # HAR analytics: metrics, domain explorer, DNS/WHOIS
-│   │   ├── overview.py            # Logic
-│   │   └── overview_ui.py         # UI
-│   ├── dissemination/           # Identifier dissemination tracing
-│   │   ├── dissemination.py       # Logic
-│   │   └── dissemination_ui.py    # UI
-│   ├── identifiers/             # Stable identifier detection (entropy/cardinality scoring)
-│   │   ├── identifiers.py         # Logic
-│   │   └── identifiers_ui.py      # UI
-│   ├── metadata/                 # Standardize & tag a HAR file with embedded metadata
-│   │   ├── metadata.py            # Logic
-│   │   └── metadata_ui.py         # UI
-│   ├── naming/                   # Standardized filename format
-│   │   └── naming.py              # Logic (used by tabs/metadata)
-│   └── shared/                   # Code reused across tabs
-│       ├── entry_render.py        # Shared expander UI for a HAR entry
-│       ├── search.py              # Searching, tokenizing, matching engine
-│       └── selectors.py           # Select box helper
+./backend
+├── app/
+│   ├── main.py                  # FastAPI app + router registration
+│   ├── store.py                 # In-memory upload registry (parse once, look up by id)
+│   ├── schemas.py                # Pydantic response/request models
+│   ├── core/
+│   │   ├── models.py               # ParsedEntry / HarAnalysis data types + HAR parsing
+│   │   ├── har_time.py             # HAR ISO-8601 timestamp parsing (stdlib only)
+│   │   └── app_version.py          # Reads the app version out of pyproject.toml
+│   ├── shared/                    # Logic reused across more than one router
+│   │   ├── search.py                # Searching, tokenizing, matching engine
+│   │   ├── naming.py                 # Standardized filename format
+│   │   ├── aggregation.py            # Group-by-name helpers (Cookies/Query Params)
+│   │   └── entry_summary.py          # ParsedEntry -> EntrySummary (Network Log + Dissemination)
+│   ├── features/                  # Pure per-tab logic, no FastAPI imports
+│   │   ├── overview.py, cookies.py, query_params.py, identifiers.py,
+│   │   └── dissemination.py, metadata.py
+│   └── routers/                   # Thin HTTP layer: parse request, call features/, shape response
+│       └── har.py, overview.py, cookies.py, query_params.py, identifiers.py,
+│           dissemination.py, metadata.py, naming.py
+└── tests/                        # pytest -- unit tests per feature module + API integration tests
+
+./frontend
+├── src/
+│   ├── App.tsx                   # Upload gate, SessionBar, tab registration
+│   ├── api/                      # Typed fetch wrappers, one file per backend router
+│   ├── components/                # Shared UI: TabShell, DataTable, EntryDetailPanel, Select, ...
+│   ├── features/                  # One folder per tab (networkLog, overview, cookies, ...)
+│   ├── hooks/                     # useDebouncedValue
+│   └── lib/                       # formatBytes and other presentation-only helpers
 ```
 
-* **`app.py`** — wires up all tabs and drives the page.
-* **`core/`** — parsing and typing that nothing in the UI layer depends on stylistically; every other module builds on top of `ParsedEntry`.
-* **`tabs/`** — one file (or sub-package, for anything with enough logic to warrant separating UI from core logic) per view. All tabs implement the `Tab` protocol from `core/protocols.py`: a `title` property and a `render(entries)` method.
-* **`tabs/shared/`** — logic used by *more than one* tab (currently the entry expander renderer and the search/matching engine), kept out of `core/` since it's Streamlit-facing rather than pure parsing.
+* **`backend/app/core/`** — parsing and typing nothing else depends on stylistically; every other module builds on `ParsedEntry`.
+* **`backend/app/shared/`** — logic used by more than one router (the search/matching engine, filename convention, aggregation helpers).
+* **`backend/app/features/`** — one module per tab's business logic, pure Python, unit-tested without spinning up the API.
+* **`backend/app/routers/`** — FastAPI endpoints; stay thin, delegate to `features/`.
+* **`frontend/src/features/`** — one folder per tab; each view takes an explicit `uploadId` prop rather than reading global state.
 
-> `captures/` and `output/` are optional local working folders you can create under `src/` to keep `.har` test inputs and generated outputs organized while you work. They're gitignored scratch space, not part of the application code, so they're left out of the tree above.
+> `captures/` (repo root) is an optional local working folder for `.har` test inputs. Gitignored scratch space, not part of the application.
 
 ---
 
@@ -71,13 +79,14 @@ streamlit run app.py
 
 Alongside HAR analysis, the app includes a standalone **file standardizer** for
 renaming `.har` captures *after* you record them. Upload a capture and fill in
-the required fields.
+the required fields on the **Metadata** tab.
 
 The capture time is detected automatically: the tool reads the timestamps of all
 entries in the file and uses the earliest one. HAR files store timestamps in UTC,
 and that UTC value is what appears in the generated filename. The time shown in
 the interface is the same instant converted to your local timezone, so the two
-will differ if you aren't on UTC.
+will differ if you aren't on UTC. If no timestamp can be derived from the traffic,
+you're prompted to enter the capture date manually.
 
 ### Naming convention
 
@@ -94,19 +103,19 @@ The standardizer generates (and the app parses) filenames of the form:
 | `visit`    | first visit (fresh) / second visit (reuse existing cookies or state) / delete cookies and reload  | `FIR` / `SEC` / `DEL`                                          |
 | `extra`    | free-text context, first 3 letters uppercased, or `000` if omitted                                 | any 3 letters, or `000`                                        |
 
-This single format is defined in one place in code — `tabs/naming/naming.py`'s `get_har_filename` (building it) and `get_attrs_from_har_name` (parsing it back) — and used by both the standardizer and the Analyzer's own file-format check.
+This format is defined in one place — `backend/app/shared/naming.py`'s `get_har_filename` (building it) and `get_attrs_from_har_name` (parsing it back) — used by both the standardizer and the upload's file-format check. `GET /api/naming/options` serves the same code/label tables to the frontend, so they can't drift apart.
 
 ---
 
 ## Tabs
 
-### Overview
+### HAR Analytics (Overview)
 
-High-level summary of the loaded HAR file.
+High-level summary of the loaded HAR file: request/size/domain/latency metrics, method and status-code distribution, and a domain/subdomain traffic explorer with an opt-in DNS + WHOIS resolution report.
 
 ### Network Log
 
-The main request/response browser. Every entry renders as an expander (status, method, URL, badges) with tabs for Request Headers, Post data (POST only), Query & Cookies, Response Headers, and Response Body. Supports the full filter/highlight search described below.
+The main request/response browser: a virtualized table (handles large captures without the browser choking) plus a detail panel per row with tabs for Request/Response Headers, Post data, Query & Cookies, Response Body, Initiator, Timing, and Details. Supports the full filter/highlight search described below.
 
 ### Query Params
 
@@ -126,7 +135,7 @@ Traces a single query-param or cookie key across the whole capture — not just 
 * Builds a **value timeline**: one row per sighting, flagging whenever the value changes from the sighting immediately before it. Useful for spotting session rotation, token refresh, or a value that never changes when it probably should.
 * Runs a **dissemination scan**: takes every distinct value ever seen under that key and searches *every* field of *every* entry — headers, URLs, request/response bodies, other cookies — not just the field the value originally came from. This is how you catch a session cookie quietly leaking into a third-party request URL or an analytics payload.
 * Summarizes the scan **by domain**: which hosts received or echoed the value, in how many entries, and through which fields — a quick way to gauge third-party exposure before drilling into individual requests.
-* Matching entries render with the same expander UI as the Network Log tab, with an extra **Matches** tab showing exactly which field and encoding triggered the hit.
+* Matching entries share the same detail-panel UI as the Network Log tab, with an extra **Matches** tab showing exactly which field and encoding triggered the hit.
 
 **How to use it:**
 
@@ -135,7 +144,7 @@ Traces a single query-param or cookie key across the whole capture — not just 
 3. Optionally select encoded/hashed forms to match against (same Base64/MD5/SHA1/etc. options as the main search).
 4. Click **Search dissemination** to run the scan.
 
-The dissemination scan is a full sweep over every entry's every field, so it's gated behind that button and only runs on demand — switching keys, expanding rows, or adjusting other widgets won't silently re-trigger it. Results stay cached per key until you search again.
+The dissemination scan is a full sweep over every entry's every field, so it's gated behind that button and only runs on demand — switching keys or adjusting the encoding checkboxes won't silently re-trigger it. The narrow/highlight filters below the results *are* live once a scan has run.
 
 ### Identifiers
 
@@ -154,66 +163,13 @@ The Network Log tab supports two independent query fields: a **Filter** query (d
 
 Additionally, each search term can be checked against **encoded or hashed forms** of itself (Base64, Base32, Hex, URL-encoding — single/double/triple pass, MD5, SHA1, SHA256, SHA512, and common hash-then-encode / encode-then-hash combinations) via the checkboxes above the query fields. This surfaces matches even when the plaintext only appears in encoded form somewhere in the traffic (e.g. a token that shows up Base64-encoded in a cookie). Matched entries display a badge indicating which field and encoding produced the match.
 
-The same matching engine (`tabs/shared/search.py`) powers the Dissemination tab's scan.
+The same matching engine (`backend/app/shared/search.py`) powers the Dissemination tab's scan.
 
 ---
 
-## 🔌 How to Add a New Tab
+## Adding a New Tab
 
-Adding a custom tab (e.g., a "Performance" audit tab) takes less than two minutes:
+1. **Backend**: add `backend/app/features/<name>.py` (pure logic, unit-tested) and `backend/app/routers/<name>.py` (thin FastAPI endpoints calling into it), then register the router in `backend/app/main.py`.
+2. **Frontend**: add `frontend/src/api/<name>.ts` (typed fetch wrappers) and `frontend/src/features/<name>/<Name>View.tsx`, then add it to the `tabs` array in `frontend/src/App.tsx`.
 
-### 1. Create the Tab File
-
-Create `tabs/performance.py` implementing the `Tab` protocol:
-
-```python
-import streamlit as st
-from core.models import ParsedEntry
-
-class PerformanceTab:
-    @property
-    def title(self) -> str:
-        return "🚀 Performance Analysis"
-
-    def render(self, entries: list[ParsedEntry]) -> None:
-        st.markdown("### Latency & Payload Audits")
-        # Write your custom Streamlit UI code here!
-```
-
-For anything with enough logic to warrant separating UI from core logic (see `identifiers/`, `metadata/`, `dissemination/`, or `overview/`), make it a sub-package instead, following the `<name>.py` (logic) / `<name>_ui.py` (UI) convention:
-
-```bash
-tabs/performance/
-├── __init__.py
-├── performance.py      # Logic
-└── performance_ui.py   # UI
-```
-
-### 2. Expose It in the Package
-
-Open `tabs/__init__.py` to import and export your new class:
-
-```python
-from .performance import PerformanceTab
-
-__all__ = [..., "PerformanceTab"]
-```
-
-### 3. Register It in the Main App
-
-Add it to the `tabs_to_render` list inside `app.py`:
-
-```python
-tabs_to_render: list[Tab] = [
-    NetworkLogTab(),
-    OverviewTab(),
-    CookiesTab(),
-    QueryParamsTab(),
-    IdentifiersTab(),
-    DisseminationTab(),
-    MetadataTab(),
-    PerformanceTab(),  # Added!
-]
-```
-
-If your tab needs logic shared with other tabs (not just its own), put it in `tabs/shared/` rather than duplicating it.
+If your tab needs logic shared with other tabs (not just its own), put it in `backend/app/shared/` (backend) or `frontend/src/components/`/`frontend/src/lib/` (frontend) rather than duplicating it.
