@@ -165,6 +165,7 @@ async def get_entry_detail(upload_id: str, index: int) -> EntryDetail:
         initiator_type=entry.initiator_type,
         initiator_url=entry.initiator_url,
         initiator_stack=entry.initiator_stack,
+        raw=entry.raw,
     )
 
 

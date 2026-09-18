@@ -4,7 +4,7 @@ import { fetchEncodingOptions, fetchEntries, fetchMethodOrder, fetchScopeOptions
 import { useDebouncedValue } from '../../hooks/useDebouncedValue'
 import { SearchControls } from './SearchControls'
 import { EntryTable } from './EntryTable'
-import { EntryDetailPanel } from './EntryDetailPanel'
+import { EntryDetailPanel } from '../../components/EntryDetailPanel'
 import { Pagination } from './Pagination'
 
 interface NetworkLogViewProps {

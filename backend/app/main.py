@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.routers.cookies import router as cookies_router
+from app.routers.dissemination import router as dissemination_router
 from app.routers.har import router as har_router
 from app.routers.identifiers import router as identifiers_router
 from app.routers.overview import router as overview_router
@@ -20,7 +21,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-for router in (har_router, overview_router, cookies_router, query_params_router, identifiers_router):
+for router in (
+    har_router,
+    overview_router,
+    cookies_router,
+    query_params_router,
+    identifiers_router,
+    dissemination_router,
+):
     app.include_router(router)
 
 

@@ -77,6 +77,12 @@ class EntryDetail(BaseModel):
     initiator_type: str
     initiator_url: str
     initiator_stack: list[dict[str, Any]]
+    # Original, unmodified HAR entry JSON -- backs the Timing/Details tabs
+    # (connection info, cache, per-phase timings, redirect URL, ...), the
+    # same way tabs/shared/entry_render.py's _render_timing_tab/
+    # _render_details_tab reach into ``entry.raw`` for fields that don't
+    # otherwise have a place on ParsedEntry.
+    raw: dict[str, Any]
 
 
 # --- Overview ---
@@ -177,3 +183,59 @@ class IdentifiersResponse(BaseModel):
 
     query_params: list[IdentifierSummaryRow]
     cookies: list[IdentifierSummaryRow]
+
+
+# --- Dissemination ---
+
+
+class DisseminationFirstSeen(BaseModel):
+    """Where/when a traced key's earliest sighting occurred."""
+
+    origin: str
+    when: str
+    method: str
+    domain: str
+    value: str
+
+
+class DisseminationTimelineResponse(BaseModel):
+    """Always-live (not gated behind Search): sighting count + value timeline
+    for one traced key. ``timeline`` rows keep the original's display-ready
+    keys (Started/Origin/Method/Host/URL/Value/"Value changed"), the same
+    loose-dict convention as RecordsView."""
+
+    sightings: int
+    distinct_values: int
+    origins: list[str]
+    first_seen: DisseminationFirstSeen
+    timeline: list[dict[str, Any]]
+
+
+class DisseminationSearchRequest(BaseModel):
+    """Body for the explicit "Search dissemination" scan.
+
+    ``narrow``/``highlight`` ride along so the whole scan-plus-filter
+    happens in one request; they're cheap relative to the scan itself and
+    keeping them server-side keeps app.shared.search as the one place the
+    query mini-language is implemented.
+    """
+
+    key: str
+    encodings: list[str]
+    narrow: str = ""
+    highlight: str = ""
+
+
+class DisseminationMatchRow(BaseModel):
+    """One matching entry: its Network-Log-shaped summary (reused so the
+    frontend's row/detail-panel components need no dissemination-specific
+    variant) plus which fields it matched through."""
+
+    entry: EntrySummary
+    badges: list[str]
+    reasons: list[dict[str, str]]
+
+
+class DisseminationSearchResponse(BaseModel):
+    by_domain: list[dict[str, Any]]
+    matches: list[DisseminationMatchRow]

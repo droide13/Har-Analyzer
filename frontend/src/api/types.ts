@@ -64,6 +64,8 @@ export interface EntryDetail {
   initiator_type: string
   initiator_url: string
   initiator_stack: Record<string, unknown>[]
+  /** Original, unmodified HAR entry JSON -- backs the Timing/Details tabs. */
+  raw: Record<string, unknown>
 }
 
 /** label -> field-key map, e.g. { "All fields": "any", URL: "url", ... }. */
@@ -137,4 +139,33 @@ export interface IdentifierSummaryRow {
 export interface IdentifiersResponse {
   query_params: IdentifierSummaryRow[]
   cookies: IdentifierSummaryRow[]
+}
+
+// --- Dissemination ---
+
+export interface DisseminationFirstSeen {
+  origin: string
+  when: string
+  method: string
+  domain: string
+  value: string
+}
+
+export interface DisseminationTimelineResponse {
+  sightings: number
+  distinct_values: number
+  origins: string[]
+  first_seen: DisseminationFirstSeen
+  timeline: Record<string, unknown>[]
+}
+
+export interface DisseminationMatchRow {
+  entry: EntrySummary
+  badges: string[]
+  reasons: { Field: string; Value: string; Forms: string }[]
+}
+
+export interface DisseminationSearchResponse {
+  by_domain: Record<string, unknown>[]
+  matches: DisseminationMatchRow[]
 }
