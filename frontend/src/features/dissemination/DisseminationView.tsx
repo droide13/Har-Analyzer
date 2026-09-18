@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { fetchDisseminationKeys, fetchDisseminationTimeline } from '../../api/dissemination'
 import { fetchEncodingOptions } from '../../api/har'
 import { DataTable, type DataTableColumn } from '../../components/DataTable'
+import { Select } from '../../components/Select'
 import { DisseminationSearchForm } from './DisseminationSearchForm'
 import { DisseminationResults } from './DisseminationResults'
 
@@ -78,16 +79,13 @@ export function DisseminationView({ uploadId }: DisseminationViewProps) {
 
       {keys && (
         <div className="dissemination__key-picker">
-          <label>
-            Key to trace
-            <select value={selectedKey ?? ''} onChange={(e) => setSelectedKey(e.target.value)}>
-              {keys.map((key) => (
-                <option key={key} value={key}>
-                  {key}
-                </option>
-              ))}
-            </select>
-          </label>
+          <span className="dropdown__label">Key to trace</span>
+          <Select
+            value={selectedKey ?? ''}
+            onChange={setSelectedKey}
+            options={keys}
+            ariaLabel="Key to trace"
+          />
         </div>
       )}
 

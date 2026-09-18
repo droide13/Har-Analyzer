@@ -155,6 +155,92 @@
   color: var(--text);
 }
 
+/* Custom dropdown (components/Select.tsx) -- a native <select>'s open
+   popup is rendered by the browser/OS and mostly ignores page CSS for
+   its width, which looks broken once option text is long/unpredictable
+   (a domain, a cookie key). This is a real page element instead, so it's
+   bounded by its container exactly like every other control. */
+.dropdown__label {
+  display: block;
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+
+.dropdown {
+  position: relative;
+}
+
+.dropdown__trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  text-align: left;
+  font: inherit;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.dropdown__value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dropdown__chevron {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.dropdown__panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  max-height: 260px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.dropdown__option {
+  display: block;
+  width: 100%;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.dropdown__option:hover {
+  background: var(--bg-subtle);
+}
+
+.dropdown__option--selected {
+  color: var(--accent);
+  font-weight: 600;
+}
+
 .search-controls__methods {
   border: none;
   padding: 0;
@@ -551,19 +637,14 @@
 
 /* Deliberately not .search-controls__row: that row's label rule is
    flex:1 so a lone child stretches to fill it, which is right for a
-   "Filter Query" text box but wrong for a single narrow key select --
-   this gets its own bounded width instead. */
+   "Filter Query" text box but wrong for a single narrow picker -- this
+   gets its own bounded width instead. */
 .dissemination__key-picker {
-  margin-bottom: 8px;
-}
-
-.dissemination__key-picker label {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  font-size: 13px;
-  color: var(--text-muted);
   max-width: 320px;
+  margin-bottom: 8px;
 }
 
 .dissemination__banner {
