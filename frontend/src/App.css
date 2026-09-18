@@ -16,6 +16,28 @@
 .app__session-info {
   color: var(--text-muted);
   font-size: 13px;
+  margin: 0;
+}
+
+/* Session bar */
+
+.session-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.session-bar button {
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 13px;
 }
 
 /* File upload */
@@ -36,6 +58,28 @@
 
 .file-upload__error {
   color: var(--error);
+}
+
+.file-upload--compact {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.file-upload--compact .file-upload__dropzone {
+  padding: 12px 20px;
+  border-radius: 6px;
+}
+
+.file-upload__cancel {
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 13px;
 }
 
 /* Tab shell */
@@ -504,6 +548,23 @@
 }
 
 /* Dissemination */
+
+/* Deliberately not .search-controls__row: that row's label rule is
+   flex:1 so a lone child stretches to fill it, which is right for a
+   "Filter Query" text box but wrong for a single narrow key select --
+   this gets its own bounded width instead. */
+.dissemination__key-picker {
+  margin-bottom: 8px;
+}
+
+.dissemination__key-picker label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+  color: var(--text-muted);
+  max-width: 320px;
+}
 
 .dissemination__banner {
   background: var(--bg-subtle);

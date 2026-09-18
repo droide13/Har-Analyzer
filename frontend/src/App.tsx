@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { FileUpload } from './components/FileUpload'
+import { SessionBar } from './components/SessionBar'
 import { TabShell, type TabDefinition } from './components/TabShell'
 import { NetworkLogView } from './features/networkLog/NetworkLogView'
 import { OverviewView } from './features/overview/OverviewView'
@@ -13,6 +14,14 @@ import './App.css'
 
 export default function App() {
   const [session, setSession] = useState<UploadResponse | null>(null)
+  // True whenever the upload picker should show: always with no session
+  // yet, or on demand afterward via SessionBar's "Switch file".
+  const [isPickingFile, setIsPickingFile] = useState(false)
+
+  function handleUploaded(upload: UploadResponse) {
+    setSession(upload)
+    setIsPickingFile(false)
+  }
 
   const tabs: TabDefinition[] = session
     ? [
@@ -30,14 +39,20 @@ export default function App() {
     <div className="app">
       <h1>HAR Analyzer</h1>
 
-      {!session && <FileUpload onUploaded={setSession} />}
+      {!session && <FileUpload onUploaded={handleUploaded} />}
 
       {session && (
         <>
-          <p className="app__session-info">
-            {session.filename} &mdash; {session.entry_count} entries
-          </p>
-          <TabShell tabs={tabs} />
+          <SessionBar session={session} onSwitchFile={() => setIsPickingFile(true)} />
+
+          {isPickingFile && (
+            <FileUpload onUploaded={handleUploaded} onCancel={() => setIsPickingFile(false)} compact />
+          )}
+
+          {/* Keyed on upload_id so switching files remounts the whole tab
+              tree -- every view's local filter/selection state resets
+              instead of pointing at indices from the previous file. */}
+          <TabShell key={session.upload_id} tabs={tabs} />
         </>
       )}
     </div>

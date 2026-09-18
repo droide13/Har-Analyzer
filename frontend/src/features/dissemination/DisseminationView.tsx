@@ -77,7 +77,7 @@ export function DisseminationView({ uploadId }: DisseminationViewProps) {
       </p>
 
       {keys && (
-        <div className="search-controls__row">
+        <div className="dissemination__key-picker">
           <label>
             Key to trace
             <select value={selectedKey ?? ''} onChange={(e) => setSelectedKey(e.target.value)}>

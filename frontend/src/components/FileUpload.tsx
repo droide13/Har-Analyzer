@@ -5,11 +5,23 @@ import type { UploadResponse } from '../api/types'
 
 interface FileUploadProps {
   onUploaded: (upload: UploadResponse) => void
+  onCancel?: () => void
+  /** Smaller dropzone for the "switch file" panel, vs. the full-page initial
+   * upload screen. */
+  compact?: boolean
 }
 
-/** Replaces st.file_uploader: pick a .har file, upload it once, hand the
- * resulting upload_id up to the app shell. */
-export function FileUpload({ onUploaded }: FileUploadProps) {
+/**
+ * Replaces st.file_uploader: pick a .har file, upload it once, hand the
+ * resulting upload_id up to the app shell.
+ *
+ * Single-file today by design -- one <input> and one uploadHar(file) call.
+ * A future "load multiple HARs / a whole folder" feature would add a
+ * batch variant of this (e.g. a `multiple`/`webkitdirectory` input plus a
+ * loop calling the same uploadHar), not change how this one works, so
+ * there's no premature multi-file plumbing here yet.
+ */
+export function FileUpload({ onUploaded, onCancel, compact = false }: FileUploadProps) {
   const [isUploading, setIsUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -27,7 +39,7 @@ export function FileUpload({ onUploaded }: FileUploadProps) {
   }
 
   return (
-    <div className="file-upload">
+    <div className={`file-upload ${compact ? 'file-upload--compact' : ''}`}>
       <label className="file-upload__dropzone">
         <input
           type="file"
@@ -41,6 +53,11 @@ export function FileUpload({ onUploaded }: FileUploadProps) {
         {isUploading ? 'Uploading...' : 'Upload your HTTP Archive document (.har)'}
       </label>
       {error && <p className="file-upload__error">{error}</p>}
+      {onCancel && (
+        <button className="file-upload__cancel" onClick={onCancel} disabled={isUploading}>
+          Cancel
+        </button>
+      )}
     </div>
   )
 }
