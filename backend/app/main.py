@@ -7,6 +7,8 @@ from app.routers.cookies import router as cookies_router
 from app.routers.dissemination import router as dissemination_router
 from app.routers.har import router as har_router
 from app.routers.identifiers import router as identifiers_router
+from app.routers.metadata import router as metadata_router
+from app.routers.naming import router as naming_router
 from app.routers.overview import router as overview_router
 from app.routers.query_params import router as query_params_router
 
@@ -28,6 +30,8 @@ for router in (
     query_params_router,
     identifiers_router,
     dissemination_router,
+    metadata_router,
+    naming_router,
 ):
     app.include_router(router)
 

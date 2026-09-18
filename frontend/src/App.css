@@ -86,7 +86,7 @@
   flex-wrap: wrap;
 }
 
-.search-controls__row label {
+.search-controls__row > label:not(.search-controls__checkbox) {
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -96,9 +96,13 @@
   min-width: 200px;
 }
 
-.search-controls input[type='text'],
-.search-controls select,
-.search-controls input[type='number'] {
+/* Form controls are styled app-wide, not just within .search-controls --
+   Metadata's form lives outside that wrapper and needs the same look. */
+.app input[type='text'],
+.app input[type='number'],
+.app input[type='datetime-local'],
+.app select,
+.app textarea {
   font: inherit;
   padding: 6px 8px;
   border: 1px solid var(--border);
@@ -164,11 +168,25 @@
   border-radius: 6px;
 }
 
-.entry-table thead {
+/* Sticky + background on <thead> itself doesn't reliably paint over
+   scrolling body cells in a real table (each <th> can end up with its own
+   transparent layer) -- putting both on the <th> cells is what actually
+   keeps row text from showing through as it scrolls underneath. */
+.entry-table thead th {
   position: sticky;
   top: 0;
   background: var(--bg-subtle);
   z-index: 1;
+}
+
+/* Without table-layout: fixed, a <th style={{width}}> is only a hint --
+   the browser's auto layout algorithm can still stretch columns to fit
+   whatever the widest cell content is (a long URL, several badge chips),
+   so header and body columns drift out of alignment. Fixed layout makes
+   the declared widths (and the one unset column, URL, getting the rest)
+   authoritative. */
+.entry-table--fixed {
+  table-layout: fixed;
 }
 
 .entry-table__row {
@@ -180,6 +198,11 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.entry-table__badges {
+  white-space: normal;
+  text-overflow: clip;
 }
 
 .entry-table__row:hover {
@@ -201,6 +224,75 @@
 }
 
 .entry-table__empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+/* Virtualized entry table (Network Log): div-based, see EntryTable.tsx for
+   why -- a real <table> can't have absolutely-positioned <tr>s stay
+   column-aligned across rows the way virtualization needs. */
+
+.virtual-table__scroll {
+  flex: 1;
+  min-width: 0;
+  height: 60vh;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.virtual-table {
+  min-width: max-content;
+}
+
+.virtual-table__header {
+  display: flex;
+  position: sticky;
+  top: 0;
+  background: var(--bg-subtle);
+  z-index: 1;
+  border-bottom: 1px solid var(--border);
+}
+
+.virtual-table__body {
+  position: relative;
+}
+
+.virtual-table__row {
+  display: flex;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+  align-items: center;
+}
+
+.virtual-table__row:hover {
+  background: var(--bg-subtle);
+}
+
+.virtual-table__row--highlighted {
+  background: var(--highlight);
+}
+
+.virtual-table__row--selected {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.virtual-table__cell {
+  padding: 4px 8px;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.virtual-table__url {
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.virtual-table__empty {
   padding: 24px;
   text-align: center;
   color: var(--text-muted);
@@ -369,14 +461,24 @@
   margin-bottom: 12px;
 }
 
-.data-table thead {
+.data-table thead th {
   position: sticky;
   top: 0;
   background: var(--bg-subtle);
+  z-index: 1;
 }
 
 .data-table tr {
   border-bottom: 1px solid var(--border);
+}
+
+/* Unlike the fixed-width entry tables, DataTable's columns are whatever a
+   caller's field names happen to be (Overview's Fields, Dissemination's
+   URL, ...), so there's no per-column width to enforce here -- instead,
+   long unbroken content (a URL, a token) wraps within its cell instead of
+   stretching the table past its container. */
+.data-table td {
+  overflow-wrap: anywhere;
 }
 
 .data-table__empty {

@@ -169,3 +169,54 @@ export interface DisseminationSearchResponse {
   by_domain: Record<string, unknown>[]
   matches: DisseminationMatchRow[]
 }
+
+// --- Metadata ---
+
+export interface HarAnalysis {
+  tool_version: string
+  domain: string
+  interact: string
+  cookies: string
+  visit: string
+  extra: string
+  captured_at: string
+  standardized_filename: string
+  description: string
+  email_used: string
+  notes: string
+}
+
+export interface MetadataDetected {
+  first_request_domain: string
+  captured_at: string | null
+  domain_options: string[]
+}
+
+export interface MetadataResponse {
+  detected: MetadataDetected
+  existing_analysis: HarAnalysis | null
+}
+
+export interface GenerateMetadataRequest {
+  domain: string
+  interact: string
+  cookies: string
+  visit: string
+  extra?: string
+  captured_at: string
+  description?: string
+  email_used?: string
+  notes?: string
+}
+
+export interface GenerateMetadataResponse {
+  filename: string
+  analysis: HarAnalysis
+}
+
+/** internal-code -> display-label maps, e.g. { login: "Login" }. */
+export interface NamingOptions {
+  interact: Record<string, string>
+  cookies: Record<string, string>
+  visit: Record<string, string>
+}

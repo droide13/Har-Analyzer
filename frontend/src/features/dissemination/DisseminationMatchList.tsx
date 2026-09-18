@@ -13,7 +13,7 @@ interface DisseminationMatchListProps {
 export function DisseminationMatchList({ matches, selectedIndex, onSelectRow }: DisseminationMatchListProps) {
   return (
     <div className="entry-table__scroll">
-      <table className="entry-table">
+      <table className="entry-table entry-table--fixed">
         <thead>
           <tr>
             <th style={{ width: 70 }}>Status</th>
@@ -40,7 +40,7 @@ export function DisseminationMatchList({ matches, selectedIndex, onSelectRow }: 
               </td>
               <td>{row.entry.method}</td>
               <td className="entry-table__url">{row.entry.url}</td>
-              <td>
+              <td className="entry-table__badges">
                 {row.badges.map((badge) => (
                   <span key={badge} className="badge badge--orange">
                     {badge}

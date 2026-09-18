@@ -77,16 +77,18 @@ export function DisseminationView({ uploadId }: DisseminationViewProps) {
       </p>
 
       {keys && (
-        <label>
-          Key to trace
-          <select value={selectedKey ?? ''} onChange={(e) => setSelectedKey(e.target.value)}>
-            {keys.map((key) => (
-              <option key={key} value={key}>
-                {key}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="search-controls__row">
+          <label>
+            Key to trace
+            <select value={selectedKey ?? ''} onChange={(e) => setSelectedKey(e.target.value)}>
+              {keys.map((key) => (
+                <option key={key} value={key}>
+                  {key}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
       )}
 
       {timelineQuery.data && (

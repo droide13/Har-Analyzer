@@ -7,6 +7,7 @@ import { CookiesView } from './features/cookies/CookiesView'
 import { QueryParamsView } from './features/queryParams/QueryParamsView'
 import { IdentifiersView } from './features/identifiers/IdentifiersView'
 import { DisseminationView } from './features/dissemination/DisseminationView'
+import { MetadataView } from './features/metadata/MetadataView'
 import type { UploadResponse } from './api/types'
 import './App.css'
 
@@ -21,6 +22,7 @@ export default function App() {
         { key: 'query-params', label: 'Query Params', render: () => <QueryParamsView uploadId={session.upload_id} /> },
         { key: 'identifiers', label: 'Identifiers', render: () => <IdentifiersView uploadId={session.upload_id} /> },
         { key: 'dissemination', label: 'Dissemination', render: () => <DisseminationView uploadId={session.upload_id} /> },
+        { key: 'metadata', label: 'Metadata', render: () => <MetadataView uploadId={session.upload_id} /> },
       ]
     : []
 

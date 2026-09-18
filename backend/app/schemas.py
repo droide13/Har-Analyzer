@@ -239,3 +239,63 @@ class DisseminationMatchRow(BaseModel):
 class DisseminationSearchResponse(BaseModel):
     by_domain: list[dict[str, Any]]
     matches: list[DisseminationMatchRow]
+
+
+# --- Metadata ---
+
+
+class HarAnalysisModel(BaseModel):  # pylint: disable=too-many-instance-attributes
+    """Mirrors core.models.HarAnalysis.to_dict()."""
+
+    tool_version: str
+    domain: str
+    interact: str
+    cookies: str
+    visit: str
+    extra: str
+    captured_at: str
+    standardized_filename: str
+    description: str = ""
+    email_used: str = ""
+    notes: str = ""
+
+
+class MetadataDetected(BaseModel):
+    """What the backend derived from the HAR's own traffic."""
+
+    first_request_domain: str
+    captured_at: str | None
+    domain_options: list[str]
+
+
+class MetadataResponse(BaseModel):
+    detected: MetadataDetected
+    existing_analysis: HarAnalysisModel | None
+
+
+class GenerateMetadataRequest(BaseModel):  # pylint: disable=too-many-instance-attributes
+    """Body for the "Generate standardized file" action."""
+
+    domain: str
+    interact: str
+    cookies: str
+    visit: str
+    extra: str = ""
+    captured_at: str  # ISO 8601; parsed the same way HAR's own timestamps are
+    description: str = ""
+    email_used: str = ""
+    notes: str = ""
+
+
+class GenerateMetadataResponse(BaseModel):
+    filename: str
+    analysis: HarAnalysisModel
+
+
+class NamingOptions(BaseModel):
+    """label tables from app.shared.naming, single source of truth for the
+    Metadata form's Interaction/Cookie/Visit selects."""
+
+    interact: dict[str, str]
+    cookies: dict[str, str]
+    visit: dict[str, str]

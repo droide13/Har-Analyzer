@@ -13,6 +13,7 @@ function statusColor(status: string): string {
 interface Column {
   header: string
   widthPx: number
+  grow?: boolean
   render: (entry: EntrySummary) => ReactNode
 }
 
@@ -29,7 +30,12 @@ const COLUMNS: Column[] = [
     render: (e) => <span className={statusColor(e.status)}>{e.status || '—'}</span>,
   },
   { header: 'Method', widthPx: 70, render: (e) => e.method },
-  { header: 'URL', widthPx: 480, render: (e) => <span className="entry-table__url">{e.url}</span> },
+  {
+    header: 'URL',
+    widthPx: 480,
+    grow: true,
+    render: (e) => <span className="virtual-table__url">{e.url}</span>,
+  },
   { header: 'Domain', widthPx: 180, render: (e) => e.domain },
   { header: 'MIME', widthPx: 140, render: (e) => e.mime },
   { header: 'Time', widthPx: 80, render: (e) => `${e.time_ms.toFixed(1)} ms` },
@@ -39,6 +45,10 @@ const COLUMNS: Column[] = [
     render: (e) => (e.req_cookie_count || e.res_cookie_count ? `${e.req_cookie_count}↑ ${e.res_cookie_count}↓` : null),
   },
 ]
+
+function cellStyle(col: Column): React.CSSProperties {
+  return col.grow ? { flex: `1 1 ${col.widthPx}px`, minWidth: col.widthPx } : { flex: `0 0 ${col.widthPx}px` }
+}
 
 interface EntryTableProps {
   items: EntrySummary[]
@@ -50,6 +60,12 @@ interface EntryTableProps {
  * Virtualized replacement for the original's one-st.expander-per-row
  * pattern: only the rows actually scrolled into view are ever mounted,
  * regardless of how many entries are in the filtered result.
+ *
+ * Built from plain divs, not a real <table> -- a <tr> can't be
+ * absolutely positioned (react-virtual's whole trick) while still
+ * participating in normal table column-width layout, so a real table
+ * here would render with columns that don't line up between rows. Flex
+ * rows with matching fixed-width cells sidestep that entirely.
  */
 export function EntryTable({ items, selectedIndex, onSelectRow }: EntryTableProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -62,28 +78,27 @@ export function EntryTable({ items, selectedIndex, onSelectRow }: EntryTableProp
   })
 
   return (
-    <div className="entry-table__scroll" ref={scrollRef}>
-      <table className="entry-table">
-        <thead>
-          <tr>
-            {COLUMNS.map((col) => (
-              <th key={col.header} style={{ width: col.widthPx }}>
-                {col.header}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody style={{ height: virtualizer.getTotalSize(), position: 'relative' }}>
+    <div className="virtual-table__scroll" ref={scrollRef}>
+      <div className="virtual-table" role="table">
+        <div className="virtual-table__header" role="row">
+          {COLUMNS.map((col) => (
+            <div key={col.header} className="virtual-table__cell" role="columnheader" style={cellStyle(col)}>
+              {col.header}
+            </div>
+          ))}
+        </div>
+        <div className="virtual-table__body" style={{ height: virtualizer.getTotalSize() }}>
           {virtualizer.getVirtualItems().map((virtualRow) => {
             const entry = items[virtualRow.index]
             return (
-              <tr
+              <div
                 key={entry.index}
+                role="row"
                 onClick={() => onSelectRow(entry.index)}
                 className={[
-                  'entry-table__row',
-                  entry.highlighted ? 'entry-table__row--highlighted' : '',
-                  entry.index === selectedIndex ? 'entry-table__row--selected' : '',
+                  'virtual-table__row',
+                  entry.highlighted ? 'virtual-table__row--highlighted' : '',
+                  entry.index === selectedIndex ? 'virtual-table__row--selected' : '',
                 ]
                   .filter(Boolean)
                   .join(' ')}
@@ -91,22 +106,22 @@ export function EntryTable({ items, selectedIndex, onSelectRow }: EntryTableProp
                   position: 'absolute',
                   top: 0,
                   left: 0,
-                  width: '100%',
+                  right: 0,
                   height: ROW_HEIGHT_PX,
                   transform: `translateY(${virtualRow.start}px)`,
                 }}
               >
                 {COLUMNS.map((col) => (
-                  <td key={col.header} style={{ width: col.widthPx }}>
+                  <div key={col.header} className="virtual-table__cell" role="cell" style={cellStyle(col)}>
                     {col.render(entry)}
-                  </td>
+                  </div>
                 ))}
-              </tr>
+              </div>
             )
           })}
-        </tbody>
-      </table>
-      {items.length === 0 && <p className="entry-table__empty">No entries match the current filter.</p>}
+        </div>
+      </div>
+      {items.length === 0 && <p className="virtual-table__empty">No entries match the current filter.</p>}
     </div>
   )
 }

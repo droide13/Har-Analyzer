@@ -23,13 +23,25 @@ class UploadNotFoundError(KeyError):
 
 @dataclass
 class UploadRecord:
-    """Everything derived from one uploaded HAR file."""
+    """Everything derived from one uploaded HAR file.
+
+    ``har_data`` stays the pristine parsed upload for the record's whole
+    lifetime -- it's never mutated in place, matching the original's
+    ``load_raw_har(file_bytes)`` always re-reading the untouched original
+    bytes. A Metadata "Generate standardized file" call produces a
+    *separate* embed_analysis'd copy, stashed in ``standardized_bytes``/
+    ``standardized_filename`` for the download endpoint -- the same role
+    Streamlit's ``st.session_state`` played for freezing what the download
+    button serves.
+    """
 
     upload_id: str
     filename: str
     har_data: dict[str, Any]
     entries: list[ParsedEntry]
     uploaded_at: float = field(default_factory=time.monotonic)
+    standardized_bytes: bytes | None = None
+    standardized_filename: str | None = None
 
 
 class UploadStore:
@@ -61,13 +73,14 @@ class UploadStore:
             raise UploadNotFoundError(upload_id)
         return record
 
-    def replace_har_data(self, upload_id: str, har_data: dict[str, Any]) -> UploadRecord:
-        """Swap in a new ``har_data`` for an existing upload (Metadata's embed step)."""
+    def set_standardized_output(self, upload_id: str, filename: str, data: bytes) -> UploadRecord:
+        """Stash a freshly generated standardized HAR for the download endpoint."""
         with self._lock:
             record = self._records.get(upload_id)
             if record is None:
                 raise UploadNotFoundError(upload_id)
-            record.har_data = har_data
+            record.standardized_filename = filename
+            record.standardized_bytes = data
         return record
 
 
