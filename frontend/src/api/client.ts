@@ -21,6 +21,15 @@ export async function apiPostForm<T>(path: string, form: FormData): Promise<T> {
   return parseOrThrow<T>(response)
 }
 
+export async function apiPostJson<T>(path: string, body: unknown): Promise<T> {
+  const response = await fetch(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  return parseOrThrow<T>(response)
+}
+
 function buildQuery(params: Record<string, string | number | undefined>): string {
   const entries = Object.entries(params).filter(([, v]) => v !== undefined) as [string, string | number][]
   if (entries.length === 0) return ''

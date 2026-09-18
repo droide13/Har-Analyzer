@@ -309,6 +309,97 @@
   font-size: 13px;
 }
 
+/* Metrics row (Overview, Cookies, Query Params) */
+
+.metrics-row {
+  display: flex;
+  gap: 24px;
+  margin: 8px 0 16px;
+  flex-wrap: wrap;
+}
+
+.metric {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.metric__label {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.metric__value {
+  font-size: 22px;
+  font-weight: 600;
+}
+
+/* Overview */
+
+.overview__charts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.overview__caption {
+  color: var(--text-muted);
+  font-size: 13px;
+  margin: 4px 0 12px;
+}
+
+.overview__error {
+  color: var(--error);
+}
+
+.domain-explorer {
+  margin-top: 16px;
+}
+
+/* Generic data table (Overview subdomain/resolution tables, Cookies,
+   Query Params, Identifiers -- all plain, non-virtualized tables) */
+
+.data-table__scroll {
+  max-height: 60vh;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+
+.data-table thead {
+  position: sticky;
+  top: 0;
+  background: var(--bg-subtle);
+}
+
+.data-table tr {
+  border-bottom: 1px solid var(--border);
+}
+
+.data-table__empty {
+  padding: 16px;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.aggregate-toggle-view {
+  margin-top: 8px;
+}
+
+/* Identifiers */
+
+.identifiers__value-expander {
+  margin: 4px 0 12px;
+  font-size: 13px;
+}
+
+.identifiers__value-expander summary {
+  cursor: pointer;
+  color: var(--text-muted);
+}
+
 /* Pagination */
 
 .pagination {

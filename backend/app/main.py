@@ -3,7 +3,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.routers.cookies import router as cookies_router
 from app.routers.har import router as har_router
+from app.routers.identifiers import router as identifiers_router
+from app.routers.overview import router as overview_router
+from app.routers.query_params import router as query_params_router
 
 app = FastAPI(title="HAR Analyzer API", version="0.1.0")
 
@@ -16,7 +20,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(har_router)
+for router in (har_router, overview_router, cookies_router, query_params_router, identifiers_router):
+    app.include_router(router)
 
 
 @app.get("/api/health")
