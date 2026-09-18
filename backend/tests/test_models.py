@@ -29,7 +29,9 @@ def test_parsed_entry_fields_match_source(sample_har_dict: dict) -> None:
     assert "[Res] tracking_id: trk-999" in first.cookies_text
 
 
-def test_load_parsed_entries_matches_build_from_dict(sample_har_bytes: bytes, sample_har_dict: dict) -> None:
+def test_load_parsed_entries_matches_build_from_dict(
+    sample_har_bytes: bytes, sample_har_dict: dict
+) -> None:
     assert load_parsed_entries(sample_har_bytes) == build_entries_from_har_data(sample_har_dict)
 
 

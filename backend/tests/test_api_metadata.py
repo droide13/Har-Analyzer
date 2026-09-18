@@ -18,7 +18,9 @@ def upload_id(client: TestClient, sample_har_bytes: bytes) -> str:
     return response.json()["upload_id"]
 
 
-def test_get_metadata_detects_domain_and_no_existing_analysis(client: TestClient, upload_id: str) -> None:
+def test_get_metadata_detects_domain_and_no_existing_analysis(
+    client: TestClient, upload_id: str
+) -> None:
     response = client.get(f"/api/har/{upload_id}/metadata")
     body = response.json()
     assert response.status_code == 200

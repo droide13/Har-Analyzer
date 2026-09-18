@@ -11,6 +11,7 @@ router = APIRouter(prefix="/api/har", tags=["cookies"])
 
 @router.get("/{upload_id}/cookies", response_model=RecordsView)
 async def get_cookies(upload_id: str) -> RecordsView:
+    """Per-occurrence cookie records plus a name-grouped aggregate."""
     try:
         record = upload_store.get(upload_id)
     except UploadNotFoundError as exc:
@@ -22,4 +23,6 @@ async def get_cookies(upload_id: str) -> RecordsView:
         "missing_secure": sum(1 for r in records if not r["Secure"]),
         "missing_http_only": sum(1 for r in records if not r["HttpOnly"]),
     }
-    return RecordsView(metrics=metrics, records=records, aggregated=aggregate_cookie_records(records))
+    return RecordsView(
+        metrics=metrics, records=records, aggregated=aggregate_cookie_records(records)
+    )

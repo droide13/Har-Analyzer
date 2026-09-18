@@ -2,7 +2,10 @@
 
 from fastapi import APIRouter, HTTPException
 
-from app.features.query_params import aggregate_query_param_records, collect_query_param_records
+from app.features.query_params import (
+    aggregate_query_param_records,
+    collect_query_param_records,
+)
 from app.schemas import RecordsView
 from app.store import UploadNotFoundError, upload_store
 
@@ -11,6 +14,7 @@ router = APIRouter(prefix="/api/har", tags=["query-params"])
 
 @router.get("/{upload_id}/query-params", response_model=RecordsView)
 async def get_query_params(upload_id: str) -> RecordsView:
+    """Per-occurrence query-param records plus a name-grouped aggregate."""
     try:
         record = upload_store.get(upload_id)
     except UploadNotFoundError as exc:

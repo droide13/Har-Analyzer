@@ -12,4 +12,5 @@ router = APIRouter(prefix="/api/naming", tags=["naming"])
 
 @router.get("/options", response_model=NamingOptions)
 async def get_naming_options() -> NamingOptions:
+    """Interact/cookies/visit code -> label tables for the Metadata form's selects."""
     return NamingOptions(interact=INTERACT_LABELS, cookies=COOKIES_LABELS, visit=VISIT_LABELS)

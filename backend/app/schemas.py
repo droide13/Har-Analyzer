@@ -237,6 +237,8 @@ class DisseminationMatchRow(BaseModel):
 
 
 class DisseminationSearchResponse(BaseModel):
+    """The full dissemination scan result: domain aggregate + matching entries."""
+
     by_domain: list[dict[str, Any]]
     matches: list[DisseminationMatchRow]
 
@@ -269,6 +271,8 @@ class MetadataDetected(BaseModel):
 
 
 class MetadataResponse(BaseModel):
+    """Everything the Metadata tab needs to render its detected-info banner and form."""
+
     detected: MetadataDetected
     existing_analysis: HarAnalysisModel | None
 
@@ -288,6 +292,8 @@ class GenerateMetadataRequest(BaseModel):  # pylint: disable=too-many-instance-a
 
 
 class GenerateMetadataResponse(BaseModel):
+    """The standardized filename and the analysis record just embedded."""
+
     filename: str
     analysis: HarAnalysisModel
 

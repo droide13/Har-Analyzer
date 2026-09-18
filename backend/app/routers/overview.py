@@ -11,7 +11,11 @@ from app.features.overview import (
     get_status_counts,
     resolve_subdomains,
 )
-from app.schemas import OverviewResponse, ResolveSubdomainsRequest, SubdomainResolutionRow
+from app.schemas import (
+    OverviewResponse,
+    ResolveSubdomainsRequest,
+    SubdomainResolutionRow,
+)
 from app.store import UploadNotFoundError, upload_store
 
 router = APIRouter(prefix="/api/har", tags=["overview"])
@@ -19,6 +23,7 @@ router = APIRouter(prefix="/api/har", tags=["overview"])
 
 @router.get("/{upload_id}/overview", response_model=OverviewResponse)
 async def get_overview(upload_id: str) -> OverviewResponse:
+    """Summary metrics, method/status distribution, and the domain map."""
     try:
         record = upload_store.get(upload_id)
     except UploadNotFoundError as exc:
@@ -34,8 +39,12 @@ async def get_overview(upload_id: str) -> OverviewResponse:
     )
 
 
-@router.post("/{upload_id}/overview/resolve-subdomains", response_model=list[SubdomainResolutionRow])
-async def post_resolve_subdomains(upload_id: str, body: ResolveSubdomainsRequest) -> list[SubdomainResolutionRow]:
+@router.post(
+    "/{upload_id}/overview/resolve-subdomains", response_model=list[SubdomainResolutionRow]
+)
+async def post_resolve_subdomains(
+    upload_id: str, body: ResolveSubdomainsRequest
+) -> list[SubdomainResolutionRow]:
     """Follows each subdomain's CNAME chain to an IP, then a WHOIS/RDAP owner
     lookup -- slow and network-bound, so it's only ever called on an explicit
     "Resolve subdomains" click, never automatically."""
@@ -46,6 +55,8 @@ async def post_resolve_subdomains(upload_id: str, body: ResolveSubdomainsRequest
 
     rows = resolve_subdomains(sorted(set(body.subdomains)))
     return [
-        SubdomainResolutionRow(subdomain=r.subdomain, chain=r.chain, ips=r.ips, organization=r.organization)
+        SubdomainResolutionRow(
+            subdomain=r.subdomain, chain=r.chain, ips=r.ips, organization=r.organization
+        )
         for r in rows
     ]

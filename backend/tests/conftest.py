@@ -50,8 +50,10 @@ SAMPLE_HAR: dict = {
                     "headers": [],
                     "cookies": [],
                     "queryString": [],
-                    "postData": {"mimeType": "application/x-www-form-urlencoded",
-                                 "text": "user=alice&pass=secret"},
+                    "postData": {
+                        "mimeType": "application/x-www-form-urlencoded",
+                        "text": "user=alice&pass=secret",
+                    },
                 },
                 "response": {
                     "status": 302,

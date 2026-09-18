@@ -66,7 +66,9 @@ def test_extract_entry_domain_falls_back_to_url() -> None:
 
 def test_collect_domain_options_orders_and_sentinels(sample_har_dict: dict) -> None:
     entries = build_entries_from_har_data(sample_har_dict)
-    options, first_domain = collect_domain_options(entries, "example.com", frozenset({"cdn.example.com"}))
+    options, first_domain = collect_domain_options(
+        entries, "example.com", frozenset({"cdn.example.com"})
+    )
 
     assert first_domain == "example.com"  # first request's domain
     assert options[0] == "example.com"

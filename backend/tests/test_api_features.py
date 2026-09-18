@@ -58,7 +58,12 @@ def test_identifiers_endpoint_applies_thresholds(client: TestClient, upload_id: 
     # Loosened thresholds surface "session" (3 appearances, 2 unique values).
     loosened = client.get(
         f"/api/har/{upload_id}/identifiers",
-        params={"min_appearances": 3, "max_unique_values": 2, "min_avg_length": 0, "min_avg_entropy": 0},
+        params={
+            "min_appearances": 3,
+            "max_unique_values": 2,
+            "min_avg_length": 0,
+            "min_avg_entropy": 0,
+        },
     ).json()
     cookie_keys = {row["key"] for row in loosened["cookies"]}
     assert "session" in cookie_keys

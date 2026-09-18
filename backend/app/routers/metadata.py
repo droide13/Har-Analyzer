@@ -14,7 +14,11 @@ from datetime import datetime
 from fastapi import APIRouter, HTTPException, Response
 
 from app.core.models import embed_analysis, get_embedded_analysis, serialize_har
-from app.features.metadata import StandardizeInputs, build_standardized_result, collect_domain_options
+from app.features.metadata import (
+    StandardizeInputs,
+    build_standardized_result,
+    collect_domain_options,
+)
 from app.schemas import (
     GenerateMetadataRequest,
     GenerateMetadataResponse,
@@ -37,6 +41,7 @@ def _get_record(upload_id: str) -> UploadRecord:
 
 @router.get("/{upload_id}/metadata", response_model=MetadataResponse)
 async def get_metadata(upload_id: str) -> MetadataResponse:
+    """Detected domain/capture time from traffic, plus any existing embedded analysis."""
     record = _get_record(upload_id)
 
     try:
@@ -60,7 +65,10 @@ async def get_metadata(upload_id: str) -> MetadataResponse:
 
 
 @router.post("/{upload_id}/metadata/generate", response_model=GenerateMetadataResponse)
-async def generate_metadata(upload_id: str, body: GenerateMetadataRequest) -> GenerateMetadataResponse:
+async def generate_metadata(
+    upload_id: str, body: GenerateMetadataRequest
+) -> GenerateMetadataResponse:
+    """Build the standardized filename, embed it, and stash the bytes for download."""
     record = _get_record(upload_id)
 
     if not body.domain.strip():
@@ -91,11 +99,14 @@ async def generate_metadata(upload_id: str, body: GenerateMetadataRequest) -> Ge
     updated_har = embed_analysis(record.har_data, analysis)
     upload_store.set_standardized_output(upload_id, filename, serialize_har(updated_har))
 
-    return GenerateMetadataResponse(filename=filename, analysis=HarAnalysisModel(**analysis.to_dict()))
+    return GenerateMetadataResponse(
+        filename=filename, analysis=HarAnalysisModel(**analysis.to_dict())
+    )
 
 
 @router.get("/{upload_id}/metadata/download")
 async def download_standardized_har(upload_id: str) -> Response:
+    """Serves whatever /metadata/generate last produced for this upload."""
     record = _get_record(upload_id)
 
     if record.standardized_bytes is None or record.standardized_filename is None:

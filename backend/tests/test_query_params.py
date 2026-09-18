@@ -1,5 +1,8 @@
 from app.core.models import build_entries_from_har_data
-from app.features.query_params import aggregate_query_param_records, collect_query_param_records
+from app.features.query_params import (
+    aggregate_query_param_records,
+    collect_query_param_records,
+)
 
 
 def test_collect_query_param_records(sample_har_dict: dict) -> None:

@@ -14,7 +14,6 @@ fragment that re-runs live and a form that only submits on demand:
 from fastapi import APIRouter, HTTPException, Query
 
 from app.core.har_time import format_started_date_time
-from app.core.models import ParsedEntry
 from app.features.dissemination import (
     aggregate_by_domain,
     collect_occurrences,
@@ -31,29 +30,12 @@ from app.schemas import (
     DisseminationSearchRequest,
     DisseminationSearchResponse,
     DisseminationTimelineResponse,
-    EntrySummary,
 )
+from app.shared.entry_summary import build_entry_summary
 from app.shared.search import entry_matches, summarize_reasons
 from app.store import UploadNotFoundError, upload_store
 
 router = APIRouter(prefix="/api/har", tags=["dissemination"])
-
-
-def _entry_summary(entry: ParsedEntry) -> EntrySummary:
-    return EntrySummary(
-        index=entry.index,
-        started_date_time=entry.started_date_time,
-        method=entry.method,
-        url=entry.url,
-        domain=entry.domain,
-        status=entry.status,
-        status_text=entry.status_text,
-        mime=entry.mime,
-        time_ms=entry.time_ms,
-        body_size=entry.body_size,
-        req_cookie_count=len(entry.req_cookies),
-        res_cookie_count=len(entry.res_cookies),
-    )
 
 
 @router.get("/{upload_id}/dissemination/keys", response_model=list[str])
@@ -68,7 +50,9 @@ async def get_dissemination_keys(upload_id: str) -> list[str]:
 
 
 @router.get("/{upload_id}/dissemination/timeline", response_model=DisseminationTimelineResponse)
-async def get_dissemination_timeline(upload_id: str, key: str = Query(...)) -> DisseminationTimelineResponse:
+async def get_dissemination_timeline(
+    upload_id: str, key: str = Query(...)
+) -> DisseminationTimelineResponse:
     """Sighting count + value-over-time timeline for one key. Always live --
     shown as soon as a key is picked, no scan of the rest of the HAR."""
     try:
@@ -104,7 +88,9 @@ async def get_dissemination_timeline(upload_id: str, key: str = Query(...)) -> D
 
 
 @router.post("/{upload_id}/dissemination/search", response_model=DisseminationSearchResponse)
-async def post_dissemination_search(upload_id: str, body: DisseminationSearchRequest) -> DisseminationSearchResponse:
+async def post_dissemination_search(
+    upload_id: str, body: DisseminationSearchRequest
+) -> DisseminationSearchResponse:
     """Full dissemination scan for one key's values, optionally narrowed/highlighted."""
     try:
         record = upload_store.get(upload_id)
@@ -134,7 +120,7 @@ async def post_dissemination_search(upload_id: str, body: DisseminationSearchReq
     highlight_active = bool(body.highlight.strip())
     rows: list[DisseminationMatchRow] = []
     for entry, reasons in visible:
-        summary = _entry_summary(entry)
+        summary = build_entry_summary(entry)
         if highlight_active:
             highlight_result = entry_matches(entry, body.highlight, "any", set())
             summary.highlighted = highlight_result.matched

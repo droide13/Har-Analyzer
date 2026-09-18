@@ -67,7 +67,9 @@ def test_filter_identifiers_thresholds(sample_har_dict: dict) -> None:
 
 def test_filter_identifiers_excludes_noise_keys(sample_har_dict: dict) -> None:
     entries = build_entries_from_har_data(sample_har_dict)
-    tracked = extract_tracked_keys(entries, get_query_items)  # "token" isn't noise, but exercise the flag
+    tracked = extract_tracked_keys(
+        entries, get_query_items
+    )  # "token" isn't noise, but exercise the flag
     matches_without_exclusion = filter_identifiers(
         tracked,
         min_appearances=1,

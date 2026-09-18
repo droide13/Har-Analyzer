@@ -24,9 +24,7 @@ def test_negation_excludes_matches(sample_har_dict: dict) -> None:
 
 def test_method_filter(sample_har_dict: dict) -> None:
     entries = build_entries_from_har_data(sample_har_dict)
-    matches = [
-        e.index for e in entries if entry_matches(e, "", "any", {"POST"}).matched
-    ]
+    matches = [e.index for e in entries if entry_matches(e, "", "any", {"POST"}).matched]
     assert matches == [1]
 
 

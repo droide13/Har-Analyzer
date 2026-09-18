@@ -75,7 +75,9 @@ def test_list_entries_pagination(client: TestClient, upload_id: str) -> None:
     assert page1["total_pages"] == 1
     assert [item["index"] for item in page1["items"]] == [0, 1, 2, 3, 4]
 
-    clamped = client.get(f"/api/har/{upload_id}/entries", params={"page_size": 10, "page": 5}).json()
+    clamped = client.get(
+        f"/api/har/{upload_id}/entries", params={"page_size": 10, "page": 5}
+    ).json()
     assert clamped["page"] == 1
     assert [item["index"] for item in clamped["items"]] == [0, 1, 2, 3, 4]
 

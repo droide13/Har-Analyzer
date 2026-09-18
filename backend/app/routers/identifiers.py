@@ -71,6 +71,7 @@ async def get_identifiers(  # pylint: disable=too-many-arguments,too-many-positi
     exclude_common: bool = Query(default=True),
     sort_by: SortBy = Query(default="Appearances"),
 ) -> IdentifiersResponse:
+    """Query-param and cookie keys matching the 4-signal identifier filters."""
     try:
         record = upload_store.get(upload_id)
     except UploadNotFoundError as exc:

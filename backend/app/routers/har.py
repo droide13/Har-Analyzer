@@ -11,7 +11,14 @@ actual matching -- unchanged from the original.
 from fastapi import APIRouter, HTTPException, Query, UploadFile
 
 from app.core.models import METHOD_ORDER, SCOPE_OPTIONS, ParsedEntry
-from app.schemas import EntriesPage, EntryDetail, EntrySummary, HeaderPair, UploadResponse
+from app.schemas import (
+    EntriesPage,
+    EntryDetail,
+    EntrySummary,
+    HeaderPair,
+    UploadResponse,
+)
+from app.shared.entry_summary import build_entry_summary
 from app.shared.search import ENCODING_OPTIONS, entry_matches, summarize_reasons
 from app.store import UploadNotFoundError, UploadRecord, upload_store
 
@@ -48,7 +55,7 @@ async def upload_har(file: UploadFile) -> UploadResponse:
 
 
 @router.get("/{upload_id}/entries", response_model=EntriesPage)
-async def list_entries(  # pylint: disable=too-many-arguments,too-many-positional-arguments
+async def list_entries(  # pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-locals
     upload_id: str,
     q: str = Query(default="", description="Filter query (discards non-matching entries)"),
     h: str = Query(default="", description="Highlight query (flags matches, discards nothing)"),
@@ -69,7 +76,9 @@ async def list_entries(  # pylint: disable=too-many-arguments,too-many-positiona
     if encoding_set is None:
         encoding_set = set(ENCODING_OPTIONS)
 
-    filter_results = {e.index: entry_matches(e, q, scope, method_set, encoding_set) for e in entries}
+    filter_results = {
+        e.index: entry_matches(e, q, scope, method_set, encoding_set) for e in entries
+    }
     filtered = [e for e in entries if filter_results[e.index].matched]
 
     h_active = bool(h.strip())
@@ -91,29 +100,15 @@ async def list_entries(  # pylint: disable=too-many-arguments,too-many-positiona
         if highlighted:
             highlighted_count += 1
         filter_reasons = filter_results[entry.index].reasons
-        items.append(
-            EntrySummary(
-                index=entry.index,
-                started_date_time=entry.started_date_time,
-                method=entry.method,
-                url=entry.url,
-                domain=entry.domain,
-                status=entry.status,
-                status_text=entry.status_text,
-                mime=entry.mime,
-                time_ms=entry.time_ms,
-                body_size=entry.body_size,
-                req_cookie_count=len(entry.req_cookies),
-                res_cookie_count=len(entry.res_cookies),
-                filter_summary=summarize_reasons(filter_reasons) if q.strip() else None,
-                highlighted=highlighted,
-                highlight_summary=(
-                    summarize_reasons(highlight_result.reasons)
-                    if highlighted and highlight_result
-                    else None
-                ),
-            )
+        summary = build_entry_summary(entry)
+        summary.filter_summary = summarize_reasons(filter_reasons) if q.strip() else None
+        summary.highlighted = highlighted
+        summary.highlight_summary = (
+            summarize_reasons(highlight_result.reasons)
+            if highlighted and highlight_result
+            else None
         )
+        items.append(summary)
 
     # highlighted_count above only covers the current page; recompute over
     # the full filtered set so the UI can show a true total, not a per-page one.
@@ -141,7 +136,9 @@ async def get_entry_detail(upload_id: str, index: int) -> EntryDetail:
         raise HTTPException(status_code=404, detail="Unknown entry index")
 
     def as_pairs(items: list[dict[str, object]]) -> list[HeaderPair]:
-        return [HeaderPair(name=str(i.get("name", "")), value=str(i.get("value", ""))) for i in items]
+        return [
+            HeaderPair(name=str(i.get("name", "")), value=str(i.get("value", ""))) for i in items
+        ]
 
     return EntryDetail(
         index=entry.index,

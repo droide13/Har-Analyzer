@@ -34,11 +34,15 @@ def test_dissemination_timeline(client: TestClient, upload_id: str) -> None:
 
 
 def test_dissemination_timeline_unknown_key_returns_404(client: TestClient, upload_id: str) -> None:
-    response = client.get(f"/api/har/{upload_id}/dissemination/timeline", params={"key": "does-not-exist"})
+    response = client.get(
+        f"/api/har/{upload_id}/dissemination/timeline", params={"key": "does-not-exist"}
+    )
     assert response.status_code == 404
 
 
-def test_dissemination_search_finds_matches_and_aggregates_by_domain(client: TestClient, upload_id: str) -> None:
+def test_dissemination_search_finds_matches_and_aggregates_by_domain(
+    client: TestClient, upload_id: str
+) -> None:
     response = client.post(
         f"/api/har/{upload_id}/dissemination/search",
         json={"key": "token", "encodings": []},
@@ -50,7 +54,9 @@ def test_dissemination_search_finds_matches_and_aggregates_by_domain(client: Tes
     assert body["by_domain"][0]["Entries Hit"] == 2
 
 
-def test_dissemination_search_narrow_discards_and_highlight_flags(client: TestClient, upload_id: str) -> None:
+def test_dissemination_search_narrow_discards_and_highlight_flags(
+    client: TestClient, upload_id: str
+) -> None:
     # Narrow to only status:404 (entry 3), independent of the by-domain totals.
     narrowed = client.post(
         f"/api/har/{upload_id}/dissemination/search",
