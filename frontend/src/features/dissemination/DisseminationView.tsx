@@ -72,7 +72,7 @@ export function DisseminationView({ uploadId }: DisseminationViewProps) {
   return (
     <div className="dissemination">
       <h3>Identifier Dissemination History</h3>
-      <p className="overview__caption">
+      <p className="caption">
         Pick a query-param or cookie key to see how its value evolved over time, then search the whole HAR for every
         place that value shows up -- headers, URLs, bodies, other cookies -- beyond its original key.
       </p>
@@ -113,7 +113,7 @@ export function DisseminationView({ uploadId }: DisseminationViewProps) {
           </p>
 
           <h4>Value Timeline</h4>
-          <p className="overview__caption">
+          <p className="caption">
             One row per sighting, ordered by HAR timestamp. 'Value changed' flags a sighting whose value differs
             from the one immediately before it.
           </p>
@@ -127,7 +127,6 @@ export function DisseminationView({ uploadId }: DisseminationViewProps) {
           {encodingOptions && selectedKey && (
             <DisseminationSearchForm
               encodingOptions={encodingOptions}
-              isSearching={false}
               onSearch={(encodings) => setSubmittedSearch({ key: selectedKey, encodings })}
             />
           )}
@@ -135,7 +134,7 @@ export function DisseminationView({ uploadId }: DisseminationViewProps) {
           {submittedSearch ? (
             <DisseminationResults uploadId={uploadId} submittedSearch={submittedSearch} />
           ) : (
-            <p className="overview__caption">No search run yet for this key and encoding selection.</p>
+            <p className="caption">No search run yet for this key and encoding selection.</p>
           )}
         </>
       )}

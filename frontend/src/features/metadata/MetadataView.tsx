@@ -84,7 +84,7 @@ export function MetadataView({ uploadId }: MetadataViewProps) {
   return (
     <div className="metadata">
       <h3>Standardize &amp; Tag Current HAR File</h3>
-      <p className="overview__caption">
+      <p className="caption">
         Domain and capture time are derived from the traffic itself, allowing you to confirm or override
         classification before generating an updated copy with embedded log._analysis metadata.
       </p>
@@ -105,7 +105,7 @@ export function MetadataView({ uploadId }: MetadataViewProps) {
         </div>
       </div>
       {metadata.detected.captured_at === null && (
-        <p className="overview__error">
+        <p className="error-text">
           Could not parse a capture timestamp from any entry's startedDateTime. Enter one manually below.
         </p>
       )}
@@ -200,7 +200,7 @@ export function MetadataView({ uploadId }: MetadataViewProps) {
           </div>
 
           <h4>Experiment notes</h4>
-          <p className="overview__caption">Written into log._analysis inside the file itself, not just the filename.</p>
+          <p className="caption">Written into log._analysis inside the file itself, not just the filename.</p>
           <div className="search-controls__row">
             <label>
               Description
@@ -227,12 +227,12 @@ export function MetadataView({ uploadId }: MetadataViewProps) {
           >
             {generateMutation.isPending ? 'Generating...' : 'Generate standardized file'}
           </button>
-          {generateMutation.isError && <p className="overview__error">Failed to generate: {String(generateMutation.error)}</p>}
+          {generateMutation.isError && <p className="error-text">Failed to generate: {String(generateMutation.error)}</p>}
 
           {generateMutation.data ? (
             <>
               {isStale && (
-                <p className="overview__error">
+                <p className="error-text">
                   Form values changed since this file was generated. Press "Generate standardized file" again to
                   update the download.
                 </p>
@@ -243,14 +243,14 @@ export function MetadataView({ uploadId }: MetadataViewProps) {
                   Download Standardized .har
                 </a>
               </p>
-              <p className="overview__caption">
+              <p className="caption">
                 Note on browser save location: web browsers determine whether files download directly or open a
                 save dialog. To be prompted for a folder path on every download, enable "Ask where to save each
                 file before downloading" in your browser's settings.
               </p>
             </>
           ) : (
-            <p className="overview__caption">Fill in the fields above and click "Generate standardized file".</p>
+            <p className="caption">Fill in the fields above and click "Generate standardized file".</p>
           )}
         </>
       )}

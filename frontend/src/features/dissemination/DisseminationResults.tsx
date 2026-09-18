@@ -51,7 +51,7 @@ export function DisseminationResults({ uploadId, submittedSearch }: Disseminatio
   })
 
   if (isLoading) return <p>Loading...</p>
-  if (isError || !data) return <p className="overview__error">Failed to load dissemination results.</p>
+  if (isError || !data) return <p className="error-text">Failed to load dissemination results.</p>
 
   if (data.matches.length === 0 && data.by_domain.length === 0) {
     return <p>No further dissemination found beyond the key's own occurrences.</p>
@@ -62,14 +62,14 @@ export function DisseminationResults({ uploadId, submittedSearch }: Disseminatio
   return (
     <div>
       <h5>By Domain</h5>
-      <p className="overview__caption">
+      <p className="caption">
         Aggregated view: which hosts received/echoed this value, in how many entries, through which fields. Cookie
         origin is the earliest cookie hit on that host.
       </p>
       <DataTable columns={DOMAIN_COLUMNS} rows={data.by_domain as unknown as DomainRow[]} rowKey={(r) => r.Domain} />
 
       <h5>Matching Entries</h5>
-      <p className="overview__caption">Ordered by HAR timestamp, oldest first.</p>
+      <p className="caption">Ordered by HAR timestamp, oldest first.</p>
       <div className="search-controls__row">
         <label>
           Narrow these matches (discards)

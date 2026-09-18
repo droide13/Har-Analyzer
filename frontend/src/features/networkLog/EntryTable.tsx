@@ -1,14 +1,9 @@
 import { useRef, type ReactNode } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import type { EntrySummary } from '../../api/types'
+import { statusColor } from '../../lib/statusColor'
 
 const ROW_HEIGHT_PX = 32
-
-function statusColor(status: string): string {
-  if (status.startsWith('2') || status.startsWith('3')) return 'status-ok'
-  if (status) return 'status-error'
-  return 'status-unknown'
-}
 
 interface Column {
   header: string

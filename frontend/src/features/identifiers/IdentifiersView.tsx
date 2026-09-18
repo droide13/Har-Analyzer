@@ -55,7 +55,7 @@ export function IdentifiersView({ uploadId }: IdentifiersViewProps) {
   return (
     <div className="identifiers">
       <h3>Stable Identifier Detection</h3>
-      <p className="overview__caption">
+      <p className="caption">
         Flags query params and cookies that appear often, take on few distinct values, and look sufficiently
         random/long to be a session, tracking, or auth token -- rather than an ordinary low-cardinality param like{' '}
         <code>sort</code> or <code>lang</code>.
@@ -63,7 +63,7 @@ export function IdentifiersView({ uploadId }: IdentifiersViewProps) {
 
       <details>
         <summary>Common noise keys</summary>
-        <p className="overview__caption">
+        <p className="caption">
           page, limit, offset, sort, order, q, query, lang, locale, cache, v, version, format, type, action,
           utm_source, utm_medium, utm_campaign, utm_term, utm_content
         </p>
@@ -143,13 +143,13 @@ export function IdentifiersView({ uploadId }: IdentifiersViewProps) {
       </div>
 
       {isLoading && <p>Loading...</p>}
-      {isError && <p className="overview__error">Failed to load identifiers.</p>}
+      {isError && <p className="error-text">Failed to load identifiers.</p>}
 
       {data && (
         <>
           <IdentifiersSection label="Query Parameters" identifiers={data.query_params} />
           <hr />
-          <p className="overview__caption">
+          <p className="caption">
             First Seen As marks where a cookie turned up first: a Response Cookie was issued during this capture, a
             Request Cookie already existed.
           </p>

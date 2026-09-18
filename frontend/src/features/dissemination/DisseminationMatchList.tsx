@@ -1,4 +1,5 @@
 import type { DisseminationMatchRow } from '../../api/types'
+import { statusColor } from '../../lib/statusColor'
 
 interface DisseminationMatchListProps {
   matches: DisseminationMatchRow[]
@@ -35,9 +36,7 @@ export function DisseminationMatchList({ matches, selectedIndex, onSelectRow }: 
                 .filter(Boolean)
                 .join(' ')}
             >
-              <td className={row.entry.status.startsWith('2') || row.entry.status.startsWith('3') ? 'status-ok' : 'status-error'}>
-                {row.entry.status || '—'}
-              </td>
+              <td className={statusColor(row.entry.status)}>{row.entry.status || '—'}</td>
               <td>{row.entry.method}</td>
               <td className="entry-table__url">{row.entry.url}</td>
               <td className="entry-table__badges">

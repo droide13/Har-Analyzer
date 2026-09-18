@@ -47,7 +47,7 @@ export function QueryParamsView({ uploadId }: QueryParamsViewProps) {
   })
 
   if (isLoading) return <p>Loading...</p>
-  if (isError || !data) return <p className="overview__error">Failed to load query parameters.</p>
+  if (isError || !data) return <p className="error-text">Failed to load query parameters.</p>
 
   if (data.records.length === 0) {
     return <p>No query string parameters found.</p>

@@ -54,7 +54,7 @@ export function AggregateToggleView<TRaw, TAgg>({
 
       {view === 'aggregated' ? (
         <>
-          <p className="overview__caption">{aggregatedCaption}</p>
+          <p className="caption">{aggregatedCaption}</p>
           <DataTable columns={aggregatedColumns} rows={aggregated} rowKey={rowKey} />
         </>
       ) : (

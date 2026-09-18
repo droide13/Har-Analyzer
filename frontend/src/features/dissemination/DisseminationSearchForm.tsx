@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react'
 interface DisseminationSearchFormProps {
   encodingOptions: string[]
   onSearch: (encodings: string[]) => void
-  isSearching: boolean
 }
 
 /**
@@ -12,7 +11,7 @@ interface DisseminationSearchFormProps {
  * until "Search dissemination" is clicked -- unlike Network Log's
  * always-live filter controls.
  */
-export function DisseminationSearchForm({ encodingOptions, onSearch, isSearching }: DisseminationSearchFormProps) {
+export function DisseminationSearchForm({ encodingOptions, onSearch }: DisseminationSearchFormProps) {
   const [draftEncodings, setDraftEncodings] = useState<Set<string>>(new Set())
 
   // All checked by default, matching the original -- set once options load.
@@ -35,7 +34,7 @@ export function DisseminationSearchForm({ encodingOptions, onSearch, isSearching
         onSearch([...draftEncodings])
       }}
     >
-      <p className="overview__caption">
+      <p className="caption">
         This scans every field of every entry and is not run automatically. Untick any encoded/hashed forms you
         don't want, then click Search.
       </p>
@@ -50,9 +49,7 @@ export function DisseminationSearchForm({ encodingOptions, onSearch, isSearching
           ))}
         </div>
       </details>
-      <button type="submit" disabled={isSearching}>
-        {isSearching ? 'Searching...' : 'Search dissemination'}
-      </button>
+      <button type="submit">Search dissemination</button>
     </form>
   )
 }

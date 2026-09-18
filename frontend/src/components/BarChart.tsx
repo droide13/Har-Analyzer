@@ -1,4 +1,24 @@
+import { useEffect, useState } from 'react'
 import ReactECharts from 'echarts-for-react'
+
+const getAccentColor = () => getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()
+
+/** Tracks the `--accent` custom property so chart bars follow the OS
+ * dark/light switch the same way every CSS-styled element already does --
+ * ECharts takes a literal color, not a var(), so this is the one place
+ * that needs to read it in JS. */
+function useAccentColor(): string {
+  const [accent, setAccent] = useState(getAccentColor)
+
+  useEffect(() => {
+    const media = window.matchMedia('(prefers-color-scheme: dark)')
+    const update = () => setAccent(getAccentColor())
+    media.addEventListener('change', update)
+    return () => media.removeEventListener('change', update)
+  }, [])
+
+  return accent
+}
 
 export interface BarChartDatum {
   label: string
@@ -21,6 +41,7 @@ interface BarChartProps {
  * lands, rather than this one sprouting options for cases it doesn't serve.
  */
 export function BarChart({ data, orientation = 'vertical', valueLabel = 'Value', heightPx }: BarChartProps) {
+  const accent = useAccentColor()
   const labels = data.map((d) => d.label)
   const values = data.map((d) => d.value)
   const isHorizontal = orientation === 'horizontal'
@@ -34,7 +55,7 @@ export function BarChart({ data, orientation = 'vertical', valueLabel = 'Value',
       {
         type: 'bar',
         data: values,
-        itemStyle: { color: '#6b3bff' },
+        itemStyle: { color: accent },
       },
     ],
   }

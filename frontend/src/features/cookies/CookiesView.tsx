@@ -58,7 +58,7 @@ export function CookiesView({ uploadId }: CookiesViewProps) {
   })
 
   if (isLoading) return <p>Loading...</p>
-  if (isError || !data) return <p className="overview__error">Failed to load cookies.</p>
+  if (isError || !data) return <p className="error-text">Failed to load cookies.</p>
 
   if (data.records.length === 0) {
     return <p>No active authentication headers or session tokens found.</p>

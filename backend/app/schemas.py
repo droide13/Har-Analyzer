@@ -5,12 +5,28 @@ from typing import Any
 from pydantic import BaseModel
 
 
+class SessionMetadata(BaseModel):
+    """Best-effort session summary for the persistent header above the tabs --
+    domain/interaction/cookies/visit/extra come from the filename convention
+    (``None`` if the filename doesn't follow it), captured_at from the
+    traffic itself so it's always available regardless of naming."""
+
+    domain: str
+    interaction: str | None
+    cookies: str | None
+    visit: str | None
+    extra: str | None
+    captured_at: str | None
+    filename_valid: bool
+
+
 class UploadResponse(BaseModel):
     """Result of a successful HAR upload."""
 
     upload_id: str
     filename: str
     entry_count: int
+    session_metadata: SessionMetadata
 
 
 class EntrySummary(BaseModel):

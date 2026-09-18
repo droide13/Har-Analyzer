@@ -3,10 +3,21 @@
  * sync by hand -- there are only a handful of shapes, not worth codegen for.
  */
 
+export interface SessionMetadata {
+  domain: string
+  interaction: string | null
+  cookies: string | null
+  visit: string | null
+  extra: string | null
+  captured_at: string | null
+  filename_valid: boolean
+}
+
 export interface UploadResponse {
   upload_id: string
   filename: string
   entry_count: number
+  session_metadata: SessionMetadata
 }
 
 export interface EntrySummary {

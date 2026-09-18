@@ -16,9 +16,11 @@ from app.schemas import (
     EntryDetail,
     EntrySummary,
     HeaderPair,
+    SessionMetadata,
     UploadResponse,
 )
 from app.shared.entry_summary import build_entry_summary
+from app.shared.naming import derive_metadata_from_entries, get_attrs_from_har_name
 from app.shared.search import ENCODING_OPTIONS, entry_matches, summarize_reasons
 from app.store import UploadNotFoundError, UploadRecord, upload_store
 
@@ -39,6 +41,31 @@ def _parse_csv(value: str | None) -> set[str] | None:
     return {part.strip() for part in value.split(",") if part.strip()}
 
 
+def _build_session_metadata(record: UploadRecord) -> SessionMetadata:
+    """Filename-convention attrs (domain/interaction/cookies/visit/extra) plus
+    a capture date derived from the traffic itself, so the header has a date
+    to show even for a HAR whose filename doesn't follow the convention."""
+    attrs = get_attrs_from_har_name(record.filename)
+
+    try:
+        derived = derive_metadata_from_entries(record.entries)
+    except ValueError:
+        derived = None
+
+    domain = attrs["domain"] if attrs else (derived.domain if derived else record.filename)
+    extra = attrs["extra"] if attrs and attrs["extra"] != "000" else None
+
+    return SessionMetadata(
+        domain=domain,
+        interaction=attrs["interaction"] if attrs else None,
+        cookies=attrs["cookies"] if attrs else None,
+        visit=attrs["visit"] if attrs else None,
+        extra=extra,
+        captured_at=derived.captured_at.isoformat() if derived and derived.captured_at else None,
+        filename_valid=attrs is not None,
+    )
+
+
 @router.post("/upload", response_model=UploadResponse)
 async def upload_har(file: UploadFile) -> UploadResponse:
     """Accept a .har file, parse it once, and register it for later lookups."""
@@ -51,6 +78,7 @@ async def upload_har(file: UploadFile) -> UploadResponse:
         upload_id=record.upload_id,
         filename=record.filename,
         entry_count=len(record.entries),
+        session_metadata=_build_session_metadata(record),
     )
 
 

@@ -21,7 +21,7 @@ export function OverviewView({ uploadId }: OverviewViewProps) {
   })
 
   if (isLoading) return <p>Loading...</p>
-  if (isError || !data) return <p className="overview__error">Failed to load overview.</p>
+  if (isError || !data) return <p className="error-text">Failed to load overview.</p>
 
   return (
     <div className="overview">

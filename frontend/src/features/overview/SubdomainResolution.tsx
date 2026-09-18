@@ -18,7 +18,7 @@ export function SubdomainResolution({ uploadId, firstPartyRoot, subdomains }: Su
   return (
     <div>
       <h4>DNS Resolution for `{firstPartyRoot}` Subdomains</h4>
-      <p className="overview__caption">
+      <p className="caption">
         Fully resolves each subdomain -- following any CNAME chain, the way <code>dig</code> would -- down to an IP
         address, then looks up who WHOIS/RDAP says owns that IP.
       </p>
@@ -26,7 +26,7 @@ export function SubdomainResolution({ uploadId, firstPartyRoot, subdomains }: Su
         {mutation.isPending ? `Resolving ${subdomains.length} subdomain(s)...` : 'Resolve subdomains'}
       </button>
 
-      {mutation.isError && <p className="overview__error">Failed to resolve subdomains.</p>}
+      {mutation.isError && <p className="error-text">Failed to resolve subdomains.</p>}
 
       {mutation.data && (
         <table className="data-table">
