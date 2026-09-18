@@ -10,7 +10,7 @@ actual matching -- unchanged from the original.
 
 from fastapi import APIRouter, HTTPException, Query, UploadFile
 
-from app.core.models import METHOD_ORDER, ParsedEntry
+from app.core.models import METHOD_ORDER, SCOPE_OPTIONS, ParsedEntry
 from app.schemas import EntriesPage, EntryDetail, EntrySummary, HeaderPair, UploadResponse
 from app.shared.search import ENCODING_OPTIONS, entry_matches, summarize_reasons
 from app.store import UploadNotFoundError, UploadRecord, upload_store
@@ -178,3 +178,9 @@ async def list_method_order() -> list[str]:
 async def list_encoding_options() -> list[str]:
     """The canonical encoding/hash checkbox list, so the frontend doesn't hardcode it."""
     return ENCODING_OPTIONS
+
+
+@router.get("/meta/scopes", response_model=dict[str, str])
+async def list_scope_options() -> dict[str, str]:
+    """Label -> field-key map for the search scope dropdown, single source of truth."""
+    return SCOPE_OPTIONS

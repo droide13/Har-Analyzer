@@ -96,3 +96,14 @@ def test_entry_detail_returns_full_fields(client: TestClient, upload_id: str) ->
 def test_entry_detail_unknown_index_returns_404(client: TestClient, upload_id: str) -> None:
     response = client.get(f"/api/har/{upload_id}/entries/999")
     assert response.status_code == 404
+
+
+def test_meta_endpoints_expose_shared_option_tables(client: TestClient) -> None:
+    methods = client.get("/api/har/meta/methods").json()
+    encodings = client.get("/api/har/meta/encodings").json()
+    scopes = client.get("/api/har/meta/scopes").json()
+
+    assert "GET" in methods and "POST" in methods
+    assert "Base64" in encodings
+    assert scopes["All fields"] == "any"
+    assert scopes["Cookies"] == "cookies"
