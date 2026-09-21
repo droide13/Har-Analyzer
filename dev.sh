@@ -8,6 +8,35 @@ BACKEND_DIR="$SCRIPT_DIR/backend"
 FRONTEND_DIR="$SCRIPT_DIR/frontend"
 BACKEND_PORT=8000
 FRONTEND_PORT=5173
+HOST=""
+
+usage() {
+  echo "Usage: $0 [--host <address>]" >&2
+  echo "  --host  Expose the frontend dev server on this address (e.g. 0.0.0.0 for the LAN)." >&2
+}
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --host)
+      [ $# -ge 2 ] || { echo "--host requires an argument" >&2; usage; exit 1; }
+      HOST="$2"
+      shift 2
+      ;;
+    --host=*)
+      HOST="${1#--host=}"
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "Unknown argument: $1" >&2
+      usage
+      exit 1
+      ;;
+  esac
+done
 
 port_in_use() {
   (exec 3<>"/dev/tcp/127.0.0.1/$1") 2>/dev/null
@@ -64,4 +93,4 @@ echo ""
 echo "  Ctrl+C to stop both."
 echo ""
 
-cd "$FRONTEND_DIR" && npm run dev -- --port "$FRONTEND_PORT" --strictPort
+cd "$FRONTEND_DIR" && npm run dev -- --port "$FRONTEND_PORT" --strictPort ${HOST:+--host "$HOST"}
