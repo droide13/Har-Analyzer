@@ -1,16 +1,18 @@
 import type { IdentifierSummaryRow } from '../../api/types'
+import { Button } from '../../components/Button'
 import { DataTable, type DataTableColumn } from '../../components/DataTable'
 import { Disclosure } from '../../components/Disclosure'
 
 interface IdentifiersSectionProps {
   label: string
   identifiers: IdentifierSummaryRow[]
+  onTraceValue?: (key: string, value: string) => void
 }
 
 /** One of the two Identifiers sections (Query Parameters / Cookies): a
  * summary table plus a collapsible per-key value breakdown, mirroring the
  * original's per-key st.expander. */
-export function IdentifiersSection({ label, identifiers }: IdentifiersSectionProps) {
+export function IdentifiersSection({ label, identifiers, onTraceValue }: IdentifiersSectionProps) {
   if (identifiers.length === 0) {
     return (
       <div>
@@ -62,6 +64,24 @@ export function IdentifiersSection({ label, identifiers }: IdentifiersSectionPro
                   accessor: (v: IdentifierSummaryRow['values'][number]) => v.entropy,
                 },
                 { header: 'Domains', accessor: (v: IdentifierSummaryRow['values'][number]) => v.domains },
+                ...(onTraceValue
+                  ? [
+                      {
+                        header: 'Dissemination',
+                        accessor: (v: IdentifierSummaryRow['values'][number]) => (
+                          <Button
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              onTraceValue(tk.key, v.value)
+                            }}
+                          >
+                            Trace &rarr;
+                          </Button>
+                        ),
+                      },
+                    ]
+                  : []),
               ]}
               rows={tk.values}
               rowKey={(v) => v.value}

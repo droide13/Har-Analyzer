@@ -17,10 +17,22 @@ export default function App() {
   // True whenever the upload picker should show: always with no session
   // yet, or on demand afterward via SessionBar's "Switch file".
   const [isPickingFile, setIsPickingFile] = useState(false)
+  const [activeTab, setActiveTab] = useState('network-log')
+  // Set by the Identifiers tab's "Trace" button; consumed once by
+  // DisseminationView to select that key and auto-run a search narrowed to
+  // that exact value.
+  const [disseminationTarget, setDisseminationTarget] = useState<{ key: string; value: string } | null>(null)
 
   function handleUploaded(upload: UploadResponse) {
     setSession(upload)
     setIsPickingFile(false)
+    setActiveTab('network-log')
+    setDisseminationTarget(null)
+  }
+
+  function handleTraceValue(key: string, value: string) {
+    setDisseminationTarget({ key, value })
+    setActiveTab('dissemination')
   }
 
   const tabs: TabDefinition[] = session
@@ -29,14 +41,28 @@ export default function App() {
         { key: 'overview', label: 'HAR Analytics', render: () => <OverviewView uploadId={session.upload_id} /> },
         { key: 'cookies', label: 'Cookies', render: () => <CookiesView uploadId={session.upload_id} /> },
         { key: 'query-params', label: 'Query Params', render: () => <QueryParamsView uploadId={session.upload_id} /> },
-        { key: 'identifiers', label: 'Identifiers', render: () => <IdentifiersView uploadId={session.upload_id} /> },
-        { key: 'dissemination', label: 'Dissemination', render: () => <DisseminationView uploadId={session.upload_id} /> },
+        {
+          key: 'identifiers',
+          label: 'Identifiers',
+          render: () => <IdentifiersView uploadId={session.upload_id} onTraceValue={handleTraceValue} />,
+        },
+        {
+          key: 'dissemination',
+          label: 'Dissemination',
+          render: () => (
+            <DisseminationView
+              uploadId={session.upload_id}
+              initialTarget={disseminationTarget}
+              onInitialTargetConsumed={() => setDisseminationTarget(null)}
+            />
+          ),
+        },
         { key: 'metadata', label: 'Metadata', render: () => <MetadataView uploadId={session.upload_id} /> },
       ]
     : []
 
   return (
-    <div className="mx-auto flex min-h-[100svh] w-full max-w-[1400px] flex-col gap-3 px-6 pt-4 pb-8">
+    <div className="mx-auto flex min-h-[100svh] w-full max-w-[1400px] flex-col gap-3 px-6 pt-4 pb-24">
       <PageHeader title="HAR Analyzer" />
 
       {!session && <FileUpload onUploaded={handleUploaded} />}
@@ -52,7 +78,13 @@ export default function App() {
           {/* Keyed on upload_id so switching files remounts the whole tab
               tree -- every view's local filter/selection state resets
               instead of pointing at indices from the previous file. */}
-          <Tabs key={session.upload_id} tabs={tabs} variant="page" />
+          <Tabs
+            key={session.upload_id}
+            tabs={tabs}
+            variant="page"
+            activeTab={activeTab}
+            onActiveTabChange={setActiveTab}
+          />
         </>
       )}
     </div>

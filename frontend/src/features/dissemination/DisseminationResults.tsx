@@ -11,6 +11,9 @@ import { DisseminationMatchList } from './DisseminationMatchList'
 interface DisseminationResultsProps {
   uploadId: string
   submittedSearch: { key: string; encodings: string[] }
+  /** Seeds the narrow filter on mount -- set when this search was
+   * auto-triggered from a traced value, so results start narrowed to it. */
+  initialNarrowQuery?: string
 }
 
 interface DomainRow {
@@ -33,8 +36,8 @@ const DOMAIN_COLUMNS: DataTableColumn<DomainRow>[] = [
  * narrow/highlight filters over the matching-entries list. Re-queries the
  * backend on a narrow/highlight change (debounced) but only ever with the
  * key/encodings from the last explicit submit, never a mid-edit draft. */
-export function DisseminationResults({ uploadId, submittedSearch }: DisseminationResultsProps) {
-  const [narrowQuery, setNarrowQuery] = useState('')
+export function DisseminationResults({ uploadId, submittedSearch, initialNarrowQuery }: DisseminationResultsProps) {
+  const [narrowQuery, setNarrowQuery] = useState(initialNarrowQuery ?? '')
   const debouncedNarrow = useDebouncedValue(narrowQuery)
   const [highlightQuery, setHighlightQuery] = useState('')
   const debouncedHighlight = useDebouncedValue(highlightQuery)

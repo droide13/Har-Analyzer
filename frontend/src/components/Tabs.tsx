@@ -12,6 +12,12 @@ interface TabsProps {
   /** 'page' is the top-level app tab bar; 'panel' is the smaller,
    * bordered-pill bar used inside EntryDetailPanel. */
   variant?: 'page' | 'panel'
+  /** Omit both to let Tabs manage its own active-tab state (the 'panel'
+   * variant's usage). Passed together, they let a caller (e.g. a "jump to
+   * this other tab" action elsewhere on the page) drive which tab is
+   * active from outside. */
+  activeTab?: string
+  onActiveTabChange?: (key: string) => void
 }
 
 const ROOT_CLASSES = {
@@ -43,8 +49,10 @@ const CONTENT_CLASSES = {
  * constructed here, preserving the "switching tabs costs nothing for the
  * others" behavior this app was rewritten from Streamlit to get.
  */
-export function Tabs({ tabs, variant = 'page' }: TabsProps) {
-  const [active, setActive] = useState(tabs[0]?.key)
+export function Tabs({ tabs, variant = 'page', activeTab: controlledActive, onActiveTabChange }: TabsProps) {
+  const [internalActive, setInternalActive] = useState(tabs[0]?.key)
+  const active = controlledActive ?? internalActive
+  const setActive = onActiveTabChange ?? setInternalActive
   const activeTab = tabs.find((t) => t.key === active)
 
   return (

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { fetchDisseminationKeys, fetchDisseminationTimeline } from '../../api/dissemination'
 import { fetchEncodingOptions } from '../../api/har'
@@ -10,6 +10,13 @@ import { DisseminationResults } from './DisseminationResults'
 
 interface DisseminationViewProps {
   uploadId: string
+  /** A key/value pair traced in from another tab (e.g. the Identifiers
+   * panel's "Trace" button): selects that key and auto-runs a search
+   * narrowed to that exact value. Applied once, then cleared via
+   * onInitialTargetConsumed so navigating back to this tab later doesn't
+   * re-apply it over a manual selection. */
+  initialTarget?: { key: string; value: string } | null
+  onInitialTargetConsumed?: () => void
 }
 
 interface TimelineRow {
@@ -39,7 +46,7 @@ interface SubmittedSearch {
 
 /** Direct port of tabs/dissemination/dissemination_ui.py: key picker, an
  * always-live value timeline, then an explicit-submit dissemination scan. */
-export function DisseminationView({ uploadId }: DisseminationViewProps) {
+export function DisseminationView({ uploadId, initialTarget, onInitialTargetConsumed }: DisseminationViewProps) {
   const { data: keys } = useQuery({
     queryKey: ['dissemination-keys', uploadId],
     queryFn: () => fetchDisseminationKeys(uploadId),
@@ -48,17 +55,35 @@ export function DisseminationView({ uploadId }: DisseminationViewProps) {
 
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
   const [submittedSearch, setSubmittedSearch] = useState<SubmittedSearch | null>(null)
-
-  useEffect(() => {
-    if (keys && keys.length > 0 && selectedKey === null) setSelectedKey(keys[0])
-  }, [keys, selectedKey])
+  const [initialNarrowQuery, setInitialNarrowQuery] = useState<string | undefined>(undefined)
 
   // A search's results only make sense for the key that produced them --
   // switching keys invalidates whatever was found before, same as the
-  // original's (key, encodings) signature check.
-  useEffect(() => {
+  // original's (key, encodings) signature check. Only wired up to the
+  // user-facing key picker (handleKeyChange), not to every selectedKey
+  // change, so the auto-search below can set selectedKey + submittedSearch
+  // together without this immediately wiping the latter out.
+  function handleKeyChange(key: string) {
+    setSelectedKey(key)
     setSubmittedSearch(null)
-  }, [selectedKey])
+    setInitialNarrowQuery(undefined)
+  }
+
+  // Keep the latest callback without making it an effect dependency --
+  // App.tsx passes a fresh closure every render, which would otherwise
+  // re-run this effect on every unrelated re-render.
+  const onInitialTargetConsumedRef = useRef(onInitialTargetConsumed)
+  useEffect(() => {
+    onInitialTargetConsumedRef.current = onInitialTargetConsumed
+  })
+
+  useEffect(() => {
+    if (!initialTarget || !encodingOptions) return
+    setSelectedKey(initialTarget.key)
+    setSubmittedSearch({ key: initialTarget.key, encodings: encodingOptions })
+    setInitialNarrowQuery(initialTarget.value)
+    onInitialTargetConsumedRef.current?.()
+  }, [initialTarget, encodingOptions])
 
   const timelineQuery = useQuery({
     queryKey: ['dissemination-timeline', uploadId, selectedKey],
@@ -81,8 +106,18 @@ export function DisseminationView({ uploadId }: DisseminationViewProps) {
       {keys && (
         <label className="mb-2 flex max-w-xs flex-col gap-1 text-[13px] text-text-muted">
           Key to trace
-          <Select value={selectedKey ?? ''} onChange={setSelectedKey} options={keys} ariaLabel="Key to trace" />
+          <Select
+            value={selectedKey ?? ''}
+            onChange={handleKeyChange}
+            options={keys}
+            ariaLabel="Key to trace"
+            placeholder="Select a key..."
+          />
         </label>
+      )}
+
+      {selectedKey === null && (
+        <p className="my-1 mb-3 text-[13px] text-text-muted">Pick a key above to load its dissemination history.</p>
       )}
 
       {timelineQuery.data && (
@@ -116,12 +151,19 @@ export function DisseminationView({ uploadId }: DisseminationViewProps) {
           {encodingOptions && selectedKey && (
             <DisseminationSearchForm
               encodingOptions={encodingOptions}
-              onSearch={(encodings) => setSubmittedSearch({ key: selectedKey, encodings })}
+              onSearch={(encodings) => {
+                setSubmittedSearch({ key: selectedKey, encodings })
+                setInitialNarrowQuery(undefined)
+              }}
             />
           )}
 
           {submittedSearch ? (
-            <DisseminationResults uploadId={uploadId} submittedSearch={submittedSearch} />
+            <DisseminationResults
+              uploadId={uploadId}
+              submittedSearch={submittedSearch}
+              initialNarrowQuery={initialNarrowQuery}
+            />
           ) : (
             <p className="my-1 mb-3 text-[13px] text-text-muted">No search run yet for this key and encoding selection.</p>
           )}
