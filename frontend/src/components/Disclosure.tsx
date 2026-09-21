@@ -5,13 +5,26 @@ interface DisclosureProps {
   summary: ReactNode
   children: ReactNode
   defaultOpen?: boolean
+  /** Omit both to let Disclosure manage its own open state. Passed
+   * together, they let a caller (e.g. a "jump to and expand this one"
+   * action elsewhere on the page) drive it from outside. */
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
 /** Replaces native <details>/<summary> -- same collapsed-by-default
  * disclosure, but as a component so its trigger/content can be styled
  * consistently across the 5 places that used it. */
-export function Disclosure({ summary, children, defaultOpen = false }: DisclosureProps) {
-  const [open, setOpen] = useState(defaultOpen)
+export function Disclosure({
+  summary,
+  children,
+  defaultOpen = false,
+  open: controlledOpen,
+  onOpenChange,
+}: DisclosureProps) {
+  const [internalOpen, setInternalOpen] = useState(defaultOpen)
+  const open = controlledOpen ?? internalOpen
+  const setOpen = onOpenChange ?? setInternalOpen
 
   return (
     <Collapsible.Root open={open} onOpenChange={setOpen} className="text-[13px]">

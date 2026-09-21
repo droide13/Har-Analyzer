@@ -19,9 +19,9 @@ export default function App() {
   const [isPickingFile, setIsPickingFile] = useState(false)
   const [activeTab, setActiveTab] = useState('network-log')
   // Set by the Identifiers tab's "Trace" button; consumed once by
-  // DisseminationView to select that key and auto-run a search narrowed to
-  // that exact value.
-  const [disseminationTarget, setDisseminationTarget] = useState<{ key: string; value: string } | null>(null)
+  // DisseminationView to select that key and auto-run its dissemination
+  // search.
+  const [disseminationTarget, setDisseminationTarget] = useState<{ key: string } | null>(null)
 
   function handleUploaded(upload: UploadResponse) {
     setSession(upload)
@@ -30,8 +30,8 @@ export default function App() {
     setDisseminationTarget(null)
   }
 
-  function handleTraceValue(key: string, value: string) {
-    setDisseminationTarget({ key, value })
+  function handleTraceKey(key: string) {
+    setDisseminationTarget({ key })
     setActiveTab('dissemination')
   }
 
@@ -44,7 +44,7 @@ export default function App() {
         {
           key: 'identifiers',
           label: 'Identifiers',
-          render: () => <IdentifiersView uploadId={session.upload_id} onTraceValue={handleTraceValue} />,
+          render: () => <IdentifiersView uploadId={session.upload_id} onTraceKey={handleTraceKey} />,
         },
         {
           key: 'dissemination',
