@@ -2,7 +2,9 @@
 
 A fast, strictly typed tool to parse, filter, and audit HTTP Archive (`.har`) files — with a focus on tracing how identifiers (cookies, query-param tokens, session IDs) are captured and disseminated across a capture.
 
-A FastAPI backend (Python) does the parsing/analysis; a React + TypeScript frontend renders it. Originally a single Streamlit app — rewritten for performance on large captures and richer interactive graphs. Feature-for-feature parity with the original: same 7 tabs, same search syntax, same naming convention.
+The app has been written from manually created python scripts to a visual browser tool using Claude.
+
+A FastAPI backend (Python) does the parsing/analysis; a React + TypeScript frontend renders it. Feature-for-feature parity with the original: same 7 tabs, same search syntax, same naming convention.
 
 ---
 
