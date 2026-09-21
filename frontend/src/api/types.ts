@@ -47,6 +47,7 @@ export interface EntriesPage {
   page_size: number
   total_pages: number
   items: EntrySummary[]
+  highlighted_pages: number[]
 }
 
 export interface HeaderPair {

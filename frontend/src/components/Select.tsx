@@ -6,6 +6,8 @@ interface SelectProps {
   onChange: (value: string) => void
   options: string[]
   ariaLabel?: string
+  /** Shown in the trigger when value is empty (e.g. nothing picked yet). */
+  placeholder?: string
 }
 
 /**
@@ -21,7 +23,7 @@ interface SelectProps {
  * up top so picking one out of a long list (e.g. Dissemination's key
  * picker) doesn't mean scrolling through all of them by hand.
  */
-export function Select({ value, onChange, options, ariaLabel }: SelectProps) {
+export function Select({ value, onChange, options, ariaLabel, placeholder }: SelectProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [query, setQuery] = useState('')
 
@@ -41,7 +43,9 @@ export function Select({ value, onChange, options, ariaLabel }: SelectProps) {
           aria-label={ariaLabel}
           className="flex w-full items-center justify-between gap-2 rounded border border-border bg-bg px-2 py-1.5 text-left text-text"
         >
-          <span className="overflow-hidden text-ellipsis whitespace-nowrap">{value}</span>
+          <span className={`overflow-hidden text-ellipsis whitespace-nowrap ${value ? '' : 'text-text-muted'}`}>
+            {value || placeholder}
+          </span>
           <span className="shrink-0 text-text-muted" aria-hidden="true">
             ▾
           </span>
