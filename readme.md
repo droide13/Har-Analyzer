@@ -8,7 +8,17 @@ A FastAPI backend (Python) does the parsing/analysis; a React + TypeScript front
 
 ## Setup & Use
 
-Backend and frontend run as two separate local processes.
+Requires Python 3 and Node.js already installed.
+
+```bash
+./dev.sh
+```
+
+Sets up the backend virtual environment and installs frontend dependencies
+on first run, then starts both dev servers together. Ctrl+C stops both.
+
+<details>
+<summary>Manual setup (two separate terminals)</summary>
 
 ```bash
 # Backend (FastAPI)
@@ -25,6 +35,8 @@ cd frontend
 npm install
 npm run dev   # http://localhost:5173 -- proxies /api/* to the backend on :8000
 ```
+
+</details>
 
 Open http://localhost:5173 and upload a `.har` file.
 
