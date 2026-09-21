@@ -1,4 +1,4 @@
-# HAR Analyzer
+# HAR Analyzer <img src="./assets/har_analyzer.png" alt="HAR Analyzer Logo" width="28" align="absmiddle">
 
 A fast, strictly typed tool to parse, filter, and audit HTTP Archive (`.har`) files — with a focus on tracing how identifiers (cookies, query-param tokens, session IDs) are captured and disseminated across a capture.
 
@@ -93,11 +93,12 @@ you're prompted to enter the capture date manually.
 The standardizer generates (and the app parses) filenames of the form:
 
 ```
-<domain>-interact-(LOA|NAV|EMA|SIG|LOG)-cookies-(ACC|DEN|IGN)-visit-(FIR|SEC|DEL)-extra-(3 LETTERS or 000)-yy-mm-dd-hh.har
+<domain>-platform-(WEB|MOB)-interact-(LOA|NAV|EMA|SIG|LOG)-cookies-(ACC|DEN|IGN)-visit-(FIR|SEC|DEL)-extra-(3 LETTERS or 000)-yy-mm-dd-hh.har
 ```
 
 | Segment    | Meaning                                                                                          | Codes                                                          |
 | ---------- | ------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| `platform` | web / mobile (more device types, e.g. TV/CTV, can be added the same way)                          | `WEB` / `MOB`                                                  |
 | `interact` | load / navigate / enter email / sign up / login                                                   | `LOA` / `NAV` / `EMA` / `SIG` / `LOG`                          |
 | `cookies`  | accept / deny / ignore                                                                             | `ACC` / `DEN` / `IGN`                                          |
 | `visit`    | first visit (fresh) / second visit (reuse existing cookies or state) / delete cookies and reload  | `FIR` / `SEC` / `DEL`                                          |
