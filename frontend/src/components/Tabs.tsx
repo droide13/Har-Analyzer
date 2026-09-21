@@ -38,7 +38,10 @@ const TRIGGER_CLASSES = {
 
 const CONTENT_CLASSES = {
   page: 'pt-3',
-  panel: 'flex-1 overflow-auto p-3',
+  // min-h-0 overrides the flex item default of min-height: auto, which
+  // would otherwise let a tall child (e.g. a big JSON dump) grow this past
+  // its flex-1 share instead of capping it so overflow-auto can scroll.
+  panel: 'min-h-0 flex-1 overflow-auto p-3',
 }
 
 /**

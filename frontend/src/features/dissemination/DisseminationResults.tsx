@@ -96,38 +96,41 @@ export function DisseminationResults({ uploadId, submittedSearch, initialNarrowQ
         </FormField>
       </FormRow>
 
-      <div className="flex items-start gap-3">
+      {/* The detail panel docks to the viewport edge (fixed, full height)
+          rather than sitting inline, so this padding is what makes room for
+          it instead of letting it cover the match list. */}
+      <div className={selectedIndex !== null ? 'pr-[420px]' : ''}>
         <DisseminationMatchList matches={data.matches} selectedIndex={selectedIndex} onSelectRow={setSelectedIndex} />
-        {selectedIndex !== null && (
-          <EntryDetailPanel
-            uploadId={uploadId}
-            index={selectedIndex}
-            onClose={() => setSelectedIndex(null)}
-            extraTabs={
-              selectedMatch
-                ? [
-                    {
-                      key: 'matches',
-                      label: 'Matches',
-                      render: () => (
-                        <DataTable
-                          variant="compact"
-                          columns={[
-                            { header: 'Field', accessor: (r: (typeof selectedMatch.reasons)[number]) => r.Field },
-                            { header: 'Value', accessor: (r: (typeof selectedMatch.reasons)[number]) => r.Value },
-                            { header: 'Forms', accessor: (r: (typeof selectedMatch.reasons)[number]) => r.Forms },
-                          ]}
-                          rows={selectedMatch.reasons}
-                          rowKey={(_, i) => i}
-                        />
-                      ),
-                    },
-                  ]
-                : []
-            }
-          />
-        )}
       </div>
+      {selectedIndex !== null && (
+        <EntryDetailPanel
+          uploadId={uploadId}
+          index={selectedIndex}
+          onClose={() => setSelectedIndex(null)}
+          extraTabs={
+            selectedMatch
+              ? [
+                  {
+                    key: 'matches',
+                    label: 'Matches',
+                    render: () => (
+                      <DataTable
+                        variant="compact"
+                        columns={[
+                          { header: 'Field', accessor: (r: (typeof selectedMatch.reasons)[number]) => r.Field },
+                          { header: 'Value', accessor: (r: (typeof selectedMatch.reasons)[number]) => r.Value },
+                          { header: 'Forms', accessor: (r: (typeof selectedMatch.reasons)[number]) => r.Forms },
+                        ]}
+                        rows={selectedMatch.reasons}
+                        rowKey={(_, i) => i}
+                      />
+                    ),
+                  },
+                ]
+              : []
+          }
+        />
+      )}
     </div>
   )
 }
