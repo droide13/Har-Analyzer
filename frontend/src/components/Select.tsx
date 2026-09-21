@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
+import { Popover } from 'radix-ui'
 
 interface SelectProps {
   value: string
@@ -12,67 +13,63 @@ interface SelectProps {
  * not the page -- its width mostly ignores page CSS and is sized from
  * option content, which can render far wider than the closed control (or
  * the whole window) once options are long/unpredictable strings, like a
- * domain or a cookie/query-param key. This renders its own panel instead,
- * so it's bounded by the same container width as the closed control, with
- * long option text truncated rather than blowing out the layout -- and,
- * since that means no OS-native typeahead either, a plain substring filter
- * input up top so picking one out of a long list (e.g. Dissemination's key
+ * domain or a cookie/query-param key. This renders its own panel instead
+ * (via Radix Popover, which owns the positioning/focus-trap/outside-click/
+ * Escape chrome), so it's bounded by the same trigger width, with long
+ * option text truncated rather than blowing out the layout -- and, since
+ * that means no OS-native typeahead either, a plain substring filter input
+ * up top so picking one out of a long list (e.g. Dissemination's key
  * picker) doesn't mean scrolling through all of them by hand.
  */
 export function Select({ value, onChange, options, ariaLabel }: SelectProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [query, setQuery] = useState('')
-  const rootRef = useRef<HTMLDivElement>(null)
-  const searchRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setIsOpen(false)
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
-
-  useEffect(() => {
-    if (isOpen) searchRef.current?.focus()
-    else setQuery('')
-  }, [isOpen])
 
   const filteredOptions = options.filter((option) => option.toLowerCase().includes(query.toLowerCase()))
 
   return (
-    <div className="dropdown" ref={rootRef}>
-      <button
-        type="button"
-        className="dropdown__trigger"
-        aria-label={ariaLabel}
-        aria-haspopup="listbox"
-        aria-expanded={isOpen}
-        onClick={() => setIsOpen((open) => !open)}
-      >
-        <span className="dropdown__value">{value}</span>
-        <span className="dropdown__chevron" aria-hidden="true">
-          ▾
-        </span>
-      </button>
-      {isOpen && (
-        <div className="dropdown__panel">
+    <Popover.Root
+      open={isOpen}
+      onOpenChange={(open) => {
+        setIsOpen(open)
+        if (!open) setQuery('')
+      }}
+    >
+      <Popover.Trigger asChild>
+        <button
+          type="button"
+          aria-label={ariaLabel}
+          className="flex w-full items-center justify-between gap-2 rounded border border-border bg-bg px-2 py-1.5 text-left text-text"
+        >
+          <span className="overflow-hidden text-ellipsis whitespace-nowrap">{value}</span>
+          <span className="shrink-0 text-text-muted" aria-hidden="true">
+            ▾
+          </span>
+        </button>
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content
+          align="start"
+          sideOffset={4}
+          className="z-20 w-[var(--radix-popover-trigger-width)] rounded-md border border-border bg-bg p-1 shadow-lg"
+        >
           <input
-            ref={searchRef}
             type="text"
-            className="dropdown__search"
+            className="mb-1 w-full rounded border border-border bg-bg px-2 py-1 text-[13px]"
             placeholder="Type to filter..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
-          <ul className="dropdown__list" role="listbox">
+          <ul className="m-0 max-h-[220px] list-none overflow-y-auto p-0" role="listbox">
             {filteredOptions.map((option) => (
               <li key={option}>
                 <button
                   type="button"
                   role="option"
                   aria-selected={option === value}
-                  className={`dropdown__option ${option === value ? 'dropdown__option--selected' : ''}`}
+                  className={`block w-full overflow-hidden truncate rounded px-2 py-1.5 text-left text-[13px] hover:bg-bg-subtle ${
+                    option === value ? 'font-semibold text-accent' : 'text-text'
+                  }`}
                   onClick={() => {
                     onChange(option)
                     setIsOpen(false)
@@ -82,10 +79,10 @@ export function Select({ value, onChange, options, ariaLabel }: SelectProps) {
                 </button>
               </li>
             ))}
-            {filteredOptions.length === 0 && <li className="dropdown__empty">No matches</li>}
+            {filteredOptions.length === 0 && <li className="px-2 py-1.5 text-[13px] text-text-muted">No matches</li>}
           </ul>
-        </div>
-      )}
-    </div>
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
   )
 }

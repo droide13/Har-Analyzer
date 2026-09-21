@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { fetchQueryParams } from '../../api/queryParams'
 import { AggregateToggleView } from '../../components/AggregateToggleView'
 import type { DataTableColumn } from '../../components/DataTable'
+import { ErrorState, LoadingState } from '../../components/QueryState'
 
 interface QueryParamsViewProps {
   uploadId: string
@@ -46,8 +47,8 @@ export function QueryParamsView({ uploadId }: QueryParamsViewProps) {
     queryFn: () => fetchQueryParams(uploadId),
   })
 
-  if (isLoading) return <p>Loading...</p>
-  if (isError || !data) return <p className="error-text">Failed to load query parameters.</p>
+  if (isLoading) return <LoadingState />
+  if (isError || !data) return <ErrorState label="Failed to load query parameters." />
 
   if (data.records.length === 0) {
     return <p>No query string parameters found.</p>
@@ -61,7 +62,7 @@ export function QueryParamsView({ uploadId }: QueryParamsViewProps) {
         { label: 'Unique Param Names', value: data.metrics.unique_names },
         { label: 'Empty Values', value: data.metrics.empty_values },
       ]}
-      aggregatedCaption="One row per param name. Method shows 'Mixed' if the param appears under more than one HTTP method; Value shows the shared value or how many distinct values were seen."
+      aggregatedCaption="One row per param name. Method lists every HTTP method the param appeared under; Value shows the shared value or how many distinct values were seen."
       aggregatedColumns={AGGREGATED_COLUMNS}
       rawColumns={RAW_COLUMNS}
       records={data.records as unknown as QueryParamRecord[]}

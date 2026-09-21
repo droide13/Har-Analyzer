@@ -1,7 +1,13 @@
 import { useState } from 'react'
 import type { RootDomainMetric } from '../../api/types'
-import { formatBytes } from '../../lib/formatBytes'
+import { formatBandwidth } from '../../lib/formatBytes'
 import { BarChart, type BarChartDatum } from '../../components/BarChart'
+import { DataTable } from '../../components/DataTable'
+import { FormRow } from '../../components/FormField'
+import { MetricsRow } from '../../components/MetricsRow'
+import { RangeField } from '../../components/RangeField'
+import { Select } from '../../components/Select'
+import { SegmentedControl } from '../../components/SegmentedControl'
 import { SubdomainResolution } from './SubdomainResolution'
 
 interface DomainExplorerProps {
@@ -11,6 +17,11 @@ interface DomainExplorerProps {
 }
 
 type SortBy = 'Requests' | 'Bandwidth'
+
+const SORT_OPTIONS = [
+  { value: 'Requests', label: 'Requests' },
+  { value: 'Bandwidth', label: 'Bandwidth' },
+]
 
 function metricValue(metric: { requests: number; bytes: number }, sortBy: SortBy): number {
   return sortBy === 'Requests' ? metric.requests : metric.bytes
@@ -45,96 +56,56 @@ export function DomainExplorer({ uploadId, domainMap, firstPartyDomain }: Domain
     : []
 
   return (
-    <div className="domain-explorer">
-      <h3>Domain and Subdomain Explorer</h3>
+    <div className="mt-4">
+      <h3 className="text-base font-semibold">Domain and Subdomain Explorer</h3>
 
-      <div className="search-controls__row">
-        <fieldset className="search-controls__methods">
-          <legend>Sort Everything By</legend>
-          {(['Requests', 'Bandwidth'] as const).map((option) => (
-            <label key={option} className="search-controls__checkbox">
-              <input type="radio" checked={sortBy === option} onChange={() => setSortBy(option)} />
-              {option}
-            </label>
-          ))}
-        </fieldset>
-        <label>
-          Show Top Domains in Chart ({chartLimit})
-          <input
-            type="range"
-            min={5}
-            max={50}
-            step={5}
-            value={chartLimit}
-            onChange={(e) => setChartLimit(Number(e.target.value))}
-          />
-        </label>
-      </div>
+      <FormRow>
+        <SegmentedControl legend="Sort Everything By" options={SORT_OPTIONS} value={sortBy} onChange={(v) => setSortBy(v as SortBy)} />
+        <RangeField
+          label="Show Top Domains in Chart"
+          value={chartLimit}
+          min={5}
+          max={50}
+          step={5}
+          onChange={setChartLimit}
+        />
+      </FormRow>
 
-      <h4>
+      <h4 className="text-sm font-semibold">
         Top {chartLimit} Domains by {unitLabel}
       </h4>
       <BarChart data={topDomains} orientation="horizontal" valueLabel={unitLabel} />
 
-      <label>
+      <label className="mt-3 mb-3 flex max-w-md flex-col gap-1 text-[13px] text-text-muted">
         Inspect Root Domain (alphabetically)
-        <select value={selectedRoot} onChange={(e) => setSelectedRoot(e.target.value)}>
-          {domainOptions.map((domain) => {
-            const metric = domainMap[domain]
-            return (
-              <option key={domain} value={domain}>
-                {domain} ({metric.requests} reqs | {formatBytes(metric.bytes)})
-              </option>
-            )
-          })}
-        </select>
+        <Select value={selectedRoot} onChange={setSelectedRoot} options={domainOptions} ariaLabel="Root domain" />
       </label>
 
       {root && (
         <>
-          <div className="metrics-row">
-            <div className="metric">
-              <span className="metric__label">Root Requests</span>
-              <span className="metric__value">{root.requests.toLocaleString()}</span>
-            </div>
-            <div className="metric">
-              <span className="metric__label">Total Bandwidth</span>
-              <span className="metric__value">{formatBytes(root.bytes)}</span>
-            </div>
-            <div className="metric">
-              <span className="metric__label">Subdomains Seen</span>
-              <span className="metric__value">{Object.keys(root.subdomains).length}</span>
-            </div>
-          </div>
+          <MetricsRow
+            metrics={[
+              { label: 'Root Requests', value: root.requests.toLocaleString() },
+              { label: 'Total Bandwidth', value: formatBandwidth(root.bytes, root.sized_requests) },
+              { label: 'Subdomains Seen', value: Object.keys(root.subdomains).length },
+            ]}
+          />
 
-          <h4>
+          <h4 className="text-sm font-semibold">
             Subdomains of `{selectedRoot}` (sorted by {sortBy})
           </h4>
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Subdomain Address</th>
-                <th>Requests</th>
-                <th>Total Size</th>
-              </tr>
-            </thead>
-            <tbody>
-              {subdomainRows.map((row) => (
-                <tr key={row.subdomain}>
-                  <td>{row.subdomain}</td>
-                  <td>{row.requests}</td>
-                  <td>{formatBytes(row.bytes)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <DataTable
+            columns={[
+              { header: 'Subdomain Address', accessor: (row) => row.subdomain },
+              { header: 'Requests', accessor: (row) => row.requests },
+              { header: 'Total Size', accessor: (row) => formatBandwidth(row.bytes, row.sized_requests) },
+            ]}
+            rows={subdomainRows}
+            rowKey={(row) => row.subdomain}
+          />
 
-          {selectedRoot === firstPartyDomain && firstPartyDomain !== 'unknown' && (
-            <SubdomainResolution
-              uploadId={uploadId}
-              firstPartyRoot={firstPartyDomain}
-              subdomains={Object.keys(root.subdomains)}
-            />
+          {selectedRoot !== 'unknown' && (
+            <SubdomainResolution uploadId={uploadId} rootDomain={selectedRoot} subdomains={Object.keys(root.subdomains)} />
           )}
         </>
       )}

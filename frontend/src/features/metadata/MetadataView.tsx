@@ -2,6 +2,11 @@ import { useEffect, useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { fetchMetadata, fetchNamingOptions, generateMetadata, standardizedDownloadUrl } from '../../api/metadata'
 import type { GenerateMetadataRequest } from '../../api/types'
+import { Button } from '../../components/Button'
+import { DataTable } from '../../components/DataTable'
+import { FormField, FormRow, fieldInputClasses } from '../../components/FormField'
+import { MetricsRow } from '../../components/MetricsRow'
+import { ErrorState, LoadingState } from '../../components/QueryState'
 
 interface MetadataViewProps {
   uploadId: string
@@ -19,7 +24,11 @@ function firstKey(labels: Record<string, string>): string {
  * app -- generate and download are two explicit steps here too, same as
  * the original's button + frozen session-state download. */
 export function MetadataView({ uploadId }: MetadataViewProps) {
-  const { data: metadata, isLoading } = useQuery({
+  const {
+    data: metadata,
+    isLoading,
+    isError,
+  } = useQuery({
     queryKey: ['metadata', uploadId],
     queryFn: () => fetchMetadata(uploadId),
   })
@@ -27,6 +36,7 @@ export function MetadataView({ uploadId }: MetadataViewProps) {
 
   const [selectedDomainOption, setSelectedDomainOption] = useState('')
   const [customDomain, setCustomDomain] = useState('')
+  const [platform, setPlatform] = useState('')
   const [interact, setInteract] = useState('')
   const [cookies, setCookies] = useState('')
   const [visit, setVisit] = useState('')
@@ -47,6 +57,7 @@ export function MetadataView({ uploadId }: MetadataViewProps) {
       setNotes(metadata.existing_analysis?.notes ?? '')
     }
     if (naming) {
+      setPlatform((prev) => prev || firstKey(naming.platform))
       setInteract((prev) => prev || firstKey(naming.interact))
       setCookies((prev) => prev || firstKey(naming.cookies))
       setVisit((prev) => prev || firstKey(naming.visit))
@@ -58,7 +69,8 @@ export function MetadataView({ uploadId }: MetadataViewProps) {
     onSuccess: (_result, variables) => setLastGeneratedInputs(variables),
   })
 
-  if (isLoading) return <p>Loading...</p>
+  if (isLoading) return <LoadingState />
+  if (isError) return <ErrorState label="Failed to load metadata." />
   if (!metadata || !naming) return null
 
   const domain = selectedDomainOption === CUSTOM_DOMAIN_LABEL ? customDomain : selectedDomainOption
@@ -68,6 +80,7 @@ export function MetadataView({ uploadId }: MetadataViewProps) {
 
   const currentInputs: GenerateMetadataRequest = {
     domain,
+    platform,
     interact,
     cookies,
     visit,
@@ -82,48 +95,40 @@ export function MetadataView({ uploadId }: MetadataViewProps) {
   const canGenerate = domain.trim().length > 0 && capturedAt.length > 0
 
   return (
-    <div className="metadata">
-      <h3>Standardize &amp; Tag Current HAR File</h3>
-      <p className="caption">
+    <div>
+      <h3 className="text-base font-semibold">Standardize &amp; Tag Current HAR File</h3>
+      <p className="my-1 mb-3 text-[13px] text-text-muted">
         Domain and capture time are derived from the traffic itself, allowing you to confirm or override
         classification before generating an updated copy with embedded log._analysis metadata.
       </p>
 
-      <h4>Detected from file contents</h4>
-      <div className="metrics-row">
-        <div className="metric">
-          <span className="metric__label">Primary domain (first request)</span>
-          <span className="metric__value">{metadata.detected.first_request_domain}</span>
-        </div>
-        <div className="metric">
-          <span className="metric__label">Capture time</span>
-          <span className="metric__value">
-            {metadata.detected.captured_at
-              ? new Date(metadata.detected.captured_at).toLocaleString()
-              : 'Unknown'}
-          </span>
-        </div>
-      </div>
+      <h4 className="text-sm font-semibold">Detected from file contents</h4>
+      <MetricsRow
+        metrics={[
+          { label: 'Primary domain (first request)', value: metadata.detected.first_request_domain },
+          {
+            label: 'Capture time',
+            value: metadata.detected.captured_at ? new Date(metadata.detected.captured_at).toLocaleString() : 'Unknown',
+          },
+        ]}
+      />
       {metadata.detected.captured_at === null && (
-        <p className="error-text">
-          Could not parse a capture timestamp from any entry's startedDateTime. Enter one manually below.
-        </p>
+        <ErrorState label="Could not parse a capture timestamp from any entry's startedDateTime. Enter one manually below." />
       )}
 
       {hasExisting && metadata.existing_analysis && (
         <>
-          <h4>Current metadata</h4>
-          <table className="data-table">
-            <tbody>
-              {Object.entries(metadata.existing_analysis).map(([field, value]) => (
-                <tr key={field}>
-                  <td className="entry-detail__pair-name">{field}</td>
-                  <td>{String(value)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <label className="search-controls__checkbox">
+          <h4 className="text-sm font-semibold">Current metadata</h4>
+          <DataTable
+            showHeader={false}
+            columns={[
+              { header: 'Field', accessor: ([field]) => field, className: 'font-semibold' },
+              { header: 'Value', accessor: ([, value]) => String(value) },
+            ]}
+            rows={Object.entries(metadata.existing_analysis)}
+            rowKey={([field]) => field}
+          />
+          <label className="inline-flex items-center gap-1.5 text-[13px] whitespace-nowrap">
             <input type="checkbox" checked={overwriteConfirmed} onChange={(e) => setOverwriteConfirmed(e.target.checked)} />
             I want to overwrite this with new values below.
           </label>
@@ -132,125 +137,125 @@ export function MetadataView({ uploadId }: MetadataViewProps) {
 
       {formVisible && (
         <>
-          <h4>Confirm classification</h4>
-          <div className="search-controls__row">
-            <label>
-              Domain
-              <select value={selectedDomainOption} onChange={(e) => setSelectedDomainOption(e.target.value)}>
+          <h4 className="mt-3 text-sm font-semibold">Confirm classification</h4>
+          <FormRow>
+            <FormField label="Domain">
+              <select className={fieldInputClasses} value={selectedDomainOption} onChange={(e) => setSelectedDomainOption(e.target.value)}>
                 {metadata.detected.domain_options.map((option) => (
                   <option key={option} value={option}>
                     {option}
                   </option>
                 ))}
               </select>
-            </label>
+            </FormField>
             {selectedDomainOption === CUSTOM_DOMAIN_LABEL && (
-              <label>
-                Custom domain
-                <input type="text" value={customDomain} onChange={(e) => setCustomDomain(e.target.value)} />
-              </label>
+              <FormField label="Custom domain">
+                <input type="text" className={fieldInputClasses} value={customDomain} onChange={(e) => setCustomDomain(e.target.value)} />
+              </FormField>
             )}
-            <label>
-              Interaction type
-              <select value={interact} onChange={(e) => setInteract(e.target.value)}>
+            <FormField label="Platform">
+              <select className={fieldInputClasses} value={platform} onChange={(e) => setPlatform(e.target.value)}>
+                {Object.entries(naming.platform).map(([key, label]) => (
+                  <option key={key} value={key}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </FormField>
+            <FormField label="Interaction type">
+              <select className={fieldInputClasses} value={interact} onChange={(e) => setInteract(e.target.value)}>
                 {Object.entries(naming.interact).map(([key, label]) => (
                   <option key={key} value={key}>
                     {label}
                   </option>
                 ))}
               </select>
-            </label>
-            <label>
-              Cookie handling
-              <select value={cookies} onChange={(e) => setCookies(e.target.value)}>
+            </FormField>
+            <FormField label="Cookie handling">
+              <select className={fieldInputClasses} value={cookies} onChange={(e) => setCookies(e.target.value)}>
                 {Object.entries(naming.cookies).map(([key, label]) => (
                   <option key={key} value={key}>
                     {label}
                   </option>
                 ))}
               </select>
-            </label>
-          </div>
+            </FormField>
+          </FormRow>
 
-          <div className="search-controls__row">
-            <label>
-              Visit type
-              <select value={visit} onChange={(e) => setVisit(e.target.value)}>
+          <FormRow>
+            <FormField label="Visit type">
+              <select className={fieldInputClasses} value={visit} onChange={(e) => setVisit(e.target.value)}>
                 {Object.entries(naming.visit).map(([key, label]) => (
                   <option key={key} value={key}>
                     {label}
                   </option>
                 ))}
               </select>
-            </label>
-            <label>
-              Extra context (optional)
-              <input type="text" value={extra} onChange={(e) => setExtra(e.target.value)} maxLength={3} />
-            </label>
+            </FormField>
+            <FormField label="Extra context (optional)">
+              <input type="text" className={fieldInputClasses} value={extra} onChange={(e) => setExtra(e.target.value)} maxLength={3} />
+            </FormField>
             {metadata.detected.captured_at === null && (
-              <label>
-                Capture date
+              <FormField label="Capture date">
                 <input
                   type="datetime-local"
+                  className={fieldInputClasses}
                   value={manualCapturedAt}
                   onChange={(e) => setManualCapturedAt(e.target.value)}
                 />
-              </label>
+              </FormField>
             )}
-          </div>
+          </FormRow>
 
-          <h4>Experiment notes</h4>
-          <p className="caption">Written into log._analysis inside the file itself, not just the filename.</p>
-          <div className="search-controls__row">
-            <label>
-              Description
-              <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
-            </label>
-          </div>
-          <div className="search-controls__row">
-            <label>
-              Email used
-              <input type="text" value={emailUsed} onChange={(e) => setEmailUsed(e.target.value)} />
-            </label>
-          </div>
-          <div className="search-controls__row">
-            <label>
-              Notes
-              <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
-            </label>
-          </div>
+          <h4 className="text-sm font-semibold">Experiment notes</h4>
+          <p className="my-1 mb-3 text-[13px] text-text-muted">Written into log._analysis inside the file itself, not just the filename.</p>
+          <FormRow>
+            <FormField label="Description">
+              <textarea className={fieldInputClasses} value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
+            </FormField>
+          </FormRow>
+          <FormRow>
+            <FormField label="Email used">
+              <input type="text" className={fieldInputClasses} value={emailUsed} onChange={(e) => setEmailUsed(e.target.value)} />
+            </FormField>
+          </FormRow>
+          <FormRow>
+            <FormField label="Notes">
+              <textarea className={fieldInputClasses} value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
+            </FormField>
+          </FormRow>
 
-          <h4>Standardized Output</h4>
-          <button
+          <h4 className="text-sm font-semibold">Standardized Output</h4>
+          <Button
+            variant="primary"
             onClick={() => generateMutation.mutate(currentInputs)}
             disabled={!canGenerate || generateMutation.isPending}
           >
             {generateMutation.isPending ? 'Generating...' : 'Generate standardized file'}
-          </button>
-          {generateMutation.isError && <p className="error-text">Failed to generate: {String(generateMutation.error)}</p>}
+          </Button>
+          {generateMutation.isError && <ErrorState label={`Failed to generate: ${String(generateMutation.error)}`} />}
 
           {generateMutation.data ? (
             <>
               {isStale && (
-                <p className="error-text">
-                  Form values changed since this file was generated. Press "Generate standardized file" again to
-                  update the download.
-                </p>
+                <ErrorState label='Form values changed since this file was generated. Press "Generate standardized file" again to update the download.' />
               )}
-              <code>{generateMutation.data.filename}</code>
+              <p className="mt-2">
+                <code>{generateMutation.data.filename}</code>
+              </p>
               <p>
-                <a href={standardizedDownloadUrl(uploadId)} download={generateMutation.data.filename}>
+                <a className="text-accent underline" href={standardizedDownloadUrl(uploadId)} download={generateMutation.data.filename}>
                   Download Standardized .har
                 </a>
               </p>
-              <p className="caption">
+              <p className="my-1 mb-3 text-[13px] text-text-muted">
                 Note on browser save location: web browsers determine whether files download directly or open a
                 save dialog. To be prompted for a folder path on every download, enable "Ask where to save each
                 file before downloading" in your browser's settings.
               </p>
             </>
           ) : (
-            <p className="caption">Fill in the fields above and click "Generate standardized file".</p>
+            <p className="my-1 mb-3 text-[13px] text-text-muted">Fill in the fields above and click "Generate standardized file".</p>
           )}
         </>
       )}

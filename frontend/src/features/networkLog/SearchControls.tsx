@@ -1,4 +1,8 @@
 import type { ScopeOptions } from '../../api/types'
+import { CheckboxGroup } from '../../components/CheckboxGroup'
+import { Disclosure } from '../../components/Disclosure'
+import { EncodingCheckboxList } from '../../components/EncodingCheckboxList'
+import { FormField, FormRow, fieldInputClasses } from '../../components/FormField'
 
 interface SearchControlsProps {
   filterQuery: string
@@ -55,10 +59,9 @@ export function SearchControls({
   }
 
   return (
-    <div className="search-controls">
-      <details>
-        <summary>Learn How to Search (Negations, Field Filters, etc.)</summary>
-        <ul className="search-controls__help">
+    <div className="mb-3 flex flex-col gap-3 rounded-md border border-border bg-bg-subtle p-3">
+      <Disclosure summary="Learn How to Search (Negations, Field Filters, etc.)">
+        <ul className="text-[13px] text-text-muted">
           <li>
             <strong>Free Text:</strong> searches the selected field scope, e.g. <code>api/v1</code>.
           </li>
@@ -70,79 +73,61 @@ export function SearchControls({
             <code>method:</code>, <code>header:</code>, <code>body:</code>.
           </li>
         </ul>
-      </details>
+      </Disclosure>
 
-      <div className="search-controls__row">
-        <label>
-          Filter Query (discards entries)
+      <FormRow>
+        <FormField label="Filter Query (discards entries)">
           <input
             type="text"
+            className={fieldInputClasses}
             value={filterQuery}
             onChange={(e) => onFilterQueryChange(e.target.value)}
             placeholder="e.g. status:4xx -header:image"
           />
-        </label>
-        <label>
-          Highlight Query (highlights matches)
+        </FormField>
+        <FormField label="Highlight Query (highlights matches)">
           <input
             type="text"
+            className={fieldInputClasses}
             value={highlightQuery}
             onChange={(e) => onHighlightQueryChange(e.target.value)}
             placeholder="e.g. cookies:session"
           />
-        </label>
-      </div>
+        </FormField>
+      </FormRow>
 
-      <div className="search-controls__row">
-        <label>
-          Text scope mapping
-          <select value={scope} onChange={(e) => onScopeChange(e.target.value)}>
+      <FormRow>
+        <FormField label="Text scope mapping">
+          <select className={fieldInputClasses} value={scope} onChange={(e) => onScopeChange(e.target.value)}>
             {Object.entries(scopeOptions).map(([label, value]) => (
               <option key={value} value={value}>
                 {label}
               </option>
             ))}
           </select>
-        </label>
+        </FormField>
 
-        <fieldset className="search-controls__methods">
-          <legend>Methods target</legend>
-          {methodOrder.map((method) => (
-            <label key={method} className="search-controls__checkbox">
-              <input
-                type="checkbox"
-                checked={selectedMethods.includes(method)}
-                onChange={() => toggleMethod(method)}
-              />
-              {method}
-            </label>
-          ))}
-        </fieldset>
+        <CheckboxGroup legend="Methods target" options={methodOrder} selected={selectedMethods} onToggle={toggleMethod} />
 
-        <label>
-          Results per page
+        <FormField label="Results per page">
           <input
             type="number"
+            className={fieldInputClasses}
             min={10}
             max={500}
             step={10}
             value={pageSize}
             onChange={(e) => onPageSizeChange(Number(e.target.value))}
           />
-        </label>
-      </div>
+        </FormField>
+      </FormRow>
 
-      <details>
-        <summary>Encodings &amp; Hashes for term matching (all applied by default)</summary>
-        <div className="search-controls__encodings">
-          {encodingOptions.map((name) => (
-            <label key={name} className="search-controls__checkbox">
-              <input type="checkbox" checked={selectedEncodings.has(name)} onChange={() => toggleEncoding(name)} />
-              {name}
-            </label>
-          ))}
-        </div>
-      </details>
+      <EncodingCheckboxList
+        summary="Encodings & Hashes for term matching (all applied by default)"
+        options={encodingOptions}
+        selected={selectedEncodings}
+        onToggle={toggleEncoding}
+      />
     </div>
   )
 }

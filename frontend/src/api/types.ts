@@ -5,6 +5,7 @@
 
 export interface SessionMetadata {
   domain: string
+  platform: string | null
   interaction: string | null
   cookies: string | null
   visit: string | null
@@ -87,6 +88,7 @@ export type ScopeOptions = Record<string, string>
 export interface OverviewSummary {
   total_requests: number
   total_bandwidth: number
+  sized_requests: number
   unique_domains: number
   avg_latency_ms: number
 }
@@ -94,11 +96,13 @@ export interface OverviewSummary {
 export interface SubdomainMetric {
   requests: number
   bytes: number
+  sized_requests: number
 }
 
 export interface RootDomainMetric {
   requests: number
   bytes: number
+  sized_requests: number
   subdomains: Record<string, SubdomainMetric>
 }
 
@@ -186,6 +190,7 @@ export interface DisseminationSearchResponse {
 export interface HarAnalysis {
   tool_version: string
   domain: string
+  platform: string
   interact: string
   cookies: string
   visit: string
@@ -210,6 +215,7 @@ export interface MetadataResponse {
 
 export interface GenerateMetadataRequest {
   domain: string
+  platform: string
   interact: string
   cookies: string
   visit: string
@@ -227,6 +233,7 @@ export interface GenerateMetadataResponse {
 
 /** internal-code -> display-label maps, e.g. { login: "Login" }. */
 export interface NamingOptions {
+  platform: Record<string, string>
   interact: Record<string, string>
   cookies: Record<string, string>
   visit: Record<string, string>

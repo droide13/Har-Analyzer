@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import { Button } from '../../components/Button'
+import { EncodingCheckboxList } from '../../components/EncodingCheckboxList'
 
 interface DisseminationSearchFormProps {
   encodingOptions: string[]
@@ -28,28 +30,25 @@ export function DisseminationSearchForm({ encodingOptions, onSearch }: Dissemina
 
   return (
     <form
-      className="search-controls"
+      className="mb-3 flex flex-col gap-2"
       onSubmit={(e) => {
         e.preventDefault()
         onSearch([...draftEncodings])
       }}
     >
-      <p className="caption">
+      <p className="my-1 text-[13px] text-text-muted">
         This scans every field of every entry and is not run automatically. Untick any encoded/hashed forms you
         don't want, then click Search.
       </p>
-      <details>
-        <summary>Encodings &amp; Hashes for term matching (all applied by default)</summary>
-        <div className="search-controls__encodings">
-          {encodingOptions.map((name) => (
-            <label key={name} className="search-controls__checkbox">
-              <input type="checkbox" checked={draftEncodings.has(name)} onChange={() => toggle(name)} />
-              {name}
-            </label>
-          ))}
-        </div>
-      </details>
-      <button type="submit">Search dissemination</button>
+      <EncodingCheckboxList
+        summary="Encodings & Hashes for term matching (all applied by default)"
+        options={encodingOptions}
+        selected={draftEncodings}
+        onToggle={toggle}
+      />
+      <Button type="submit" variant="primary" className="w-fit">
+        Search dissemination
+      </Button>
     </form>
   )
 }

@@ -1,66 +1,82 @@
-:root {
-  --text: #1f2328;
-  --text-muted: #6b7280;
-  --bg: #ffffff;
-  --bg-subtle: #f6f7f9;
-  --border: #d9dce1;
-  --accent: #6b3bff;
-  --ok: #1a7f37;
-  --error: #cf222e;
-  --highlight: rgba(255, 196, 0, 0.18);
+@import 'tailwindcss';
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
+@theme {
+  --color-text: #1f2328;
+  --color-text-muted: #656d78;
+  --color-bg: #ffffff;
+  --color-bg-subtle: #f2f3f5;
+  --color-bg-inset: #eaecef;
+  --color-border: #d9dce1;
+  --color-border-strong: #b9bec7;
+  --color-accent: #6b3bff;
+  --color-ok: #1a7f37;
+  --color-error: #cf222e;
+  --color-highlight: rgba(255, 196, 0, 0.18);
 
-  font: 15px/1.45 var(--sans);
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
+  --font-sans: 'Inter', system-ui, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, Consolas, monospace;
+
+  /* Sharper, more instrument-panel corners than Tailwind's defaults --
+     this alone retunes every rounded/rounded-md/rounded-lg usage app-wide. */
+  --radius: 0.1875rem;
+  --radius-md: 0.1875rem;
+  --radius-lg: 0.25rem;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --text: #e6e8eb;
-    --text-muted: #9aa1ac;
-    --bg: #14161a;
-    --bg-subtle: #1c1f24;
-    --border: #2e323a;
-    --accent: #b39dff;
-    --ok: #3fb950;
-    --error: #f85149;
-    --highlight: rgba(255, 196, 0, 0.12);
+    --color-text: #e6e8eb;
+    --color-text-muted: #8b93a0;
+    --color-bg: #0b0d10;
+    --color-bg-subtle: #16191f;
+    --color-bg-inset: #101318;
+    --color-border: #262b33;
+    --color-border-strong: #3a4048;
+    --color-accent: #b39dff;
+    --color-ok: #3fb950;
+    --color-error: #f85149;
+    --color-highlight: rgba(255, 196, 0, 0.12);
   }
 }
 
-* {
-  box-sizing: border-box;
-}
+@layer base {
+  :root {
+    color-scheme: light dark;
+  }
 
-body {
-  margin: 0;
-}
+  body {
+    font: 400 14px/1.5 var(--font-sans);
+    color: var(--color-text);
+    background: var(--color-bg);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
 
-#root {
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
-}
+  h3 {
+    margin: 0 0 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--color-border);
+    letter-spacing: -0.01em;
+  }
 
-table {
-  border-collapse: collapse;
-  width: 100%;
-}
+  h4 {
+    margin: 1.5rem 0 0.5rem;
+  }
 
-th,
-td {
-  text-align: left;
-  padding: 4px 8px;
-  font-size: 13px;
-}
+  code {
+    font-family: var(--font-mono);
+    background: var(--color-bg-inset);
+    padding: 1px 5px;
+    border-radius: var(--radius-sm);
+    font-size: 0.85em;
+  }
 
-code {
-  font-family: var(--mono);
-  background: var(--bg-subtle);
-  padding: 1px 4px;
-  border-radius: 3px;
+  ::selection {
+    background: color-mix(in srgb, var(--color-accent) 35%, transparent);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 1px;
+  }
 }

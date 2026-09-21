@@ -1,23 +1,39 @@
 import { useEffect, useState } from 'react'
 import ReactECharts from 'echarts-for-react'
 
-const getAccentColor = () => getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()
+interface ChartColors {
+  accent: string
+  text: string
+  textMuted: string
+  border: string
+}
 
-/** Tracks the `--accent` custom property so chart bars follow the OS
- * dark/light switch the same way every CSS-styled element already does --
- * ECharts takes a literal color, not a var(), so this is the one place
- * that needs to read it in JS. */
-function useAccentColor(): string {
-  const [accent, setAccent] = useState(getAccentColor)
+function readChartColors(): ChartColors {
+  const style = getComputedStyle(document.documentElement)
+  return {
+    accent: style.getPropertyValue('--color-accent').trim(),
+    text: style.getPropertyValue('--color-text').trim(),
+    textMuted: style.getPropertyValue('--color-text-muted').trim(),
+    border: style.getPropertyValue('--color-border').trim(),
+  }
+}
+
+/** Tracks theme-driven custom properties so charts follow the OS dark/light
+ * switch the same way every CSS-styled element already does -- ECharts
+ * takes literal colors, not var(), so this is the one place that needs to
+ * read them in JS. Without this, ECharts' own default (near-black) axis
+ * label/line colors are illegible against the dark theme's background. */
+function useChartColors(): ChartColors {
+  const [colors, setColors] = useState(readChartColors)
 
   useEffect(() => {
     const media = window.matchMedia('(prefers-color-scheme: dark)')
-    const update = () => setAccent(getAccentColor())
+    const update = () => setColors(readChartColors())
     media.addEventListener('change', update)
     return () => media.removeEventListener('change', update)
   }, [])
 
-  return accent
+  return colors
 }
 
 export interface BarChartDatum {
@@ -41,16 +57,24 @@ interface BarChartProps {
  * lands, rather than this one sprouting options for cases it doesn't serve.
  */
 export function BarChart({ data, orientation = 'vertical', valueLabel = 'Value', heightPx }: BarChartProps) {
-  const accent = useAccentColor()
+  const { accent, text, textMuted, border } = useChartColors()
   const labels = data.map((d) => d.label)
   const values = data.map((d) => d.value)
   const isHorizontal = orientation === 'horizontal'
 
+  const axisLine = { lineStyle: { color: border } }
+  const axisLabel = { color: textMuted }
+  const splitLine = { lineStyle: { color: border } }
+  const nameTextStyle = { color: textMuted }
+  const categoryAxis = { type: 'category' as const, data: labels, axisLine, axisLabel, splitLine }
+  const valueAxis = { type: 'value' as const, name: valueLabel, axisLine, axisLabel, splitLine, nameTextStyle }
+
   const option = {
     grid: { containLabel: true, left: 8, right: 16, top: 24, bottom: 8 },
+    textStyle: { color: text },
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-    xAxis: isHorizontal ? { type: 'value', name: valueLabel } : { type: 'category', data: labels },
-    yAxis: isHorizontal ? { type: 'category', data: labels } : { type: 'value', name: valueLabel },
+    xAxis: isHorizontal ? valueAxis : categoryAxis,
+    yAxis: isHorizontal ? categoryAxis : valueAxis,
     series: [
       {
         type: 'bar',

@@ -1,7 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
 import { fetchOverview } from '../../api/overview'
-import { formatBytes } from '../../lib/formatBytes'
+import { formatBandwidth } from '../../lib/formatBytes'
 import { BarChart, type BarChartDatum } from '../../components/BarChart'
+import { MetricsRow } from '../../components/MetricsRow'
+import { ErrorState, LoadingState } from '../../components/QueryState'
 import { DomainExplorer } from './DomainExplorer'
 
 interface OverviewViewProps {
@@ -20,38 +22,28 @@ export function OverviewView({ uploadId }: OverviewViewProps) {
     queryFn: () => fetchOverview(uploadId),
   })
 
-  if (isLoading) return <p>Loading...</p>
-  if (isError || !data) return <p className="error-text">Failed to load overview.</p>
+  if (isLoading) return <LoadingState />
+  if (isError || !data) return <ErrorState label="Failed to load overview." />
 
   return (
-    <div className="overview">
-      <h3>Metrics Summary</h3>
-      <div className="metrics-row">
-        <div className="metric">
-          <span className="metric__label">Requests</span>
-          <span className="metric__value">{data.summary.total_requests.toLocaleString()}</span>
-        </div>
-        <div className="metric">
-          <span className="metric__label">Size</span>
-          <span className="metric__value">{formatBytes(data.summary.total_bandwidth)}</span>
-        </div>
-        <div className="metric">
-          <span className="metric__label">Domains</span>
-          <span className="metric__value">{data.summary.unique_domains}</span>
-        </div>
-        <div className="metric">
-          <span className="metric__label">Avg Time</span>
-          <span className="metric__value">{data.summary.avg_latency_ms.toFixed(1)} ms</span>
-        </div>
-      </div>
+    <div>
+      <h3 className="text-base font-semibold">Metrics Summary</h3>
+      <MetricsRow
+        metrics={[
+          { label: 'Requests', value: data.summary.total_requests.toLocaleString() },
+          { label: 'Size', value: formatBandwidth(data.summary.total_bandwidth, data.summary.sized_requests) },
+          { label: 'Domains', value: data.summary.unique_domains },
+          { label: 'Avg Time', value: `${data.summary.avg_latency_ms.toFixed(1)} ms` },
+        ]}
+      />
 
-      <div className="overview__charts">
+      <div className="mb-4 grid grid-cols-2 gap-4">
         <div>
-          <h4>Methods</h4>
+          <h4 className="text-sm font-semibold">Methods</h4>
           <BarChart data={toChartData(data.method_counts)} />
         </div>
         <div>
-          <h4>Status Codes</h4>
+          <h4 className="text-sm font-semibold">Status Codes</h4>
           <BarChart data={toChartData(data.status_counts)} />
         </div>
       </div>

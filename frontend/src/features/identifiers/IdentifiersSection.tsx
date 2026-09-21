@@ -1,4 +1,6 @@
 import type { IdentifierSummaryRow } from '../../api/types'
+import { DataTable, type DataTableColumn } from '../../components/DataTable'
+import { Disclosure } from '../../components/Disclosure'
 
 interface IdentifiersSectionProps {
   label: string
@@ -12,72 +14,60 @@ export function IdentifiersSection({ label, identifiers }: IdentifiersSectionPro
   if (identifiers.length === 0) {
     return (
       <div>
-        <h4>{label}</h4>
-        <p>No matches in {label.toLowerCase()} at current filter settings.</p>
+        <h4 className="text-sm font-semibold">{label}</h4>
+        <p className="text-[13px] text-text-muted">No matches in {label.toLowerCase()} at current filter settings.</p>
       </div>
     )
   }
 
   const hasScope = identifiers.some((tk) => tk.first_seen_as)
 
+  const summaryColumns: DataTableColumn<IdentifierSummaryRow>[] = [
+    { header: 'Key', accessor: (tk) => tk.key },
+    ...(hasScope ? [{ header: 'First Seen As', accessor: (tk: IdentifierSummaryRow) => tk.first_seen_as }] : []),
+    { header: 'Appearances', accessor: (tk) => tk.appearances },
+    { header: 'Unique Values', accessor: (tk) => tk.unique_values },
+    { header: 'Avg Length', accessor: (tk) => tk.avg_length },
+    { header: 'Avg Entropy', accessor: (tk) => tk.avg_entropy },
+    { header: 'Domains', accessor: (tk) => tk.domains },
+  ]
+
   return (
     <div>
-      <h4>{label}</h4>
-      <table className="data-table">
-        <thead>
-          <tr>
-            <th>Key</th>
-            {hasScope && <th>First Seen As</th>}
-            <th>Appearances</th>
-            <th>Unique Values</th>
-            <th>Avg Length</th>
-            <th>Avg Entropy</th>
-            <th>Domains</th>
-          </tr>
-        </thead>
-        <tbody>
-          {identifiers.map((tk) => (
-            <tr key={tk.key}>
-              <td>{tk.key}</td>
-              {hasScope && <td>{tk.first_seen_as}</td>}
-              <td>{tk.appearances}</td>
-              <td>{tk.unique_values}</td>
-              <td>{tk.avg_length}</td>
-              <td>{tk.avg_entropy}</td>
-              <td>{tk.domains}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <h4 className="text-sm font-semibold">{label}</h4>
+      <DataTable columns={summaryColumns} rows={identifiers} rowKey={(tk) => tk.key} />
 
       {identifiers.map((tk) => (
-        <details key={tk.key} className="identifiers__value-expander">
-          <summary>Values for `{tk.key}`</summary>
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Value</th>
-                {hasScope && <th>First Seen As</th>}
-                <th>Appearances</th>
-                <th>Length</th>
-                <th>Entropy</th>
-                <th>Domains</th>
-              </tr>
-            </thead>
-            <tbody>
-              {tk.values.map((v) => (
-                <tr key={v.value}>
-                  <td>{v.value}</td>
-                  {hasScope && <td>{v.first_seen_as}</td>}
-                  <td>{v.appearances}</td>
-                  <td>{v.length}</td>
-                  <td>{v.entropy}</td>
-                  <td>{v.domains}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </details>
+        <div key={tk.key} className="mb-3 text-[13px]">
+          <Disclosure summary={`Values for \`${tk.key}\``}>
+            <DataTable
+              variant="compact"
+              columns={[
+                { header: 'Value', accessor: (v: IdentifierSummaryRow['values'][number]) => v.value },
+                ...(hasScope
+                  ? [
+                      {
+                        header: 'First Seen As',
+                        accessor: (v: IdentifierSummaryRow['values'][number]) => v.first_seen_as,
+                      },
+                    ]
+                  : []),
+                {
+                  header: 'Appearances',
+                  accessor: (v: IdentifierSummaryRow['values'][number]) => v.appearances,
+                },
+                { header: 'Length', accessor: (v: IdentifierSummaryRow['values'][number]) => v.length },
+                {
+                  header: 'Entropy',
+                  accessor: (v: IdentifierSummaryRow['values'][number]) => v.entropy,
+                },
+                { header: 'Domains', accessor: (v: IdentifierSummaryRow['values'][number]) => v.domains },
+              ]}
+              rows={tk.values}
+              rowKey={(v) => v.value}
+            />
+          </Disclosure>
+        </div>
       ))}
     </div>
   )

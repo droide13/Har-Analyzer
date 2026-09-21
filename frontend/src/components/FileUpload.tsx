@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { uploadHar } from '../api/har'
 import { ApiError } from '../api/client'
 import type { UploadResponse } from '../api/types'
+import { Button } from './Button'
 
 interface FileUploadProps {
   onUploaded: (upload: UploadResponse) => void
@@ -39,24 +40,38 @@ export function FileUpload({ onUploaded, onCancel, compact = false }: FileUpload
   }
 
   return (
-    <div className={`file-upload ${compact ? 'file-upload--compact' : ''}`}>
-      <label className="file-upload__dropzone">
+    <div className={compact ? 'mb-2 flex items-center gap-3' : ''}>
+      <label
+        className={`block cursor-pointer rounded-lg border-2 border-dashed border-border text-text-muted transition-colors hover:border-accent hover:text-text ${
+          compact ? 'rounded-md px-5 py-3' : 'p-16 text-center'
+        }`}
+      >
         <input
           type="file"
           accept=".har,application/json"
           disabled={isUploading}
+          className="hidden"
           onChange={(e) => {
             const file = e.target.files?.[0]
             if (file) void handleFile(file)
           }}
         />
-        {isUploading ? 'Uploading...' : 'Upload your HTTP Archive document (.har)'}
+        {isUploading ? (
+          'Uploading…'
+        ) : compact ? (
+          'Upload your HTTP Archive document (.har)'
+        ) : (
+          <span className="flex flex-col items-center gap-1.5">
+            <span className="text-sm font-medium">Upload your HTTP Archive document</span>
+            <span className="font-mono text-xs">.har</span>
+          </span>
+        )}
       </label>
-      {error && <p className="file-upload__error">{error}</p>}
+      {error && <p className="text-error">{error}</p>}
       {onCancel && (
-        <button className="file-upload__cancel" onClick={onCancel} disabled={isUploading}>
+        <Button onClick={onCancel} disabled={isUploading}>
           Cancel
-        </button>
+        </Button>
       )}
     </div>
   )

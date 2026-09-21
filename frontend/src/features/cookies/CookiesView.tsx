@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { fetchCookies } from '../../api/cookies'
 import { AggregateToggleView } from '../../components/AggregateToggleView'
 import type { DataTableColumn } from '../../components/DataTable'
+import { ErrorState, LoadingState } from '../../components/QueryState'
 
 interface CookiesViewProps {
   uploadId: string
@@ -57,8 +58,8 @@ export function CookiesView({ uploadId }: CookiesViewProps) {
     queryFn: () => fetchCookies(uploadId),
   })
 
-  if (isLoading) return <p>Loading...</p>
-  if (isError || !data) return <p className="error-text">Failed to load cookies.</p>
+  if (isLoading) return <LoadingState />
+  if (isError || !data) return <ErrorState label="Failed to load cookies." />
 
   if (data.records.length === 0) {
     return <p>No active authentication headers or session tokens found.</p>

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { fetchEncodingOptions, fetchEntries, fetchMethodOrder, fetchScopeOptions } from '../../api/har'
 import { useDebouncedValue } from '../../hooks/useDebouncedValue'
+import { ErrorState } from '../../components/QueryState'
 import { SearchControls } from './SearchControls'
 import { EntryTable } from './EntryTable'
 import { EntryDetailPanel } from '../../components/EntryDetailPanel'
@@ -75,7 +76,7 @@ export function NetworkLogView({ uploadId }: NetworkLogViewProps) {
   const data = entriesQuery.data
 
   return (
-    <div className="network-log">
+    <div>
       {methodOrder && encodingOptions && scopeOptions && (
         <SearchControls
           filterQuery={filterQuery}
@@ -98,13 +99,13 @@ export function NetworkLogView({ uploadId }: NetworkLogViewProps) {
 
       {data && (
         <>
-          <p className="network-log__summary">
+          <p className="text-[13px] text-text-muted">
             Showing <strong>{data.filtered}</strong> items
             {debouncedHighlightQuery.trim() && ` (${data.highlighted} highlighted)`} out of {data.total} total
             entries.
           </p>
           <Pagination page={data.page} totalPages={data.total_pages} onPageChange={setPage} />
-          <div className="network-log__body">
+          <div className="flex items-start gap-3">
             <EntryTable items={data.items} selectedIndex={selectedIndex} onSelectRow={setSelectedIndex} />
             {selectedIndex !== null && (
               <EntryDetailPanel uploadId={uploadId} index={selectedIndex} onClose={() => setSelectedIndex(null)} />
@@ -113,7 +114,7 @@ export function NetworkLogView({ uploadId }: NetworkLogViewProps) {
         </>
       )}
 
-      {entriesQuery.isError && <p className="network-log__error">Failed to load entries.</p>}
+      {entriesQuery.isError && <ErrorState label="Failed to load entries." />}
     </div>
   )
 }

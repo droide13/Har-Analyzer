@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { DataTable, type DataTableColumn } from './DataTable'
+import { MetricsRow } from './MetricsRow'
+import { SegmentedControl } from './SegmentedControl'
 
 interface AggregateToggleViewProps<TRaw, TAgg> {
   title: string
@@ -11,6 +13,11 @@ interface AggregateToggleViewProps<TRaw, TAgg> {
   aggregated: TAgg[]
   rowKey: (row: TRaw | TAgg, index: number) => string | number
 }
+
+const VIEW_OPTIONS = [
+  { value: 'aggregated', label: 'Aggregated by name' },
+  { value: 'raw', label: 'All records' },
+]
 
 /**
  * Shared "metrics row + Aggregated/All records toggle + table" layout used
@@ -31,30 +38,20 @@ export function AggregateToggleView<TRaw, TAgg>({
   const [view, setView] = useState<'aggregated' | 'raw'>('aggregated')
 
   return (
-    <div className="aggregate-toggle-view">
-      <h3>{title}</h3>
-      <div className="metrics-row">
-        {metrics.map((m) => (
-          <div className="metric" key={m.label}>
-            <span className="metric__label">{m.label}</span>
-            <span className="metric__value">{m.value.toLocaleString()}</span>
-          </div>
-        ))}
-      </div>
+    <div className="mt-2">
+      <h3 className="text-base font-semibold">{title}</h3>
+      <MetricsRow metrics={metrics.map((m) => ({ label: m.label, value: m.value.toLocaleString() }))} />
 
-      <fieldset className="search-controls__methods">
-        <legend>View</legend>
-        {(['aggregated', 'raw'] as const).map((option) => (
-          <label key={option} className="search-controls__checkbox">
-            <input type="radio" checked={view === option} onChange={() => setView(option)} />
-            {option === 'aggregated' ? 'Aggregated by name' : 'All records'}
-          </label>
-        ))}
-      </fieldset>
+      <SegmentedControl
+        legend="View"
+        options={VIEW_OPTIONS}
+        value={view}
+        onChange={(next) => setView(next as 'aggregated' | 'raw')}
+      />
 
       {view === 'aggregated' ? (
         <>
-          <p className="caption">{aggregatedCaption}</p>
+          <p className="mt-1 mb-3 text-[13px] text-text-muted">{aggregatedCaption}</p>
           <DataTable columns={aggregatedColumns} rows={aggregated} rowKey={rowKey} />
         </>
       ) : (

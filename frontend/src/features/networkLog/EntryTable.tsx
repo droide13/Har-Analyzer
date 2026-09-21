@@ -1,7 +1,9 @@
 import { useRef, type ReactNode } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import type { EntrySummary } from '../../api/types'
-import { statusColor } from '../../lib/statusColor'
+import { Badge } from '../../components/Badge'
+import { statusTone } from '../../lib/statusColor'
+import { rowStateClassName } from '../../lib/rowState'
 
 const ROW_HEIGHT_PX = 32
 
@@ -10,6 +12,11 @@ interface Column {
   widthPx: number
   grow?: boolean
   render: (entry: EntrySummary) => ReactNode
+  /** Plain-text value for a hover tooltip, so a value truncated by column
+   * width is still readable without having to open the row's detail panel
+   * (which the row's own onClick already does, so cells don't duplicate
+   * that as a click action). */
+  title: (entry: EntrySummary) => string
 }
 
 /**
@@ -22,22 +29,25 @@ const COLUMNS: Column[] = [
   {
     header: 'Status',
     widthPx: 70,
-    render: (e) => <span className={statusColor(e.status)}>{e.status || '—'}</span>,
+    render: (e) => <Badge tone={statusTone(e.status)}>{e.status || '—'}</Badge>,
+    title: (e) => e.status || 'Unknown',
   },
-  { header: 'Method', widthPx: 70, render: (e) => e.method },
+  { header: 'Method', widthPx: 70, render: (e) => e.method, title: (e) => e.method },
   {
     header: 'URL',
     widthPx: 480,
     grow: true,
-    render: (e) => <span className="virtual-table__url">{e.url}</span>,
+    render: (e) => <span className="font-mono text-xs">{e.url}</span>,
+    title: (e) => e.url,
   },
-  { header: 'Domain', widthPx: 180, render: (e) => e.domain },
-  { header: 'MIME', widthPx: 140, render: (e) => e.mime },
-  { header: 'Time', widthPx: 80, render: (e) => `${e.time_ms.toFixed(1)} ms` },
+  { header: 'Domain', widthPx: 180, render: (e) => e.domain, title: (e) => e.domain },
+  { header: 'MIME', widthPx: 140, render: (e) => e.mime, title: (e) => e.mime },
+  { header: 'Time', widthPx: 80, render: (e) => `${e.time_ms.toFixed(1)} ms`, title: (e) => `${e.time_ms.toFixed(1)} ms` },
   {
     header: 'Cookies',
     widthPx: 90,
     render: (e) => (e.req_cookie_count || e.res_cookie_count ? `${e.req_cookie_count}↑ ${e.res_cookie_count}↓` : null),
+    title: (e) => `${e.req_cookie_count} sent, ${e.res_cookie_count} received`,
   },
 ]
 
@@ -73,16 +83,21 @@ export function EntryTable({ items, selectedIndex, onSelectRow }: EntryTableProp
   })
 
   return (
-    <div className="virtual-table__scroll" ref={scrollRef}>
-      <div className="virtual-table" role="table">
-        <div className="virtual-table__header" role="row">
+    <div className="h-[60vh] flex-1 min-w-0 overflow-auto rounded-md border border-border-strong shadow-sm" ref={scrollRef}>
+      <div className="min-w-max" role="table">
+        <div className="sticky top-0 z-10 flex border-b border-border bg-bg-subtle" role="row">
           {COLUMNS.map((col) => (
-            <div key={col.header} className="virtual-table__cell" role="columnheader" style={cellStyle(col)}>
+            <div
+              key={col.header}
+              className="px-2 py-1 text-[13px] font-medium text-text-muted"
+              role="columnheader"
+              style={cellStyle(col)}
+            >
               {col.header}
             </div>
           ))}
         </div>
-        <div className="virtual-table__body" style={{ height: virtualizer.getTotalSize() }}>
+        <div className="relative" style={{ height: virtualizer.getTotalSize() }}>
           {virtualizer.getVirtualItems().map((virtualRow) => {
             const entry = items[virtualRow.index]
             return (
@@ -90,13 +105,7 @@ export function EntryTable({ items, selectedIndex, onSelectRow }: EntryTableProp
                 key={entry.index}
                 role="row"
                 onClick={() => onSelectRow(entry.index)}
-                className={[
-                  'virtual-table__row',
-                  entry.highlighted ? 'virtual-table__row--highlighted' : '',
-                  entry.index === selectedIndex ? 'virtual-table__row--selected' : '',
-                ]
-                  .filter(Boolean)
-                  .join(' ')}
+                className={`flex items-center ${rowStateClassName(entry.highlighted, entry.index === selectedIndex)}`}
                 style={{
                   position: 'absolute',
                   top: 0,
@@ -107,7 +116,13 @@ export function EntryTable({ items, selectedIndex, onSelectRow }: EntryTableProp
                 }}
               >
                 {COLUMNS.map((col) => (
-                  <div key={col.header} className="virtual-table__cell" role="cell" style={cellStyle(col)}>
+                  <div
+                    key={col.header}
+                    title={col.title(entry)}
+                    className="overflow-hidden text-ellipsis whitespace-nowrap px-2 py-1 text-[13px]"
+                    role="cell"
+                    style={cellStyle(col)}
+                  >
                     {col.render(entry)}
                   </div>
                 ))}
@@ -116,7 +131,7 @@ export function EntryTable({ items, selectedIndex, onSelectRow }: EntryTableProp
           })}
         </div>
       </div>
-      {items.length === 0 && <p className="virtual-table__empty">No entries match the current filter.</p>}
+      {items.length === 0 && <p className="p-6 text-center text-text-muted">No entries match the current filter.</p>}
     </div>
   )
 }

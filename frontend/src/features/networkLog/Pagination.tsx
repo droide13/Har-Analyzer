@@ -1,3 +1,5 @@
+import { Button } from '../../components/Button'
+
 interface PaginationProps {
   page: number
   totalPages: number
@@ -6,16 +8,16 @@ interface PaginationProps {
 
 export function Pagination({ page, totalPages, onPageChange }: PaginationProps) {
   return (
-    <div className="pagination">
-      <button disabled={page <= 1} onClick={() => onPageChange(page - 1)}>
+    <div className="mb-2 flex items-center gap-3 text-[13px]">
+      <Button disabled={page <= 1} onClick={() => onPageChange(page - 1)}>
         Previous
-      </button>
+      </Button>
       <span>
         Page {page} of {totalPages}
       </span>
-      <button disabled={page >= totalPages} onClick={() => onPageChange(page + 1)}>
+      <Button disabled={page >= totalPages} onClick={() => onPageChange(page + 1)}>
         Next
-      </button>
+      </Button>
     </div>
   )
 }

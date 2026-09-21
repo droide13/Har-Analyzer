@@ -4,6 +4,8 @@ import { searchDissemination } from '../../api/dissemination'
 import { useDebouncedValue } from '../../hooks/useDebouncedValue'
 import { EntryDetailPanel } from '../../components/EntryDetailPanel'
 import { DataTable, type DataTableColumn } from '../../components/DataTable'
+import { FormField, FormRow, fieldInputClasses } from '../../components/FormField'
+import { ErrorState, LoadingState } from '../../components/QueryState'
 import { DisseminationMatchList } from './DisseminationMatchList'
 
 interface DisseminationResultsProps {
@@ -50,8 +52,8 @@ export function DisseminationResults({ uploadId, submittedSearch }: Disseminatio
     placeholderData: (previous) => previous,
   })
 
-  if (isLoading) return <p>Loading...</p>
-  if (isError || !data) return <p className="error-text">Failed to load dissemination results.</p>
+  if (isLoading) return <LoadingState />
+  if (isError || !data) return <ErrorState label="Failed to load dissemination results." />
 
   if (data.matches.length === 0 && data.by_domain.length === 0) {
     return <p>No further dissemination found beyond the key's own occurrences.</p>
@@ -61,37 +63,37 @@ export function DisseminationResults({ uploadId, submittedSearch }: Disseminatio
 
   return (
     <div>
-      <h5>By Domain</h5>
-      <p className="caption">
+      <h5 className="text-sm font-semibold">By Domain</h5>
+      <p className="my-1 mb-3 text-[13px] text-text-muted">
         Aggregated view: which hosts received/echoed this value, in how many entries, through which fields. Cookie
         origin is the earliest cookie hit on that host.
       </p>
       <DataTable columns={DOMAIN_COLUMNS} rows={data.by_domain as unknown as DomainRow[]} rowKey={(r) => r.Domain} />
 
-      <h5>Matching Entries</h5>
-      <p className="caption">Ordered by HAR timestamp, oldest first.</p>
-      <div className="search-controls__row">
-        <label>
-          Narrow these matches (discards)
+      <h5 className="text-sm font-semibold">Matching Entries</h5>
+      <p className="my-1 mb-3 text-[13px] text-text-muted">Ordered by HAR timestamp, oldest first.</p>
+      <FormRow>
+        <FormField label="Narrow these matches (discards)">
           <input
             type="text"
+            className={fieldInputClasses}
             value={narrowQuery}
             onChange={(e) => setNarrowQuery(e.target.value)}
             placeholder="e.g. domain:example.com, status:200"
           />
-        </label>
-        <label>
-          Highlight within matches (keeps all)
+        </FormField>
+        <FormField label="Highlight within matches (keeps all)">
           <input
             type="text"
+            className={fieldInputClasses}
             value={highlightQuery}
             onChange={(e) => setHighlightQuery(e.target.value)}
             placeholder="e.g. cookie, status:200"
           />
-        </label>
-      </div>
+        </FormField>
+      </FormRow>
 
-      <div className="network-log__body">
+      <div className="flex items-start gap-3">
         <DisseminationMatchList matches={data.matches} selectedIndex={selectedIndex} onSelectRow={setSelectedIndex} />
         {selectedIndex !== null && (
           <EntryDetailPanel
@@ -105,24 +107,16 @@ export function DisseminationResults({ uploadId, submittedSearch }: Disseminatio
                       key: 'matches',
                       label: 'Matches',
                       render: () => (
-                        <table className="data-table">
-                          <thead>
-                            <tr>
-                              <th>Field</th>
-                              <th>Value</th>
-                              <th>Forms</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {selectedMatch.reasons.map((r, i) => (
-                              <tr key={i}>
-                                <td>{r.Field}</td>
-                                <td>{r.Value}</td>
-                                <td>{r.Forms}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                        <DataTable
+                          variant="compact"
+                          columns={[
+                            { header: 'Field', accessor: (r: (typeof selectedMatch.reasons)[number]) => r.Field },
+                            { header: 'Value', accessor: (r: (typeof selectedMatch.reasons)[number]) => r.Value },
+                            { header: 'Forms', accessor: (r: (typeof selectedMatch.reasons)[number]) => r.Forms },
+                          ]}
+                          rows={selectedMatch.reasons}
+                          rowKey={(_, i) => i}
+                        />
                       ),
                     },
                   ]

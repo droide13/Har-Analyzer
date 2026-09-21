@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { FileUpload } from './components/FileUpload'
+import { PageHeader } from './components/PageHeader'
 import { SessionBar } from './components/SessionBar'
-import { TabShell, type TabDefinition } from './components/TabShell'
+import { Tabs, type TabDefinition } from './components/Tabs'
 import { NetworkLogView } from './features/networkLog/NetworkLogView'
 import { OverviewView } from './features/overview/OverviewView'
 import { CookiesView } from './features/cookies/CookiesView'
@@ -10,7 +11,6 @@ import { IdentifiersView } from './features/identifiers/IdentifiersView'
 import { DisseminationView } from './features/dissemination/DisseminationView'
 import { MetadataView } from './features/metadata/MetadataView'
 import type { UploadResponse } from './api/types'
-import './App.css'
 
 export default function App() {
   const [session, setSession] = useState<UploadResponse | null>(null)
@@ -36,8 +36,8 @@ export default function App() {
     : []
 
   return (
-    <div className="app">
-      <h1>HAR Analyzer</h1>
+    <div className="mx-auto flex min-h-[100svh] w-full max-w-[1400px] flex-col gap-3 px-6 pt-4 pb-8">
+      <PageHeader title="HAR Analyzer" />
 
       {!session && <FileUpload onUploaded={handleUploaded} />}
 
@@ -52,7 +52,7 @@ export default function App() {
           {/* Keyed on upload_id so switching files remounts the whole tab
               tree -- every view's local filter/selection state resets
               instead of pointing at indices from the previous file. */}
-          <TabShell key={session.upload_id} tabs={tabs} />
+          <Tabs key={session.upload_id} tabs={tabs} variant="page" />
         </>
       )}
     </div>

@@ -1,7 +1,12 @@
-import { type ReactNode, useState } from 'react'
+import { type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { fetchEntryDetail } from '../api/har'
 import type { EntryDetail, HeaderPair } from '../api/types'
+import { Button } from './Button'
+import { DataTable } from './DataTable'
+import { JsonBlock } from './JsonBlock'
+import { ErrorState, LoadingState } from './QueryState'
+import { Tabs, type TabDefinition } from './Tabs'
 
 export interface ExtraDetailTab {
   key: string
@@ -40,54 +45,45 @@ function formatDurationMs(value: number): string {
 }
 
 function PairTable({ pairs }: { pairs: HeaderPair[] }) {
-  if (pairs.length === 0) return <p className="entry-detail__empty">None.</p>
+  if (pairs.length === 0) return <p className="text-sm text-text-muted">None.</p>
   return (
-    <table className="entry-detail__pairs">
-      <tbody>
-        {pairs.map((p, i) => (
-          <tr key={`${p.name}-${i}`}>
-            <td className="entry-detail__pair-name">{p.name}</td>
-            <td>{p.value}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <DataTable
+      variant="compact"
+      showHeader={false}
+      columns={[
+        { header: 'Name', accessor: (p: HeaderPair) => p.name, className: 'font-semibold' },
+        { header: 'Value', accessor: (p: HeaderPair) => p.value },
+      ]}
+      rows={pairs}
+      rowKey={(p, i) => `${p.name}-${i}`}
+    />
   )
 }
 
 function BodyText({ text, placeholder }: { text: string; placeholder: string }) {
-  if (!text) return <p className="entry-detail__empty">{placeholder}</p>
-  return <pre className="entry-detail__body">{text}</pre>
+  if (!text) return <p className="text-sm text-text-muted">{placeholder}</p>
+  return <pre className="font-mono whitespace-pre-wrap break-all rounded bg-bg-inset p-2 text-xs">{text}</pre>
 }
 
 function InitiatorTab({ detail }: { detail: EntryDetail }) {
   return (
     <div>
-      <p className="entry-detail__meta">Type: {detail.initiator_type}</p>
-      {detail.initiator_url && <p className="entry-detail__meta">Source URL: {detail.initiator_url}</p>}
+      <p className="text-sm text-text-muted">Type: {detail.initiator_type}</p>
+      {detail.initiator_url && <p className="text-sm text-text-muted">Source URL: {detail.initiator_url}</p>}
       {detail.initiator_stack.length === 0 ? (
-        <p className="entry-detail__empty">No JS call stack available for this request.</p>
+        <p className="text-sm text-text-muted">No JS call stack available for this request.</p>
       ) : (
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Function</th>
-              <th>URL</th>
-              <th>Line</th>
-              <th>Column</th>
-            </tr>
-          </thead>
-          <tbody>
-            {detail.initiator_stack.map((frame, i) => (
-              <tr key={i}>
-                <td>{String(frame.functionName ?? '(anonymous)')}</td>
-                <td>{String(frame.url ?? '')}</td>
-                <td>{String(frame.lineNumber ?? '')}</td>
-                <td>{String(frame.columnNumber ?? '')}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <DataTable
+          variant="compact"
+          columns={[
+            { header: 'Function', accessor: (f) => String(f.functionName ?? '(anonymous)') },
+            { header: 'URL', accessor: (f) => String(f.url ?? '') },
+            { header: 'Line', accessor: (f) => String(f.lineNumber ?? '') },
+            { header: 'Column', accessor: (f) => String(f.columnNumber ?? '') },
+          ]}
+          rows={detail.initiator_stack}
+          rowKey={(_, i) => i}
+        />
       )}
     </div>
   )
@@ -102,27 +98,20 @@ function TimingTab({ detail }: { detail: EntryDetail }) {
 
   return (
     <div>
-      <p className="entry-detail__meta">Started: {detail.started_date_time || 'Unknown'}</p>
-      <p className="entry-detail__meta">Total time: {formatDurationMs(detail.time_ms)}</p>
+      <p className="text-sm text-text-muted">Started: {detail.started_date_time || 'Unknown'}</p>
+      <p className="mb-2 text-sm text-text-muted">Total time: {formatDurationMs(detail.time_ms)}</p>
       {rows.length === 0 ? (
-        <p className="entry-detail__empty">No timing breakdown available for this entry.</p>
+        <p className="text-sm text-text-muted">No timing breakdown available for this entry.</p>
       ) : (
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Phase</th>
-              <th>Duration</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={row.phase}>
-                <td>{row.phase}</td>
-                <td>{row.duration}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <DataTable
+          variant="compact"
+          columns={[
+            { header: 'Phase', accessor: (row) => row.phase },
+            { header: 'Duration', accessor: (row) => row.duration },
+          ]}
+          rows={rows}
+          rowKey={(row) => row.phase}
+        />
       )}
     </div>
   )
@@ -136,39 +125,26 @@ function DetailsTab({ detail }: { detail: EntryDetail }) {
 
   return (
     <div>
-      <h4>Connection</h4>
-      <pre className="entry-detail__body">
-        {JSON.stringify(
-          {
-            'Server IP': raw.serverIPAddress ?? 'Unknown',
-            Connection: raw.connection ?? 'Unknown',
-            'Request HTTP Version': request.httpVersion ?? 'Unknown',
-            'Response HTTP Version': response.httpVersion ?? 'Unknown',
-          },
-          null,
-          2,
-        )}
-      </pre>
-      <h4>Sizes &amp; Redirect</h4>
-      <pre className="entry-detail__body">
-        {JSON.stringify(
-          {
-            'Request Headers Size': request.headersSize ?? -1,
-            'Request Body Size': request.bodySize ?? -1,
-            'Response Headers Size': detail.headers_size,
-            'Response Body Size': detail.body_size,
-            'Redirect URL': response.redirectURL ?? null,
-          },
-          null,
-          2,
-        )}
-      </pre>
-      {Object.keys(cache).length > 0 && (
-        <>
-          <h4>Cache</h4>
-          <pre className="entry-detail__body">{JSON.stringify(cache, null, 2)}</pre>
-        </>
-      )}
+      <JsonBlock
+        title="Connection"
+        value={{
+          'Server IP': raw.serverIPAddress ?? 'Unknown',
+          Connection: raw.connection ?? 'Unknown',
+          'Request HTTP Version': request.httpVersion ?? 'Unknown',
+          'Response HTTP Version': response.httpVersion ?? 'Unknown',
+        }}
+      />
+      <JsonBlock
+        title="Sizes & Redirect"
+        value={{
+          'Request Headers Size': request.headersSize ?? -1,
+          'Request Body Size': request.bodySize ?? -1,
+          'Response Headers Size': detail.headers_size,
+          'Response Body Size': detail.body_size,
+          'Redirect URL': response.redirectURL ?? null,
+        }}
+      />
+      {Object.keys(cache).length > 0 && <JsonBlock title="Cache" value={cache} />}
     </div>
   )
 }
@@ -184,10 +160,8 @@ function StandardTabContent({ tab, detail }: { tab: StandardTabKey; detail: Entr
     case 'cookies':
       return (
         <div>
-          <h4>Request Cookies</h4>
-          <pre className="entry-detail__body">{JSON.stringify(detail.req_cookies, null, 2)}</pre>
-          <h4>Response Cookies</h4>
-          <pre className="entry-detail__body">{JSON.stringify(detail.res_cookies, null, 2)}</pre>
+          <JsonBlock title="Request Cookies" value={detail.req_cookies} />
+          <JsonBlock title="Response Cookies" value={detail.res_cookies} />
         </div>
       )
     case 'req-body':
@@ -208,60 +182,44 @@ function StandardTabContent({ tab, detail }: { tab: StandardTabKey; detail: Entr
  * expander-in-expander-per-row pattern (tabs/shared/entry_render.py) with a
  * single on-demand fetch. Shared by Network Log and Dissemination. */
 export function EntryDetailPanel({ uploadId, index, onClose, extraTabs = [] }: EntryDetailPanelProps) {
-  const allTabKeys = [...extraTabs.map((t) => t.key), ...STANDARD_TABS.map((t) => t.key)]
-  const [tab, setTab] = useState(allTabKeys[0])
-
   const { data: detail, isLoading, error } = useQuery({
     queryKey: ['entry-detail', uploadId, index],
     queryFn: () => fetchEntryDetail(uploadId, index),
   })
 
+  const tabDefinitions: TabDefinition[] = detail
+    ? [
+        ...extraTabs.map((t) => ({ key: t.key, label: t.label, render: () => t.render(detail) })),
+        ...STANDARD_TABS.map((t) => ({ key: t.key, label: t.label, render: () => <StandardTabContent tab={t.key} detail={detail} /> })),
+      ]
+    : []
+
   return (
-    <aside className="entry-detail">
-      <div className="entry-detail__header">
-        <strong>Entry #{index}</strong>
-        <button onClick={onClose} aria-label="Close detail panel">
+    <aside className="flex h-[60vh] w-[420px] shrink-0 flex-col rounded-md border border-border-strong bg-bg shadow-sm">
+      <div className="flex items-center justify-between border-b border-border bg-bg-subtle px-3 py-2">
+        <strong className="font-mono text-[13px]">Entry #{index}</strong>
+        <Button variant="ghost" onClick={onClose} aria-label="Close detail panel">
           ✕
-        </button>
+        </Button>
       </div>
 
-      {isLoading && <p>Loading...</p>}
-      {error && <p className="entry-detail__error">Failed to load entry detail.</p>}
+      {isLoading && (
+        <div className="p-3">
+          <LoadingState />
+        </div>
+      )}
+      {error && (
+        <div className="p-3">
+          <ErrorState label="Failed to load entry detail." />
+        </div>
+      )}
 
       {detail && (
         <>
-          <p className="entry-detail__url">
+          <p className="font-mono px-3 pt-2 text-xs break-all">
             {detail.method} {detail.url}
           </p>
-          <div className="entry-detail__tabs" role="tablist">
-            {extraTabs.map((t) => (
-              <button
-                key={t.key}
-                role="tab"
-                aria-selected={t.key === tab}
-                className={`entry-detail__tab ${t.key === tab ? 'entry-detail__tab--active' : ''}`}
-                onClick={() => setTab(t.key)}
-              >
-                {t.label}
-              </button>
-            ))}
-            {STANDARD_TABS.map((t) => (
-              <button
-                key={t.key}
-                role="tab"
-                aria-selected={t.key === tab}
-                className={`entry-detail__tab ${t.key === tab ? 'entry-detail__tab--active' : ''}`}
-                onClick={() => setTab(t.key)}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
-          <div className="entry-detail__content">
-            {extraTabs.find((t) => t.key === tab)?.render(detail) ?? (
-              <StandardTabContent tab={tab as StandardTabKey} detail={detail} />
-            )}
-          </div>
+          <Tabs key={index} tabs={tabDefinitions} variant="panel" />
         </>
       )}
     </aside>

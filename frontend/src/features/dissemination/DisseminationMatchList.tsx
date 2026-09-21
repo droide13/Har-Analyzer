@@ -1,5 +1,7 @@
 import type { DisseminationMatchRow } from '../../api/types'
-import { statusColor } from '../../lib/statusColor'
+import { Badge } from '../../components/Badge'
+import { statusTone } from '../../lib/statusColor'
+import { rowStateClassName } from '../../lib/rowState'
 
 interface DisseminationMatchListProps {
   matches: DisseminationMatchRow[]
@@ -13,14 +15,22 @@ interface DisseminationMatchListProps {
  * EntryDetailPanel, same as Network Log. */
 export function DisseminationMatchList({ matches, selectedIndex, onSelectRow }: DisseminationMatchListProps) {
   return (
-    <div className="entry-table__scroll">
-      <table className="entry-table entry-table--fixed">
+    <div className="flex-1 min-w-0 h-[60vh] overflow-auto rounded-md border border-border-strong shadow-sm">
+      <table className="w-full table-fixed border-collapse">
         <thead>
           <tr>
-            <th style={{ width: 70 }}>Status</th>
-            <th style={{ width: 70 }}>Method</th>
-            <th>URL</th>
-            <th style={{ width: 260 }}>Matched Fields</th>
+            <th className="w-[70px] sticky top-0 z-10 border-b border-border bg-bg-subtle px-2 py-1 text-left text-[13px] font-medium text-text-muted">
+              Status
+            </th>
+            <th className="w-[70px] sticky top-0 z-10 border-b border-border bg-bg-subtle px-2 py-1 text-left text-[13px] font-medium text-text-muted">
+              Method
+            </th>
+            <th className="sticky top-0 z-10 border-b border-border bg-bg-subtle px-2 py-1 text-left text-[13px] font-medium text-text-muted">
+              URL
+            </th>
+            <th className="w-[260px] sticky top-0 z-10 border-b border-border bg-bg-subtle px-2 py-1 text-left text-[13px] font-medium text-text-muted">
+              Matched Fields
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -28,29 +38,29 @@ export function DisseminationMatchList({ matches, selectedIndex, onSelectRow }: 
             <tr
               key={row.entry.index}
               onClick={() => onSelectRow(row.entry.index)}
-              className={[
-                'entry-table__row',
-                row.entry.highlighted ? 'entry-table__row--highlighted' : '',
-                row.entry.index === selectedIndex ? 'entry-table__row--selected' : '',
-              ]
-                .filter(Boolean)
-                .join(' ')}
+              className={rowStateClassName(row.entry.highlighted, row.entry.index === selectedIndex)}
             >
-              <td className={statusColor(row.entry.status)}>{row.entry.status || '—'}</td>
-              <td>{row.entry.method}</td>
-              <td className="entry-table__url">{row.entry.url}</td>
-              <td className="entry-table__badges">
+              <td title={row.entry.status || 'Unknown'} className="overflow-hidden text-ellipsis whitespace-nowrap px-2 py-1 text-[13px]">
+                <Badge tone={statusTone(row.entry.status)}>{row.entry.status || '—'}</Badge>
+              </td>
+              <td title={row.entry.method} className="overflow-hidden text-ellipsis whitespace-nowrap px-2 py-1 text-[13px]">
+                {row.entry.method}
+              </td>
+              <td title={row.entry.url} className="overflow-hidden text-ellipsis whitespace-nowrap px-2 py-1 font-mono text-xs">
+                {row.entry.url}
+              </td>
+              <td className="px-2 py-1 text-[13px] whitespace-normal">
                 {row.badges.map((badge) => (
-                  <span key={badge} className="badge badge--orange">
+                  <Badge key={badge} tone="orange">
                     {badge}
-                  </span>
+                  </Badge>
                 ))}
               </td>
             </tr>
           ))}
         </tbody>
       </table>
-      {matches.length === 0 && <p className="entry-table__empty">No matches for this filter.</p>}
+      {matches.length === 0 && <p className="p-6 text-center text-text-muted">No matches for this filter.</p>}
     </div>
   )
 }

@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { fetchDisseminationKeys, fetchDisseminationTimeline } from '../../api/dissemination'
 import { fetchEncodingOptions } from '../../api/har'
 import { DataTable, type DataTableColumn } from '../../components/DataTable'
+import { MetricsRow } from '../../components/MetricsRow'
 import { Select } from '../../components/Select'
 import { DisseminationSearchForm } from './DisseminationSearchForm'
 import { DisseminationResults } from './DisseminationResults'
@@ -26,7 +27,7 @@ const TIMELINE_COLUMNS: DataTableColumn<TimelineRow>[] = [
   { header: 'Origin', accessor: (r) => r.Origin },
   { header: 'Method', accessor: (r) => r.Method },
   { header: 'Host', accessor: (r) => r.Host },
-  { header: 'URL', accessor: (r) => r.URL },
+  { header: 'URL', accessor: (r) => r.URL, className: 'font-mono text-xs' },
   { header: 'Value', accessor: (r) => r.Value },
   { header: 'Value changed', accessor: (r) => (r['Value changed'] ? 'Yes' : '') },
 ]
@@ -70,50 +71,38 @@ export function DisseminationView({ uploadId }: DisseminationViewProps) {
   }
 
   return (
-    <div className="dissemination">
-      <h3>Identifier Dissemination History</h3>
-      <p className="caption">
+    <div>
+      <h3 className="text-base font-semibold">Identifier Dissemination History</h3>
+      <p className="my-1 mb-3 text-[13px] text-text-muted">
         Pick a query-param or cookie key to see how its value evolved over time, then search the whole HAR for every
         place that value shows up -- headers, URLs, bodies, other cookies -- beyond its original key.
       </p>
 
       {keys && (
-        <div className="dissemination__key-picker">
-          <span className="dropdown__label">Key to trace</span>
-          <Select
-            value={selectedKey ?? ''}
-            onChange={setSelectedKey}
-            options={keys}
-            ariaLabel="Key to trace"
-          />
-        </div>
+        <label className="mb-2 flex max-w-xs flex-col gap-1 text-[13px] text-text-muted">
+          Key to trace
+          <Select value={selectedKey ?? ''} onChange={setSelectedKey} options={keys} ariaLabel="Key to trace" />
+        </label>
       )}
 
       {timelineQuery.data && (
         <>
-          <div className="metrics-row">
-            <div className="metric">
-              <span className="metric__label">Sightings</span>
-              <span className="metric__value">{timelineQuery.data.sightings}</span>
-            </div>
-            <div className="metric">
-              <span className="metric__label">Distinct Values</span>
-              <span className="metric__value">{timelineQuery.data.distinct_values}</span>
-            </div>
-            <div className="metric">
-              <span className="metric__label">Source</span>
-              <span className="metric__value">{timelineQuery.data.origins.join(' & ')}</span>
-            </div>
-          </div>
+          <MetricsRow
+            metrics={[
+              { label: 'Sightings', value: timelineQuery.data.sightings },
+              { label: 'Distinct Values', value: timelineQuery.data.distinct_values },
+              { label: 'Source', value: timelineQuery.data.origins.join(' & ') },
+            ]}
+          />
 
-          <p className="dissemination__banner">
+          <p className="my-2 rounded-md bg-bg-subtle px-3 py-2 text-[13px]">
             First seen as a <strong>{timelineQuery.data.first_seen.origin}</strong> at{' '}
             {timelineQuery.data.first_seen.when} ({timelineQuery.data.first_seen.method}{' '}
             {timelineQuery.data.first_seen.domain}) with value <code>{timelineQuery.data.first_seen.value}</code>.
           </p>
 
-          <h4>Value Timeline</h4>
-          <p className="caption">
+          <h4 className="text-sm font-semibold">Value Timeline</h4>
+          <p className="my-1 mb-3 text-[13px] text-text-muted">
             One row per sighting, ordered by HAR timestamp. 'Value changed' flags a sighting whose value differs
             from the one immediately before it.
           </p>
@@ -123,7 +112,7 @@ export function DisseminationView({ uploadId }: DisseminationViewProps) {
             rowKey={(_, i) => i}
           />
 
-          <h4>Dissemination</h4>
+          <h4 className="text-sm font-semibold">Dissemination</h4>
           {encodingOptions && selectedKey && (
             <DisseminationSearchForm
               encodingOptions={encodingOptions}
@@ -134,7 +123,7 @@ export function DisseminationView({ uploadId }: DisseminationViewProps) {
           {submittedSearch ? (
             <DisseminationResults uploadId={uploadId} submittedSearch={submittedSearch} />
           ) : (
-            <p className="caption">No search run yet for this key and encoding selection.</p>
+            <p className="my-1 mb-3 text-[13px] text-text-muted">No search run yet for this key and encoding selection.</p>
           )}
         </>
       )}
