@@ -3,10 +3,12 @@ import {
   useReactTable,
   getCoreRowModel,
   getExpandedRowModel,
+  getSortedRowModel,
   flexRender,
   type ColumnDef,
   type ColumnSizingState,
   type ExpandedState,
+  type SortingState,
 } from '@tanstack/react-table'
 
 export interface DataTableColumn<T> {
@@ -156,21 +158,28 @@ export function DataTable<T>({
     sizing: computeInitialSizing(columns, rows, ASSUMED_CONTAINER_PX),
   }))
   const [expanded, setExpanded] = useState<ExpandedState>({})
+  const [sorting, setSorting] = useState<{ key: string; state: SortingState }>({ key: columnKey, state: [] })
 
-  // Re-derive default widths whenever the column *shape* changes (not on
-  // every row update, so pagination/filtering never wipes out a resize the
-  // user just made), against the container's real measured width -- the
-  // very first render has to guess (ASSUMED_CONTAINER_PX) since nothing is
-  // in the DOM yet, and this corrects that before the browser paints.
+  // Re-derive default widths (and clear any sort) whenever the column
+  // *shape* changes (not on every row update, so pagination/filtering
+  // never wipes out a resize/sort the user just made), against the
+  // container's real measured width -- the very first render has to guess
+  // (ASSUMED_CONTAINER_PX) since nothing is in the DOM yet, and this
+  // corrects that before the browser paints.
   useLayoutEffect(() => {
     const measured = containerRef.current?.clientWidth || ASSUMED_CONTAINER_PX
     setColumnSizing({ key: columnKey, sizing: computeInitialSizing(columns, rows, measured) })
+    setSorting((prev) => (prev.key === columnKey ? prev : { key: columnKey, state: [] }))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [columnKey])
 
   const colDefs: ColumnDef<T>[] = columns.map((col) => ({
     id: col.header,
     header: col.header,
+    accessorFn: (row) => {
+      const value = col.accessor(row)
+      return typeof value === 'string' || typeof value === 'number' ? value : cellText(value)
+    },
     cell: (ctx) => col.accessor(ctx.row.original),
     minSize: MIN_CONTENT_PX,
   }))
@@ -181,12 +190,14 @@ export function DataTable<T>({
     getRowId: (row, index) => String(rowKey(row, index)),
     getCoreRowModel: getCoreRowModel(),
     getExpandedRowModel: getExpandedRowModel(),
+    getSortedRowModel: getSortedRowModel(),
     getRowCanExpand: () => true,
     columnResizeMode: 'onChange',
     enableColumnResizing: true,
     state: {
       columnSizing: columnSizing.key === columnKey ? columnSizing.sizing : computeInitialSizing(columns, rows, ASSUMED_CONTAINER_PX),
       expanded,
+      sorting: sorting.key === columnKey ? sorting.state : [],
     },
     onColumnSizingChange: (updater) =>
       setColumnSizing((prev) => ({
@@ -194,6 +205,11 @@ export function DataTable<T>({
         sizing: typeof updater === 'function' ? updater(prev.sizing) : updater,
       })),
     onExpandedChange: setExpanded,
+    onSortingChange: (updater) =>
+      setSorting((prev) => ({
+        key: columnKey,
+        state: typeof updater === 'function' ? updater(prev.state) : updater,
+      })),
   })
 
   const leafColumns = table.getAllLeafColumns()
@@ -212,6 +228,7 @@ export function DataTable<T>({
               <tr key={headerGroup.id}>
                 {headerGroup.headers.map((header, i) => {
                   const colDef = columns[i]
+                  const sortDirection = header.column.getIsSorted()
                   return (
                     <th
                       key={header.id}
@@ -220,8 +237,16 @@ export function DataTable<T>({
                       className={`sticky top-0 z-10 overflow-hidden border-b border-border bg-bg-subtle text-left text-ellipsis whitespace-nowrap font-medium text-text-muted ${cellPadding} ${colDef?.className ?? ''}`}
                     >
                       <span className="relative flex items-center justify-between gap-1">
-                        <span className="overflow-hidden text-ellipsis">
-                          {flexRender(header.column.columnDef.header, header.getContext())}
+                        <span
+                          onClick={header.column.getToggleSortingHandler()}
+                          className="flex min-w-0 cursor-pointer items-center gap-1 overflow-hidden text-ellipsis select-none hover:text-text"
+                        >
+                          <span className="overflow-hidden text-ellipsis">
+                            {flexRender(header.column.columnDef.header, header.getContext())}
+                          </span>
+                          <span className="shrink-0 text-[9px] text-accent">
+                            {sortDirection === 'asc' ? '▲' : sortDirection === 'desc' ? '▼' : ''}
+                          </span>
                         </span>
                         {i < headerGroup.headers.length - 1 && (
                           <span
