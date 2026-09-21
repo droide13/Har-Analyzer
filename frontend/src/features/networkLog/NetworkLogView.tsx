@@ -104,7 +104,12 @@ export function NetworkLogView({ uploadId }: NetworkLogViewProps) {
             {debouncedHighlightQuery.trim() && ` (${data.highlighted} highlighted)`} out of {data.total} total
             entries.
           </p>
-          <Pagination page={data.page} totalPages={data.total_pages} onPageChange={setPage} />
+          <Pagination
+            page={data.page}
+            totalPages={data.total_pages}
+            onPageChange={setPage}
+            highlightedPages={data.highlighted_pages}
+          />
           <div className="flex items-start gap-3">
             <EntryTable items={data.items} selectedIndex={selectedIndex} onSelectRow={setSelectedIndex} />
             {selectedIndex !== null && (

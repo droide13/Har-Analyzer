@@ -61,6 +61,11 @@ class EntriesPage(BaseModel):
     page_size: int
     total_pages: int
     items: list[EntrySummary]
+    # 1-indexed page numbers containing at least one highlighted match,
+    # across the whole filtered set -- not just the current page -- so the
+    # UI can offer direct jump buttons. Empty whenever no highlight query
+    # is active.
+    highlighted_pages: list[int] = []
 
 
 class HeaderPair(BaseModel):

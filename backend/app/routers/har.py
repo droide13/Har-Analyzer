@@ -157,6 +157,15 @@ async def list_entries(  # pylint: disable=too-many-arguments,too-many-positiona
         sum(1 for e in filtered if highlight_results[e.index].matched) if h_active else 0
     )
 
+    highlighted_pages: list[int] = []
+    if h_active:
+        seen_pages = {
+            i // page_size + 1
+            for i, e in enumerate(filtered)
+            if highlight_results[e.index].matched
+        }
+        highlighted_pages = sorted(seen_pages)
+
     return EntriesPage(
         total=len(entries),
         filtered=len(filtered),
@@ -165,6 +174,7 @@ async def list_entries(  # pylint: disable=too-many-arguments,too-many-positiona
         page_size=page_size,
         total_pages=total_pages,
         items=items,
+        highlighted_pages=highlighted_pages,
     )
 
 

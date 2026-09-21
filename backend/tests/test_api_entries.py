@@ -65,6 +65,15 @@ def test_list_entries_highlight_query_flags_without_discarding(
     assert body["highlighted"] == 2
     highlighted_indices = [item["index"] for item in body["items"] if item["highlighted"]]
     assert highlighted_indices == [0, 3]
+    # Both matches land on the one page returned at the default page size.
+    assert body["highlighted_pages"] == [1]
+
+
+def test_list_entries_no_highlight_query_returns_empty_highlighted_pages(
+    client: TestClient, upload_id: str
+) -> None:
+    response = client.get(f"/api/har/{upload_id}/entries")
+    assert response.json()["highlighted_pages"] == []
 
 
 def test_list_entries_pagination(client: TestClient, upload_id: str) -> None:
