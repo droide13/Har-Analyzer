@@ -10,12 +10,11 @@ import { DisseminationResults } from './DisseminationResults'
 
 interface DisseminationViewProps {
   uploadId: string
-  /** A key/value pair traced in from another tab (e.g. the Identifiers
-   * panel's "Trace" button): selects that key and auto-runs a search
-   * narrowed to that exact value. Applied once, then cleared via
-   * onInitialTargetConsumed so navigating back to this tab later doesn't
-   * re-apply it over a manual selection. */
-  initialTarget?: { key: string; value: string } | null
+  /** A key traced in from another tab (e.g. the Identifiers panel's "Trace"
+   * button): selects that key and auto-runs its dissemination search.
+   * Applied once, then cleared via onInitialTargetConsumed so navigating
+   * back to this tab later doesn't re-apply it over a manual selection. */
+  initialTarget?: { key: string } | null
   onInitialTargetConsumed?: () => void
 }
 
@@ -55,7 +54,6 @@ export function DisseminationView({ uploadId, initialTarget, onInitialTargetCons
 
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
   const [submittedSearch, setSubmittedSearch] = useState<SubmittedSearch | null>(null)
-  const [initialNarrowQuery, setInitialNarrowQuery] = useState<string | undefined>(undefined)
 
   // A search's results only make sense for the key that produced them --
   // switching keys invalidates whatever was found before, same as the
@@ -66,7 +64,6 @@ export function DisseminationView({ uploadId, initialTarget, onInitialTargetCons
   function handleKeyChange(key: string) {
     setSelectedKey(key)
     setSubmittedSearch(null)
-    setInitialNarrowQuery(undefined)
   }
 
   // Keep the latest callback without making it an effect dependency --
@@ -81,7 +78,6 @@ export function DisseminationView({ uploadId, initialTarget, onInitialTargetCons
     if (!initialTarget || !encodingOptions) return
     setSelectedKey(initialTarget.key)
     setSubmittedSearch({ key: initialTarget.key, encodings: encodingOptions })
-    setInitialNarrowQuery(initialTarget.value)
     onInitialTargetConsumedRef.current?.()
   }, [initialTarget, encodingOptions])
 
@@ -151,19 +147,12 @@ export function DisseminationView({ uploadId, initialTarget, onInitialTargetCons
           {encodingOptions && selectedKey && (
             <DisseminationSearchForm
               encodingOptions={encodingOptions}
-              onSearch={(encodings) => {
-                setSubmittedSearch({ key: selectedKey, encodings })
-                setInitialNarrowQuery(undefined)
-              }}
+              onSearch={(encodings) => setSubmittedSearch({ key: selectedKey, encodings })}
             />
           )}
 
           {submittedSearch ? (
-            <DisseminationResults
-              uploadId={uploadId}
-              submittedSearch={submittedSearch}
-              initialNarrowQuery={initialNarrowQuery}
-            />
+            <DisseminationResults uploadId={uploadId} submittedSearch={submittedSearch} />
           ) : (
             <p className="my-1 mb-3 text-[13px] text-text-muted">No search run yet for this key and encoding selection.</p>
           )}

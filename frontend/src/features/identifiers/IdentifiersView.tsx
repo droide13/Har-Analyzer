@@ -10,9 +10,9 @@ import { IdentifiersSection } from './IdentifiersSection'
 
 interface IdentifiersViewProps {
   uploadId: string
-  /** Wires up each value row's "Trace" button -- jumps to the Dissemination
-   * tab with that key/value pre-selected. */
-  onTraceValue?: (key: string, value: string) => void
+  /** Wires up each key's "Trace" button -- jumps to the Dissemination tab
+   * with that key pre-selected. */
+  onTraceKey?: (key: string) => void
 }
 
 const SORT_OPTIONS = ['Appearances', 'Entropy', 'Avg length', 'Unique values'] as const
@@ -20,7 +20,7 @@ const SORT_OPTIONS = ['Appearances', 'Entropy', 'Avg length', 'Unique values'] a
 /** Direct port of tabs/identifiers/identifiers_ui.py: 4 threshold sliders +
  * a name search + noise-key exclusion, applied server-side (the same
  * extract/filter/sort pipeline as the original), rendered as two sections. */
-export function IdentifiersView({ uploadId, onTraceValue }: IdentifiersViewProps) {
+export function IdentifiersView({ uploadId, onTraceKey }: IdentifiersViewProps) {
   const [nameQuery, setNameQuery] = useState('')
   const debouncedNameQuery = useDebouncedValue(nameQuery)
   const [sortBy, setSortBy] = useState<(typeof SORT_OPTIONS)[number]>('Appearances')
@@ -127,13 +127,13 @@ export function IdentifiersView({ uploadId, onTraceValue }: IdentifiersViewProps
 
       {data && (
         <>
-          <IdentifiersSection label="Query Parameters" identifiers={data.query_params} onTraceValue={onTraceValue} />
+          <IdentifiersSection label="Query Parameters" identifiers={data.query_params} onTraceKey={onTraceKey} />
           <hr className="my-3 border-border" />
           <p className="my-1 mb-3 text-[13px] text-text-muted">
             First Seen As marks where a cookie turned up first: a Response Cookie was issued during this capture, a
             Request Cookie already existed.
           </p>
-          <IdentifiersSection label="Cookies" identifiers={data.cookies} onTraceValue={onTraceValue} />
+          <IdentifiersSection label="Cookies" identifiers={data.cookies} onTraceKey={onTraceKey} />
         </>
       )}
     </div>
