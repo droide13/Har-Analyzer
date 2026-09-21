@@ -110,12 +110,15 @@ export function NetworkLogView({ uploadId }: NetworkLogViewProps) {
             onPageChange={setPage}
             highlightedPages={data.highlighted_pages}
           />
-          <div className="flex items-start gap-3">
+          {/* The detail panel docks to the viewport edge (fixed, full height)
+              rather than sitting inline, so this padding is what makes room
+              for it instead of letting it cover the table. */}
+          <div className={selectedIndex !== null ? 'pr-[420px]' : ''}>
             <EntryTable items={data.items} selectedIndex={selectedIndex} onSelectRow={setSelectedIndex} />
-            {selectedIndex !== null && (
-              <EntryDetailPanel uploadId={uploadId} index={selectedIndex} onClose={() => setSelectedIndex(null)} />
-            )}
           </div>
+          {selectedIndex !== null && (
+            <EntryDetailPanel uploadId={uploadId} index={selectedIndex} onClose={() => setSelectedIndex(null)} />
+          )}
         </>
       )}
 

@@ -195,7 +195,7 @@ export function EntryDetailPanel({ uploadId, index, onClose, extraTabs = [] }: E
     : []
 
   return (
-    <aside className="flex h-[60vh] w-[420px] shrink-0 flex-col rounded-md border border-border-strong bg-bg shadow-sm">
+    <aside className="fixed top-0 right-0 z-30 flex h-[100dvh] w-[420px] shrink-0 flex-col overflow-hidden border-l border-border-strong bg-bg shadow-lg">
       <div className="flex items-center justify-between border-b border-border bg-bg-subtle px-3 py-2">
         <strong className="font-mono text-[13px]">Entry #{index}</strong>
         <Button variant="ghost" onClick={onClose} aria-label="Close detail panel">
@@ -216,7 +216,11 @@ export function EntryDetailPanel({ uploadId, index, onClose, extraTabs = [] }: E
 
       {detail && (
         <>
-          <p className="font-mono px-3 pt-2 text-xs break-all">
+          {/* Capped + independently scrollable so a very long URL can't eat
+              the panel's height and squeeze the tabs below out of view --
+              the tabs area always keeps the rest of the panel regardless of
+              how many lines this wraps to. */}
+          <p className="max-h-24 shrink-0 overflow-y-auto font-mono px-3 pt-2 text-xs break-all">
             {detail.method} {detail.url}
           </p>
           <Tabs key={index} tabs={tabDefinitions} variant="panel" />
