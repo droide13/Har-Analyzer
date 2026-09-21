@@ -10,7 +10,7 @@ actual matching -- unchanged from the original.
 
 from fastapi import APIRouter, HTTPException, Query, UploadFile
 
-from app.core.models import METHOD_ORDER, SCOPE_OPTIONS, ParsedEntry
+from app.core.models import METHOD_ORDER, SCOPE_OPTIONS, ParsedEntry, get_embedded_analysis
 from app.schemas import (
     EntriesPage,
     EntryDetail,
@@ -43,10 +43,16 @@ def _parse_csv(value: str | None) -> set[str] | None:
 
 def _build_session_metadata(record: UploadRecord) -> SessionMetadata:
     """Filename-convention attrs (domain/platform/interaction/cookies/visit/
-    extra) plus a capture date derived from the traffic itself, so the header
-    has a date to show even for a HAR whose filename doesn't follow the
-    convention."""
+    extra) plus a capture date, so the header has a date to show even for a
+    HAR whose filename doesn't follow the convention.
+
+    The capture date prefers a previously embedded ``log._analysis.captured_at``
+    -- it's an authoritative, human-confirmed value -- falling back to
+    re-deriving it from the traffic's ``startedDateTime`` only when no such
+    analysis has been embedded yet. Live re-detection is otherwise reserved
+    for the Metadata tab's generate flow."""
     attrs = get_attrs_from_har_name(record.filename)
+    existing = get_embedded_analysis(record.har_data)
 
     try:
         derived = derive_metadata_from_entries(record.entries)
@@ -56,6 +62,11 @@ def _build_session_metadata(record: UploadRecord) -> SessionMetadata:
     domain = attrs["domain"] if attrs else (derived.domain if derived else record.filename)
     extra = attrs["extra"] if attrs and attrs["extra"] != "000" else None
 
+    if existing is not None:
+        captured_at = existing.captured_at
+    else:
+        captured_at = derived.captured_at.isoformat() if derived and derived.captured_at else None
+
     return SessionMetadata(
         domain=domain,
         platform=attrs["platform"] if attrs else None,
@@ -63,7 +74,7 @@ def _build_session_metadata(record: UploadRecord) -> SessionMetadata:
         cookies=attrs["cookies"] if attrs else None,
         visit=attrs["visit"] if attrs else None,
         extra=extra,
-        captured_at=derived.captured_at.isoformat() if derived and derived.captured_at else None,
+        captured_at=captured_at,
         filename_valid=attrs is not None,
     )
 
