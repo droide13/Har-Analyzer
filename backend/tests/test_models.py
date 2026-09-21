@@ -54,12 +54,15 @@ def test_format_bytes() -> None:
 def test_embed_and_read_back_analysis(sample_har_dict: dict) -> None:
     analysis = HarAnalysis(
         domain="example.com",
+        platform="web",
         interact="load",
         cookies="accept",
         visit="first",
         extra="000",
         captured_at="2026-01-01T10:00:00+00:00",
-        standardized_filename="example.com-interact-LOA-cookies-ACC-visit-FIR-extra-000-26-01-01-10.har",
+        standardized_filename=(
+            "example.com-platform-WEB-interact-LOA-cookies-ACC-visit-FIR-extra-000-26-01-01-10.har"
+        ),
     )
     updated = embed_analysis(sample_har_dict, analysis)
 

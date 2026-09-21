@@ -49,7 +49,9 @@ def test_build_domain_map_aggregates_by_root_and_subdomain(sample_har_dict: dict
 
 def test_get_first_party_domain_prefers_filename(sample_har_dict: dict) -> None:
     entries = build_entries_from_har_data(sample_har_dict)
-    standardized = "other.org-interact-LOA-cookies-ACC-visit-FIR-extra-000-26-01-01-10.har"
+    standardized = (
+        "other.org-platform-WEB-interact-LOA-cookies-ACC-visit-FIR-extra-000-26-01-01-10.har"
+    )
     assert get_first_party_domain(entries, standardized) == "other.org"
     # Falls back to traffic when the filename doesn't parse.
     assert get_first_party_domain(entries, "not-standardized.har") == "example.com"

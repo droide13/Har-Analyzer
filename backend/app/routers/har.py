@@ -42,9 +42,10 @@ def _parse_csv(value: str | None) -> set[str] | None:
 
 
 def _build_session_metadata(record: UploadRecord) -> SessionMetadata:
-    """Filename-convention attrs (domain/interaction/cookies/visit/extra) plus
-    a capture date derived from the traffic itself, so the header has a date
-    to show even for a HAR whose filename doesn't follow the convention."""
+    """Filename-convention attrs (domain/platform/interaction/cookies/visit/
+    extra) plus a capture date derived from the traffic itself, so the header
+    has a date to show even for a HAR whose filename doesn't follow the
+    convention."""
     attrs = get_attrs_from_har_name(record.filename)
 
     try:
@@ -57,6 +58,7 @@ def _build_session_metadata(record: UploadRecord) -> SessionMetadata:
 
     return SessionMetadata(
         domain=domain,
+        platform=attrs["platform"] if attrs else None,
         interaction=attrs["interaction"] if attrs else None,
         cookies=attrs["cookies"] if attrs else None,
         visit=attrs["visit"] if attrs else None,

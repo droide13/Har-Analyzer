@@ -81,6 +81,7 @@ async def generate_metadata(
 
     inputs = StandardizeInputs(
         domain=body.domain,
+        platform=body.platform,
         interact=body.interact,
         cookies=body.cookies,
         visit=body.visit,

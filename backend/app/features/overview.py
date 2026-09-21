@@ -21,10 +21,19 @@ from app.shared.naming import get_attrs_from_har_name
 
 
 class SubdomainMetric(TypedDict):
-    """Per-subdomain request count and total bandwidth."""
+    """Per-subdomain request count and total bandwidth.
+
+    ``sized_requests`` is how many of those requests actually had a
+    measurable body/headers size in the HAR (some entries -- redirects,
+    cached responses, aborted/challenge responses -- report -1 for both,
+    which is "unknown", not "zero"). The UI uses it to tell "0 bytes
+    measured" apart from "no size data available" instead of showing a
+    flat, misleading 0 B for both.
+    """
 
     requests: int
     bytes: int
+    sized_requests: int
 
 
 class RootDomainMetric(TypedDict):
@@ -32,6 +41,7 @@ class RootDomainMetric(TypedDict):
 
     requests: int
     bytes: int
+    sized_requests: int
     subdomains: dict[str, SubdomainMetric]
 
 
@@ -40,6 +50,7 @@ class OverviewSummary(TypedDict):
 
     total_requests: int
     total_bandwidth: int
+    sized_requests: int
     unique_domains: int
     avg_latency_ms: float
 
@@ -88,17 +99,25 @@ def get_first_party_domain(entries: list[ParsedEntry], filename: str | None = No
     return "unknown"
 
 
+def _has_measured_size(entry: ParsedEntry) -> bool:
+    """Whether the HAR actually reported a size for this entry, as opposed
+    to the -1 "unknown" sentinel (redirects, cached/challenge responses)."""
+    return entry.body_size >= 0 or entry.headers_size >= 0
+
+
 def calculate_overview_summary(entries: list[ParsedEntry]) -> OverviewSummary:
     """Calculates top-level summary metrics for requests, size, domains, and latency."""
     total = len(entries)
     # Treat negative sizes (-1 from cache/unknown) as 0
     bandwidth = sum(max(0, e.body_size) + max(0, e.headers_size) for e in entries)
+    sized_requests = sum(1 for e in entries if _has_measured_size(e))
     domains = len({e.domain for e in entries if e.domain})
     avg_latency = (sum(e.time_ms for e in entries) / total) if total > 0 else 0.0
 
     return {
         "total_requests": total,
         "total_bandwidth": bandwidth,
+        "sized_requests": sized_requests,
         "unique_domains": domains,
         "avg_latency_ms": avg_latency,
     }
@@ -129,18 +148,25 @@ def build_domain_map(entries: list[ParsedEntry]) -> dict[str, RootDomainMetric]:
         domain = e.domain.lower() if e.domain else "unknown"
         base = get_base_domain(domain)
         size = max(0, e.body_size) + max(0, e.headers_size)
+        sized = 1 if _has_measured_size(e) else 0
 
         if base not in domain_map:
-            domain_map[base] = {"requests": 0, "bytes": 0, "subdomains": {}}
+            domain_map[base] = {"requests": 0, "bytes": 0, "sized_requests": 0, "subdomains": {}}
 
         domain_map[base]["requests"] += 1
         domain_map[base]["bytes"] += size
+        domain_map[base]["sized_requests"] += sized
 
         if domain not in domain_map[base]["subdomains"]:
-            domain_map[base]["subdomains"][domain] = {"requests": 0, "bytes": 0}
+            domain_map[base]["subdomains"][domain] = {
+                "requests": 0,
+                "bytes": 0,
+                "sized_requests": 0,
+            }
 
         domain_map[base]["subdomains"][domain]["requests"] += 1
         domain_map[base]["subdomains"][domain]["bytes"] += size
+        domain_map[base]["subdomains"][domain]["sized_requests"] += sized
 
     return domain_map
 

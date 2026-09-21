@@ -29,6 +29,7 @@ class StandardizeInputs:  # pylint: disable=too-many-instance-attributes
     # Mirrors HarAnalysis's fields on purpose: this is the raw form input,
     # HarAnalysis is the validated record built from it.
     domain: str
+    platform: str
     interact: str
     cookies: str
     visit: str
@@ -47,6 +48,7 @@ def build_standardized_result(inputs: StandardizeInputs) -> tuple[str, HarAnalys
     """
     filename = get_har_filename(
         domain=inputs.domain,
+        platform=inputs.platform,
         interact=inputs.interact,
         cookies=inputs.cookies,
         visit=inputs.visit,
@@ -57,6 +59,7 @@ def build_standardized_result(inputs: StandardizeInputs) -> tuple[str, HarAnalys
     extra_clean = inputs.extra.strip()
     analysis = HarAnalysis(
         domain=inputs.domain.strip(),
+        platform=inputs.platform.strip().lower(),
         interact=inputs.interact.strip().lower(),
         cookies=inputs.cookies.strip().lower(),
         visit=inputs.visit.strip().lower(),

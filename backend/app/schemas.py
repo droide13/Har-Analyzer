@@ -7,11 +7,12 @@ from pydantic import BaseModel
 
 class SessionMetadata(BaseModel):
     """Best-effort session summary for the persistent header above the tabs --
-    domain/interaction/cookies/visit/extra come from the filename convention
-    (``None`` if the filename doesn't follow it), captured_at from the
-    traffic itself so it's always available regardless of naming."""
+    domain/platform/interaction/cookies/visit/extra come from the filename
+    convention (``None`` if the filename doesn't follow it), captured_at from
+    the traffic itself so it's always available regardless of naming."""
 
     domain: str
+    platform: str | None
     interaction: str | None
     cookies: str | None
     visit: str | None
@@ -109,6 +110,7 @@ class OverviewSummaryModel(BaseModel):
 
     total_requests: int
     total_bandwidth: int
+    sized_requests: int
     unique_domains: int
     avg_latency_ms: float
 
@@ -118,6 +120,7 @@ class SubdomainMetricModel(BaseModel):
 
     requests: int
     bytes: int
+    sized_requests: int
 
 
 class RootDomainMetricModel(BaseModel):
@@ -125,6 +128,7 @@ class RootDomainMetricModel(BaseModel):
 
     requests: int
     bytes: int
+    sized_requests: int
     subdomains: dict[str, SubdomainMetricModel]
 
 
@@ -267,6 +271,7 @@ class HarAnalysisModel(BaseModel):  # pylint: disable=too-many-instance-attribut
 
     tool_version: str
     domain: str
+    platform: str
     interact: str
     cookies: str
     visit: str
@@ -297,6 +302,7 @@ class GenerateMetadataRequest(BaseModel):  # pylint: disable=too-many-instance-a
     """Body for the "Generate standardized file" action."""
 
     domain: str
+    platform: str
     interact: str
     cookies: str
     visit: str
@@ -316,8 +322,9 @@ class GenerateMetadataResponse(BaseModel):
 
 class NamingOptions(BaseModel):
     """label tables from app.shared.naming, single source of truth for the
-    Metadata form's Interaction/Cookie/Visit selects."""
+    Metadata form's Platform/Interaction/Cookie/Visit selects."""
 
+    platform: dict[str, str]
     interact: dict[str, str]
     cookies: dict[str, str]
     visit: dict[str, str]

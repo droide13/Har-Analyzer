@@ -9,12 +9,6 @@ from app.core.models import ParsedEntry
 from app.shared.aggregation import describe_value, group_by_name
 
 
-def _describe_categorical(values: set[str]) -> str:
-    if len(values) == 1:
-        return f"Always {next(iter(values))}"
-    return "Mixed"
-
-
 def collect_query_param_records(entries: list[ParsedEntry]) -> list[dict[str, Any]]:
     """One record per query-string param occurrence across all requests."""
     records: list[dict[str, Any]] = []
@@ -42,7 +36,7 @@ def aggregate_query_param_records(records: list[dict[str, Any]]) -> list[dict[st
         aggregated.append(
             {
                 "Name": name,
-                "Method": _describe_categorical(method_set),
+                "Method": ", ".join(sorted(method_set)),
                 "Value": describe_value(value_set),
                 "Occurrences": len(items),
                 "Hosts": ", ".join(sorted(host_set)),

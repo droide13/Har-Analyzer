@@ -14,17 +14,21 @@ def test_get_har_filename_and_parse_round_trip() -> None:
     now = datetime(2026, 7, 17, 17, 0)
     filename = get_har_filename(
         domain="boredpanda.com",
+        platform="web",
         interact="login",
         cookies="accept",
         visit="first",
         extra="extra-context",
         now=now,
     )
-    assert filename == "boredpanda.com-interact-LOG-cookies-ACC-visit-FIR-extra-EXT-26-07-17-17.har"
+    assert filename == (
+        "boredpanda.com-platform-WEB-interact-LOG-cookies-ACC-visit-FIR-extra-EXT-26-07-17-17.har"
+    )
 
     attrs = get_attrs_from_har_name(filename)
     assert attrs is not None
     assert attrs["domain"] == "boredpanda.com"
+    assert attrs["platform"] == "Web"
     assert attrs["interaction"] == "Login"
     assert attrs["cookies"] == "Accept"
     assert attrs["extra"] == "EXT"
@@ -33,9 +37,15 @@ def test_get_har_filename_and_parse_round_trip() -> None:
 
 def test_get_har_filename_rejects_invalid_codes() -> None:
     with pytest.raises(ValueError):
-        get_har_filename(domain="example.com", interact="teleport", cookies="accept")
+        get_har_filename(
+            domain="example.com", platform="web", interact="teleport", cookies="accept"
+        )
     with pytest.raises(ValueError):
-        get_har_filename(domain="", interact="login", cookies="accept")
+        get_har_filename(domain="", platform="web", interact="login", cookies="accept")
+    with pytest.raises(ValueError):
+        get_har_filename(
+            domain="example.com", platform="desktop", interact="login", cookies="accept"
+        )
 
 
 def test_get_attrs_from_har_name_rejects_non_matching_filename() -> None:

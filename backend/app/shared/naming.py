@@ -18,6 +18,11 @@ if TYPE_CHECKING:
     from app.core.models import ParsedEntry
 
 # Naming variables
+PLATFORM_CODES: dict[str, str] = {
+    "web": "WEB",
+    "mobile": "MOB",
+}
+
 INTERACT_CODES: dict[str, str] = {
     "load": "LOA",
     "navigate": "NAV",
@@ -39,6 +44,11 @@ VISIT_CODES: dict[str, str] = {
 }
 
 DEFAULT_VISIT: str = "first"
+
+PLATFORM_LABELS: dict[str, str] = {
+    "web": "Web",
+    "mobile": "Mobile",
+}
 
 INTERACT_LABELS: dict[str, str] = {
     "load": "Load page",
@@ -73,6 +83,7 @@ class DerivedHarMetadata:
 
 def get_har_filename(  # pylint: disable=too-many-arguments,too-many-positional-arguments
     domain: str,
+    platform: str,
     interact: str,
     cookies: str,
     visit: str = DEFAULT_VISIT,
@@ -90,10 +101,14 @@ def get_har_filename(  # pylint: disable=too-many-arguments,too-many-positional-
     if not domain_clean:
         raise ValueError("Domain must not be empty.")
 
+    platform_key = platform.strip().lower()
     interact_key = interact.strip().lower()
     cookies_key = cookies.strip().lower()
     visit_key = visit.strip().lower() if visit.strip() else DEFAULT_VISIT
 
+    if platform_key not in PLATFORM_CODES:
+        valid = ", ".join(sorted(PLATFORM_CODES))
+        raise ValueError(f"Invalid platform '{platform}'. Valid options: {valid}")
     if interact_key not in INTERACT_CODES:
         valid = ", ".join(sorted(INTERACT_CODES))
         raise ValueError(f"Invalid interact '{interact}'. Valid options: {valid}")
@@ -108,7 +123,8 @@ def get_har_filename(  # pylint: disable=too-many-arguments,too-many-positional-
     timestamp = (now or datetime.now()).strftime("%y-%m-%d-%H")
 
     return (
-        f"{domain_clean}-interact-{INTERACT_CODES[interact_key]}"
+        f"{domain_clean}-platform-{PLATFORM_CODES[platform_key]}"
+        f"-interact-{INTERACT_CODES[interact_key]}"
         f"-cookies-{COOKIES_CODES[cookies_key]}"
         f"-visit-{VISIT_CODES[visit_key]}"
         f"-extra-{extra_code}"
@@ -121,16 +137,19 @@ def get_attrs_from_har_name(filename: str) -> dict[str, str] | None:
 
     Returns None if the filename doesn't match the structural pattern.
     """
+    platform_map = {code: PLATFORM_LABELS[key] for key, code in PLATFORM_CODES.items()}
     interact_map = {code: INTERACT_LABELS[key] for key, code in INTERACT_CODES.items()}
     cookies_map = {code: COOKIES_LABELS[key] for key, code in COOKIES_CODES.items()}
     visit_map = {code: VISIT_LABELS[key] for key, code in VISIT_CODES.items()}
 
+    platform_pattern = "|".join(platform_map.keys())
     interact_pattern = "|".join(interact_map.keys())
     cookies_pattern = "|".join(cookies_map.keys())
     visit_pattern = "|".join(visit_map.keys())
 
     pattern = (
-        rf"^(?P<domain>.+)-interact-(?P<interact>{interact_pattern})"
+        rf"^(?P<domain>.+)-platform-(?P<platform>{platform_pattern})"
+        rf"-interact-(?P<interact>{interact_pattern})"
         rf"-cookies-(?P<cookies>{cookies_pattern})"
         rf"-visit-(?P<visit>{visit_pattern})"
         r"-extra-(?P<extra>[A-Za-z0-9]{3})"
@@ -145,6 +164,7 @@ def get_attrs_from_har_name(filename: str) -> dict[str, str] | None:
 
     return {
         "domain": data["domain"],
+        "platform": platform_map.get(data["platform"], data["platform"]),
         "interaction": interact_map.get(data["interact"], data["interact"]),
         "cookies": cookies_map.get(data["cookies"], data["cookies"]),
         "visit": visit_map.get(data["visit"], data["visit"]),

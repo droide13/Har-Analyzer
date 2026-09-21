@@ -38,6 +38,7 @@ def test_generate_then_download_round_trip(client: TestClient, upload_id: str) -
         f"/api/har/{upload_id}/metadata/generate",
         json={
             "domain": "example.com",
+            "platform": "web",
             "interact": "login",
             "cookies": "accept",
             "visit": "first",
@@ -48,7 +49,9 @@ def test_generate_then_download_round_trip(client: TestClient, upload_id: str) -
     )
     body = generate.json()
     assert generate.status_code == 200
-    assert body["filename"].startswith("example.com-interact-LOG-cookies-ACC-visit-FIR")
+    assert body["filename"].startswith(
+        "example.com-platform-WEB-interact-LOG-cookies-ACC-visit-FIR"
+    )
     assert body["analysis"]["description"] == "test run"
 
     download = client.get(f"/api/har/{upload_id}/metadata/download")
@@ -70,6 +73,7 @@ def test_generate_rejects_empty_domain(client: TestClient, upload_id: str) -> No
         f"/api/har/{upload_id}/metadata/generate",
         json={
             "domain": "   ",
+            "platform": "web",
             "interact": "login",
             "cookies": "accept",
             "visit": "first",
@@ -84,6 +88,7 @@ def test_generate_rejects_invalid_interact_code(client: TestClient, upload_id: s
         f"/api/har/{upload_id}/metadata/generate",
         json={
             "domain": "example.com",
+            "platform": "web",
             "interact": "not-a-code",
             "cookies": "accept",
             "visit": "first",
@@ -101,6 +106,7 @@ def test_naming_options_exposes_label_tables(client: TestClient) -> None:
     response = client.get("/api/naming/options")
     body = response.json()
     assert response.status_code == 200
+    assert body["platform"]["web"] == "Web"
     assert body["interact"]["login"] == "Login"
     assert body["cookies"]["accept"] == "Accept"
     assert body["visit"]["first"] == "First visit (fresh state)"

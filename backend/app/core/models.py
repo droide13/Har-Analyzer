@@ -106,6 +106,7 @@ class HarAnalysis:  # pylint: disable=too-many-instance-attributes
     """
 
     domain: str
+    platform: str
     interact: str
     cookies: str
     visit: str
@@ -122,6 +123,7 @@ class HarAnalysis:  # pylint: disable=too-many-instance-attributes
         return {
             "tool_version": self.tool_version,
             "domain": self.domain,
+            "platform": self.platform,
             "interact": self.interact,
             "cookies": self.cookies,
             "visit": self.visit,
@@ -138,6 +140,7 @@ class HarAnalysis:  # pylint: disable=too-many-instance-attributes
         """Parse a previously embedded ``log._analysis`` dict back out."""
         return HarAnalysis(
             domain=str(data.get("domain", "")),
+            platform=str(data.get("platform", "")),
             interact=str(data.get("interact", "")),
             cookies=str(data.get("cookies", "")),
             visit=str(data.get("visit", "")),

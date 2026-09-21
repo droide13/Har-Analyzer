@@ -23,5 +23,16 @@ def test_aggregate_query_param_records_same_value_every_time(sample_har_dict: di
     row = aggregated[0]
     assert row["Name"] == "token"
     assert row["Value"] == "abc123"
-    assert row["Method"] == "Always GET"
+    assert row["Method"] == "GET"
     assert row["Occurrences"] == 2
+
+
+def test_aggregate_query_param_records_lists_every_method_seen() -> None:
+    records = [
+        {"Name": "id", "Value": "1", "Method": "GET", "Host": "example.com"},
+        {"Name": "id", "Value": "1", "Method": "POST", "Host": "example.com"},
+    ]
+    aggregated = aggregate_query_param_records(records)
+
+    assert len(aggregated) == 1
+    assert aggregated[0]["Method"] == "GET, POST"

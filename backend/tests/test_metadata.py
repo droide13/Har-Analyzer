@@ -16,6 +16,7 @@ from app.features.metadata import (
 def test_build_standardized_result_builds_filename_and_analysis() -> None:
     inputs = StandardizeInputs(
         domain="Example.com",
+        platform="web",
         interact="login",
         cookies="accept",
         visit="first",
@@ -27,8 +28,11 @@ def test_build_standardized_result_builds_filename_and_analysis() -> None:
     )
     filename, analysis = build_standardized_result(inputs)
 
-    assert filename == "Example.com-interact-LOG-cookies-ACC-visit-FIR-extra-EXT-26-07-17-17.har"
+    assert filename == (
+        "Example.com-platform-WEB-interact-LOG-cookies-ACC-visit-FIR-extra-EXT-26-07-17-17.har"
+    )
     assert analysis.domain == "Example.com"
+    assert analysis.platform == "web"
     assert analysis.interact == "login"
     assert analysis.extra == "EXT"
     assert analysis.description == "a test capture"
@@ -38,6 +42,7 @@ def test_build_standardized_result_builds_filename_and_analysis() -> None:
 def test_build_standardized_result_rejects_invalid_codes() -> None:
     inputs = StandardizeInputs(
         domain="example.com",
+        platform="web",
         interact="not-a-real-interaction",
         cookies="accept",
         visit="first",
@@ -83,6 +88,7 @@ def test_analysis_table_rows_humanizes_field_names() -> None:
 
     analysis = HarAnalysis(
         domain="example.com",
+        platform="web",
         interact="login",
         cookies="accept",
         visit="first",
