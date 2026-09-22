@@ -2,12 +2,14 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { searchDissemination } from '../../api/dissemination'
 import { useDebouncedValue } from '../../hooks/useDebouncedValue'
-import type { InitiatorChainLink } from '../../api/types'
+import type { DisseminationFirstSeen, InitiatorChainLink } from '../../api/types'
 import { EntryListWithDetail } from '../../components/EntryListWithDetail'
 import { DataTable, type DataTableColumn } from '../../components/DataTable'
 import { FormField, FormRow, fieldInputClasses } from '../../components/FormField'
 import { ErrorState, LoadingState } from '../../components/QueryState'
 import { Tabs, type TabDefinition } from '../../components/Tabs'
+import { DisseminationGraph } from './DisseminationGraph'
+import type { DomainRow } from './disseminationGraphData'
 
 interface DisseminationResultsProps {
   uploadId: string
@@ -16,14 +18,9 @@ interface DisseminationResultsProps {
    * sighting -- already computed once by the always-live timeline fetch in
    * DisseminationView, so it's passed down rather than re-fetched here. */
   initiatorChain: InitiatorChainLink[]
-}
-
-interface DomainRow {
-  Domain: string
-  'Entries Hit': number
-  'Cookie origin': string
-  Fields: string
-  'Distinct Values Seen': number
+  /** Where/when the traced key was first seen -- same timeline fetch as
+   * initiatorChain, needed as the graph's root/origin node. */
+  firstSeen: DisseminationFirstSeen
 }
 
 const DOMAIN_COLUMNS: DataTableColumn<DomainRow>[] = [
@@ -39,7 +36,7 @@ const DOMAIN_COLUMNS: DataTableColumn<DomainRow>[] = [
  * over the matching-entries list. Re-queries the backend on a narrow/
  * highlight change (debounced) but only ever with the key/encodings from
  * the last explicit submit, never a mid-edit draft. */
-export function DisseminationResults({ uploadId, submittedSearch, initiatorChain }: DisseminationResultsProps) {
+export function DisseminationResults({ uploadId, submittedSearch, initiatorChain, firstSeen }: DisseminationResultsProps) {
   const [narrowQuery, setNarrowQuery] = useState('')
   const debouncedNarrow = useDebouncedValue(narrowQuery)
   const [highlightQuery, setHighlightQuery] = useState('')
@@ -127,6 +124,24 @@ export function DisseminationResults({ uploadId, submittedSearch, initiatorChain
               )}
             </>
           )}
+        </>
+      ),
+    },
+    {
+      key: 'graph',
+      label: 'Dissemination Graph',
+      render: () => (
+        <>
+          <p className="my-1 mb-3 text-[13px] text-text-muted">
+            The whole story in one view: how this value's first sighting was caused, then where it spread
+            afterward. Click a domain to narrow the Matching HAR Entries list below to it.
+          </p>
+          <DisseminationGraph
+            firstSeen={firstSeen}
+            initiatorChain={initiatorChain}
+            byDomain={data.by_domain as unknown as DomainRow[]}
+            onSelectDomain={(domain) => setNarrowQuery(`domain:${domain}`)}
+          />
         </>
       ),
     },

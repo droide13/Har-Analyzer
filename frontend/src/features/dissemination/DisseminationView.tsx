@@ -159,6 +159,7 @@ export function DisseminationView({ uploadId, initialTarget, onInitialTargetCons
               uploadId={uploadId}
               submittedSearch={submittedSearch}
               initiatorChain={timelineQuery.data.initiator_chain}
+              firstSeen={timelineQuery.data.first_seen}
             />
           ) : (
             <p className="my-1 mb-3 text-[13px] text-text-muted">No search run yet for this key and encoding selection.</p>

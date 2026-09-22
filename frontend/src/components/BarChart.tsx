@@ -1,40 +1,5 @@
-import { useEffect, useState } from 'react'
 import ReactECharts from 'echarts-for-react'
-
-interface ChartColors {
-  accent: string
-  text: string
-  textMuted: string
-  border: string
-}
-
-function readChartColors(): ChartColors {
-  const style = getComputedStyle(document.documentElement)
-  return {
-    accent: style.getPropertyValue('--color-accent').trim(),
-    text: style.getPropertyValue('--color-text').trim(),
-    textMuted: style.getPropertyValue('--color-text-muted').trim(),
-    border: style.getPropertyValue('--color-border').trim(),
-  }
-}
-
-/** Tracks theme-driven custom properties so charts follow the OS dark/light
- * switch the same way every CSS-styled element already does -- ECharts
- * takes literal colors, not var(), so this is the one place that needs to
- * read them in JS. Without this, ECharts' own default (near-black) axis
- * label/line colors are illegible against the dark theme's background. */
-function useChartColors(): ChartColors {
-  const [colors, setColors] = useState(readChartColors)
-
-  useEffect(() => {
-    const media = window.matchMedia('(prefers-color-scheme: dark)')
-    const update = () => setColors(readChartColors())
-    media.addEventListener('change', update)
-    return () => media.removeEventListener('change', update)
-  }, [])
-
-  return colors
-}
+import { useChartColors } from '../hooks/useChartColors'
 
 export interface BarChartDatum {
   label: string
