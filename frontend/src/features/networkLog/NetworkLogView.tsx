@@ -4,8 +4,7 @@ import { fetchEncodingOptions, fetchEntries, fetchMethodOrder, fetchScopeOptions
 import { useDebouncedValue } from '../../hooks/useDebouncedValue'
 import { ErrorState } from '../../components/QueryState'
 import { SearchControls } from './SearchControls'
-import { EntryListTable } from '../../components/EntryListTable'
-import { EntryDetailPanel } from '../../components/EntryDetailPanel'
+import { EntryListWithDetail } from '../../components/EntryListWithDetail'
 import { Pagination } from './Pagination'
 
 interface NetworkLogViewProps {
@@ -110,20 +109,14 @@ export function NetworkLogView({ uploadId }: NetworkLogViewProps) {
             onPageChange={setPage}
             highlightedPages={data.highlighted_pages}
           />
-          {/* The detail panel docks to the viewport edge (fixed, full height)
-              rather than sitting inline, so this padding is what makes room
-              for it instead of letting it cover the table. */}
-          <div className={selectedIndex !== null ? 'pr-[420px]' : ''}>
-            <EntryListTable
-              items={data.items}
-              selectedIndex={selectedIndex}
-              onSelectRow={setSelectedIndex}
-              showMatchedFields={Boolean(debouncedFilterQuery.trim() || debouncedHighlightQuery.trim())}
-            />
-          </div>
-          {selectedIndex !== null && (
-            <EntryDetailPanel uploadId={uploadId} index={selectedIndex} onClose={() => setSelectedIndex(null)} />
-          )}
+          <EntryListWithDetail
+            uploadId={uploadId}
+            items={data.items}
+            selectedIndex={selectedIndex}
+            onSelectRow={setSelectedIndex}
+            onClose={() => setSelectedIndex(null)}
+            showMatchedFields={Boolean(debouncedFilterQuery.trim() || debouncedHighlightQuery.trim())}
+          />
         </>
       )}
 

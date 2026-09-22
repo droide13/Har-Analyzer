@@ -195,7 +195,7 @@ export function EntryDetailPanel({ uploadId, index, onClose, extraTabs = [] }: E
     : []
 
   return (
-    <aside className="fixed top-0 right-0 z-30 flex h-[100dvh] w-[420px] shrink-0 flex-col overflow-hidden border-l border-border-strong bg-bg shadow-lg">
+    <aside className="flex h-full w-full flex-col overflow-hidden border-l border-border-strong bg-bg">
       <div className="flex items-center justify-between border-b border-border bg-bg-subtle px-3 py-2">
         <strong className="font-mono text-[13px]">Entry #{index}</strong>
         <Button variant="ghost" onClick={onClose} aria-label="Close detail panel">
