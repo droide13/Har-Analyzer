@@ -34,9 +34,8 @@ export interface EntrySummary {
   body_size: number
   req_cookie_count: number
   res_cookie_count: number
-  filter_summary: string | null
   highlighted: boolean
-  highlight_summary: string | null
+  badges: string[]
 }
 
 export interface EntriesPage {
@@ -177,7 +176,6 @@ export interface DisseminationTimelineResponse {
 
 export interface DisseminationMatchRow {
   entry: EntrySummary
-  badges: string[]
   reasons: { Field: string; Value: string; Forms: string }[]
 }
 

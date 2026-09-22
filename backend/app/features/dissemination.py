@@ -133,14 +133,6 @@ def find_dissemination(
     return sorted(results, key=lambda match: chronological_key(match[0]))
 
 
-def dissemination_badge_labels(reasons: list[MatchReason]) -> list[str]:
-    """One label per distinct field the value hit, so a row can show where it leaked."""
-    seen_labels: dict[str, None] = {}
-    for reason in reasons:
-        seen_labels.setdefault(reason_label(reason), None)
-    return list(seen_labels)
-
-
 def reason_summary(reasons: list[MatchReason]) -> list[dict[str, str]]:
     """One row per (field, value): collapses redundant links of the
     URL-encoding chain and lists other matched forms alongside it."""

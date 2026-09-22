@@ -342,6 +342,17 @@ def entry_matches(
     return MatchResult(matched=True, reasons=all_reasons)
 
 
+def dissemination_badge_labels(reasons: list[MatchReason]) -> list[str]:
+    """One label per distinct field a set of reasons hit, order-preserving --
+    the compact chip form used wherever a row needs to show *why* it matched
+    (Network Log's filter/highlight, Dissemination's value scan) without the
+    per-encoding detail `summarize_reasons` spells out."""
+    seen_labels: dict[str, None] = {}
+    for reason in reasons:
+        seen_labels.setdefault(reason_label(reason), None)
+    return list(seen_labels)
+
+
 def summarize_reasons(reasons: list[MatchReason]) -> str:
     """One entry per field, e.g. 'Response Headers (plain, MD5)' - collapses
     redundant links of the URL-encoding chain and lists other encodings once.
