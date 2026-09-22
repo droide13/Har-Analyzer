@@ -44,6 +44,38 @@ Open http://localhost:5173 and upload a `.har` file.
 
 ---
 
+## Deployment
+
+Build the frontend to static files, then run the backend without `--reload` --
+it serves both the API and the built frontend from one process/port:
+
+```bash
+cd frontend && npm install && npm run build   # produces frontend/dist/
+cd ../backend && uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+`app/main.py` mounts `frontend/dist/` as static files (only if that directory
+exists, so this is a no-op in local dev via `./dev.sh`) after all the API
+routes, so `/api/*` is tried first and everything else falls through to the
+built frontend. No CORS config or separate frontend server needed since it's
+all same-origin.
+
+Put nginx or Caddy in front if you want TLS/a domain -- proxy everything to
+`127.0.0.1:8000` (or just serve `frontend/dist/` from it directly and proxy
+only `/api/*`, if you'd rather not use the built-in static mount).
+
+**Important:** uploads live in an in-memory, per-process store (see
+`backend/app/store.py`) -- there's no database, no shared cache, and no
+persistence across restarts, by design (a local, single-user tool). This
+means:
+- Run a single uvicorn process, never multiple `--workers` or replicas
+  behind a load balancer -- a request could land on a worker that never saw
+  the upload.
+- Any restart (crash, redeploy, reboot) clears every uploaded session; users
+  just re-upload their `.har` file.
+
+---
+
 ## Project Structure
 
 ```bash
