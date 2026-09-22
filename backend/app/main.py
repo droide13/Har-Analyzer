@@ -1,7 +1,16 @@
-"""FastAPI app entrypoint. Run with: uvicorn app.main:app --reload"""
+"""FastAPI app entrypoint.
+
+Dev: uvicorn app.main:app --reload
+Prod: build the frontend first (cd frontend && npm run build), then
+uvicorn app.main:app --host 0.0.0.0 --port 8000 (no --reload) -- see
+readme.md's Deployment section.
+"""
+
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.routers.cookies import router as cookies_router
 from app.routers.dissemination import router as dissemination_router
@@ -40,3 +49,14 @@ for router in (
 async def health() -> dict[str, str]:
     """Liveness check."""
     return {"status": "ok"}
+
+
+# Serves the built frontend (frontend/dist/, produced by `npm run build`) on
+# this same origin/port -- only if it's actually been built. frontend/dist/
+# is gitignored and never exists in local dev (dev.sh runs the Vite dev
+# server separately instead), so this is a no-op there and only activates
+# once a built frontend has been deployed alongside it. Mounted last so the
+# API routers above always get first try at matching a request.
+_frontend_dist = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
+if _frontend_dist.is_dir():
+    app.mount("/", StaticFiles(directory=_frontend_dist, html=True), name="frontend")
