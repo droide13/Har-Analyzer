@@ -15,11 +15,13 @@ interface EntryListWithDetailProps {
 }
 
 /**
- * Shared by Network Log and Dissemination: the entry list, and -- once a row
- * is selected -- a resizable detail panel alongside it, via react-resizable-
- * panels rather than a hand-rolled width (a fixed 420px column made the
- * table narrower than the browser could redistribute cleanly, breaking its
- * header layout; letting a maintained library own the split avoids that).
+ * One list + its own resizable detail panel. Used per-table (Network Log;
+ * Dissemination's Initiator Traced Entries and Matching HAR Entries each
+ * get their own instance) rather than one shared panel for multiple lists --
+ * that shared-panel approach fought react-resizable-panels' height model at
+ * every turn (forced height, sticky positioning, scroll anchoring) for a
+ * layout nobody actually wanted: two differently-sized lists jammed into one
+ * slider. Each instance here is sized to its own list, independently.
  */
 export function EntryListWithDetail({
   uploadId,
@@ -46,7 +48,7 @@ export function EntryListWithDetail({
   }
 
   return (
-    <Group orientation="horizontal" className="h-[70vh]">
+    <Group orientation="horizontal" style={{ height: '70vh' }}>
       <Panel minSize="30%" className="pr-3">
         {table}
       </Panel>

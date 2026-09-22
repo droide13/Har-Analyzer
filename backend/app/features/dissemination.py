@@ -104,6 +104,76 @@ def distinct_values(occurrences: list[Occurrence]) -> list[str]:
     return list(seen)
 
 
+_MAX_INITIATOR_CHAIN_DEPTH = 25
+
+
+@dataclass(slots=True)
+class InitiatorChainHop:
+    """One hop in the chain of requests that (transitively) caused a traced
+    sighting. `entry` is only `None` when `found` is False -- the
+    initiating URL was never captured in this HAR (a dangling reference),
+    not that there wasn't one."""
+
+    found: bool
+    entry: ParsedEntry | None
+    url: str
+    initiator_type: str
+
+
+def build_initiator_chain(entries: list[ParsedEntry], start: ParsedEntry) -> list[InitiatorChainHop]:
+    """Walk backwards from `start` through each entry's initiator_url, one
+    hop at a time, to reconstruct which script (transitively) caused it --
+    e.g. the page loaded script A, which loaded script B, which made the
+    request that first carried this value.
+
+    Each hop looks up the entry that fetched the current one's
+    initiator_url -- the latest such entry at or before it in time, since
+    that's the one the browser would actually have already loaded by then.
+    Returns hops in chronological order (earliest cause first, ending just
+    before `start`, which the caller already displays separately). Stops
+    when an entry has no initiator_url (top-level navigation), the
+    initiating URL was never captured in this HAR (a dangling reference,
+    included as the final, unresolved hop), or a cycle/depth limit is hit.
+    """
+    by_url: dict[str, list[ParsedEntry]] = {}
+    for entry in entries:
+        by_url.setdefault(entry.url, []).append(entry)
+    for group in by_url.values():
+        group.sort(key=chronological_key)
+
+    chain: list[InitiatorChainHop] = []
+    seen_indices = {start.index}
+    current = start
+
+    for _ in range(_MAX_INITIATOR_CHAIN_DEPTH):
+        initiator_url = current.initiator_url
+        if not initiator_url:
+            break
+
+        candidates = by_url.get(initiator_url)
+        if not candidates:
+            chain.append(
+                InitiatorChainHop(
+                    found=False, entry=None, url=initiator_url, initiator_type=current.initiator_type
+                )
+            )
+            break
+
+        current_key = chronological_key(current)
+        preceding = [e for e in candidates if chronological_key(e) <= current_key and e.index not in seen_indices]
+        next_entry = preceding[-1] if preceding else candidates[0]
+        if next_entry.index in seen_indices:
+            break  # Cycle guard -- shouldn't happen with real capture data.
+
+        seen_indices.add(next_entry.index)
+        chain.append(
+            InitiatorChainHop(found=True, entry=next_entry, url=next_entry.url, initiator_type=next_entry.initiator_type)
+        )
+        current = next_entry
+
+    return list(reversed(chain))
+
+
 def find_dissemination(
     entries: list[ParsedEntry],
     values: list[str],

@@ -97,7 +97,7 @@ export function EntryListTable({
   })
 
   return (
-    <div className="h-[60vh] flex-1 min-w-0 overflow-auto rounded-md border border-border-strong shadow-sm" ref={scrollRef}>
+    <div className="max-h-[60vh] flex-1 min-w-0 overflow-auto rounded-md border border-border-strong shadow-sm" ref={scrollRef}>
       <div className="min-w-max" role="table">
         <div className="sticky top-0 z-10 flex border-b border-border bg-bg-subtle" role="row">
           {columns.map((col) => (

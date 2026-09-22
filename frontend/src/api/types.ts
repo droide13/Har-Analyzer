@@ -166,11 +166,19 @@ export interface DisseminationFirstSeen {
   value: string
 }
 
+export interface InitiatorChainLink {
+  found: boolean
+  entry: EntrySummary | null
+  url: string
+  initiator_type: string
+}
+
 export interface DisseminationTimelineResponse {
   sightings: number
   distinct_values: number
   origins: string[]
   first_seen: DisseminationFirstSeen
+  initiator_chain: InitiatorChainLink[]
   timeline: Record<string, unknown>[]
 }
 
