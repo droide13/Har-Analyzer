@@ -12,12 +12,6 @@ interface Column {
   widthPx: number
   grow?: boolean
   render: (entry: EntrySummary) => ReactNode
-  /** Plain-text value for a hover tooltip, so a value truncated by column
-   * width is still readable without having to open the row's detail panel
-   * (which the row's own onClick already does, so cells don't duplicate
-   * that as a click action). Omit for a column (like Matched Fields) whose
-   * content isn't plain text. */
-  title?: (entry: EntrySummary) => string
 }
 
 const BASE_COLUMNS: Column[] = [
@@ -25,24 +19,21 @@ const BASE_COLUMNS: Column[] = [
     header: 'Status',
     widthPx: 70,
     render: (e) => <Badge tone={statusTone(e.status)}>{e.status || '—'}</Badge>,
-    title: (e) => e.status || 'Unknown',
   },
-  { header: 'Method', widthPx: 70, render: (e) => e.method, title: (e) => e.method },
+  { header: 'Method', widthPx: 70, render: (e) => e.method },
   {
     header: 'URL',
-    widthPx: 480,
+    widthPx: 240,
     grow: true,
     render: (e) => <span className="font-mono text-xs">{e.url}</span>,
-    title: (e) => e.url,
   },
-  { header: 'Domain', widthPx: 180, render: (e) => e.domain, title: (e) => e.domain },
-  { header: 'MIME', widthPx: 140, render: (e) => e.mime, title: (e) => e.mime },
-  { header: 'Time', widthPx: 80, render: (e) => `${e.time_ms.toFixed(1)} ms`, title: (e) => `${e.time_ms.toFixed(1)} ms` },
+  { header: 'Domain', widthPx: 180, render: (e) => e.domain },
+  { header: 'MIME', widthPx: 140, render: (e) => e.mime },
+  { header: 'Time', widthPx: 80, render: (e) => `${e.time_ms.toFixed(1)} ms` },
   {
     header: 'Cookies',
     widthPx: 90,
     render: (e) => (e.req_cookie_count || e.res_cookie_count ? `${e.req_cookie_count}↑ ${e.res_cookie_count}↓` : null),
-    title: (e) => `${e.req_cookie_count} sent, ${e.res_cookie_count} received`,
   },
 ]
 
@@ -141,7 +132,6 @@ export function EntryListTable({
                 {columns.map((col) => (
                   <div
                     key={col.header}
-                    title={col.title?.(entry)}
                     className="overflow-hidden text-ellipsis whitespace-nowrap px-2 py-1 text-[13px]"
                     role="cell"
                     style={cellStyle(col)}
