@@ -225,6 +225,23 @@ class DisseminationFirstSeen(BaseModel):
     value: str
 
 
+class InitiatorChainLink(BaseModel):
+    """One hop in the chain of requests that (transitively) caused the
+    traced key's first sighting -- e.g. the page loaded script A, which
+    loaded script B, which made the first-seen request. ``entry`` is the
+    Network-Log-shaped summary of that hop's request, reusing the same
+    shared row/detail-panel components as everywhere else in the app.
+    ``found=False`` means the chain ends here because the initiating URL
+    was never captured in this HAR (a dangling reference), not that there
+    wasn't one -- ``entry`` is ``None`` and only ``url``/``initiator_type``
+    are meaningful then."""
+
+    found: bool
+    entry: EntrySummary | None = None
+    url: str = ""
+    initiator_type: str = ""
+
+
 class DisseminationTimelineResponse(BaseModel):
     """Always-live (not gated behind Search): sighting count + value timeline
     for one traced key. ``timeline`` rows keep the original's display-ready
@@ -235,6 +252,10 @@ class DisseminationTimelineResponse(BaseModel):
     distinct_values: int
     origins: list[str]
     first_seen: DisseminationFirstSeen
+    # Chronological order, ending just before the first-seen sighting.
+    # Empty when the first-seen entry has no initiator (e.g. a top-level
+    # navigation) -- there's simply nothing earlier to trace.
+    initiator_chain: list[InitiatorChainLink]
     timeline: list[dict[str, Any]]
 
 

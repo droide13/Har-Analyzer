@@ -217,6 +217,25 @@ def flatten_initiator_stack(stack: dict[str, Any] | None) -> list[dict[str, Any]
     return frames
 
 
+def resolve_initiator_url(initiator: dict[str, Any], stack_frames: list[dict[str, Any]]) -> str:
+    """The URL of whatever actually caused this request.
+
+    Chrome's HAR export only populates the top-level ``_initiator.url`` for
+    a ``type: "parser"`` initiator (an HTML/CSS tag directly referencing the
+    resource); for ``type: "script"`` -- the common case for anything a
+    tracking/ad script fetched -- that field is empty and the calling
+    script's URL only exists as the innermost frame of the call stack
+    (``stack.callFrames[0]``). Falling back to it is what makes chasing a
+    chain of script-initiated requests back to their origin possible at all.
+    """
+    url = str(initiator.get("url", "") or "")
+    if url:
+        return url
+    if stack_frames:
+        return str(stack_frames[0].get("url", "") or "")
+    return ""
+
+
 def build_entries_from_har_data(har_data: dict[str, Any]) -> list[ParsedEntry]:
     """Parse ``log.entries`` out of an already-loaded HAR dict.
 
@@ -240,6 +259,7 @@ def build_entries_from_har_data(har_data: dict[str, Any]) -> list[ParsedEntry]:
         req_c = cast(list[dict[str, Any]], request.get("cookies") or [])
         res_c = cast(list[dict[str, Any]], response.get("cookies") or [])
         qp = cast(list[dict[str, Any]], request.get("queryString") or [])
+        initiator_stack = flatten_initiator_stack(cast(dict[str, Any] | None, initiator.get("stack")))
 
         parsed.append(
             ParsedEntry(
@@ -261,10 +281,8 @@ def build_entries_from_har_data(har_data: dict[str, Any]) -> list[ParsedEntry]:
                 req_body=str(post_data.get("text", "") or ""),
                 res_body=str(content.get("text", "") or ""),
                 initiator_type=str(initiator.get("type", "other")),
-                initiator_url=str(initiator.get("url", "")),
-                initiator_stack=flatten_initiator_stack(
-                    cast(dict[str, Any] | None, initiator.get("stack"))
-                ),
+                initiator_url=resolve_initiator_url(initiator, initiator_stack),
+                initiator_stack=initiator_stack,
                 raw=entry,
                 req_headers=req_h,
                 res_headers=res_h,

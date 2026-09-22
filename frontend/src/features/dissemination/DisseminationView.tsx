@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { fetchDisseminationKeys, fetchDisseminationTimeline } from '../../api/dissemination'
 import { fetchEncodingOptions } from '../../api/har'
 import { DataTable, type DataTableColumn } from '../../components/DataTable'
+import { Disclosure } from '../../components/Disclosure'
 import { MetricsRow } from '../../components/MetricsRow'
 import { Select } from '../../components/Select'
 import { DisseminationSearchForm } from './DisseminationSearchForm'
@@ -132,16 +133,17 @@ export function DisseminationView({ uploadId, initialTarget, onInitialTargetCons
             {timelineQuery.data.first_seen.domain}) with value <code>{timelineQuery.data.first_seen.value}</code>.
           </p>
 
-          <h4 className="text-sm font-semibold">Value Timeline</h4>
-          <p className="my-1 mb-3 text-[13px] text-text-muted">
-            One row per sighting, ordered by HAR timestamp. 'Value changed' flags a sighting whose value differs
-            from the one immediately before it.
-          </p>
-          <DataTable
-            columns={TIMELINE_COLUMNS}
-            rows={timelineQuery.data.timeline as unknown as TimelineRow[]}
-            rowKey={(_, i) => i}
-          />
+          <Disclosure summary={<span className="text-sm font-semibold text-text">Value Timeline</span>}>
+            <p className="my-1 mb-3 text-[13px] text-text-muted">
+              One row per sighting, ordered by HAR timestamp. 'Value changed' flags a sighting whose value differs
+              from the one immediately before it.
+            </p>
+            <DataTable
+              columns={TIMELINE_COLUMNS}
+              rows={timelineQuery.data.timeline as unknown as TimelineRow[]}
+              rowKey={(_, i) => i}
+            />
+          </Disclosure>
 
           <h4 className="text-sm font-semibold">Dissemination</h4>
           {encodingOptions && selectedKey && (
@@ -153,7 +155,11 @@ export function DisseminationView({ uploadId, initialTarget, onInitialTargetCons
           )}
 
           {submittedSearch ? (
-            <DisseminationResults uploadId={uploadId} submittedSearch={submittedSearch} />
+            <DisseminationResults
+              uploadId={uploadId}
+              submittedSearch={submittedSearch}
+              initiatorChain={timelineQuery.data.initiator_chain}
+            />
           ) : (
             <p className="my-1 mb-3 text-[13px] text-text-muted">No search run yet for this key and encoding selection.</p>
           )}

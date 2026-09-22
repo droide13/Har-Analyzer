@@ -16,6 +16,7 @@ from fastapi import APIRouter, HTTPException, Query
 from app.core.har_time import format_started_date_time
 from app.features.dissemination import (
     aggregate_by_domain,
+    build_initiator_chain,
     collect_occurrences,
     distinct_values,
     find_dissemination,
@@ -29,6 +30,7 @@ from app.schemas import (
     DisseminationSearchRequest,
     DisseminationSearchResponse,
     DisseminationTimelineResponse,
+    InitiatorChainLink,
 )
 from app.shared.entry_summary import build_entry_summary
 from app.shared.search import dissemination_badge_labels, entry_matches
@@ -71,6 +73,16 @@ async def get_dissemination_timeline(
         else f"entry #{first_entry.index} (no timestamp)"
     )
 
+    initiator_chain = [
+        InitiatorChainLink(
+            found=hop.found,
+            entry=build_entry_summary(hop.entry) if hop.entry is not None else None,
+            url=hop.url,
+            initiator_type=hop.initiator_type,
+        )
+        for hop in build_initiator_chain(record.entries, first_entry)
+    ]
+
     return DisseminationTimelineResponse(
         sightings=len(occurrences),
         distinct_values=len(distinct_values(occurrences)),
@@ -82,6 +94,7 @@ async def get_dissemination_timeline(
             domain=first_entry.domain,
             value=first_value or "(empty)",
         ),
+        initiator_chain=initiator_chain,
         timeline=value_timeline(occurrences),
     )
 

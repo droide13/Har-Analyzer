@@ -31,6 +31,9 @@ def test_dissemination_timeline(client: TestClient, upload_id: str) -> None:
     assert body["distinct_values"] == 2
     assert body["first_seen"]["origin"] == "Request Cookie"
     assert len(body["timeline"]) == 3
+    # The fixture's entries carry no _initiator data, so there's nothing to
+    # trace back through -- an empty chain, not an error.
+    assert body["initiator_chain"] == []
 
 
 def test_dissemination_timeline_unknown_key_returns_404(client: TestClient, upload_id: str) -> None:
