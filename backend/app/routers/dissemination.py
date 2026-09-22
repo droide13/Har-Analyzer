@@ -17,7 +17,6 @@ from app.core.har_time import format_started_date_time
 from app.features.dissemination import (
     aggregate_by_domain,
     collect_occurrences,
-    dissemination_badge_labels,
     distinct_values,
     find_dissemination,
     key_options,
@@ -32,7 +31,7 @@ from app.schemas import (
     DisseminationTimelineResponse,
 )
 from app.shared.entry_summary import build_entry_summary
-from app.shared.search import entry_matches, summarize_reasons
+from app.shared.search import dissemination_badge_labels, entry_matches
 from app.store import UploadNotFoundError, upload_store
 
 router = APIRouter(prefix="/api/har", tags=["dissemination"])
@@ -121,18 +120,13 @@ async def post_dissemination_search(
     rows: list[DisseminationMatchRow] = []
     for entry, reasons in visible:
         summary = build_entry_summary(entry)
+        badges = dissemination_badge_labels(reasons)
         if highlight_active:
             highlight_result = entry_matches(entry, body.highlight, "any", set())
             summary.highlighted = highlight_result.matched
-            summary.highlight_summary = (
-                summarize_reasons(highlight_result.reasons) if highlight_result.matched else None
-            )
-        rows.append(
-            DisseminationMatchRow(
-                entry=summary,
-                badges=dissemination_badge_labels(reasons),
-                reasons=reason_summary(reasons),
-            )
-        )
+            if highlight_result.matched:
+                badges = dissemination_badge_labels(highlight_result.reasons)
+        summary.badges = badges
+        rows.append(DisseminationMatchRow(entry=summary, reasons=reason_summary(reasons)))
 
     return DisseminationSearchResponse(by_domain=by_domain, matches=rows)

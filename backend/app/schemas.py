@@ -46,9 +46,11 @@ class EntrySummary(BaseModel):
     body_size: int
     req_cookie_count: int
     res_cookie_count: int
-    filter_summary: str | None = None
     highlighted: bool = False
-    highlight_summary: str | None = None
+    # Labels of the fields a filter/highlight query (Network Log) or value
+    # scan (Dissemination) matched through, e.g. ["URL", "Response Cookie"].
+    # Empty when no search is active.
+    badges: list[str] = []
 
 
 class EntriesPage(BaseModel):
@@ -254,10 +256,11 @@ class DisseminationSearchRequest(BaseModel):
 class DisseminationMatchRow(BaseModel):
     """One matching entry: its Network-Log-shaped summary (reused so the
     frontend's row/detail-panel components need no dissemination-specific
-    variant) plus which fields it matched through."""
+    variant -- including its `badges`, the same field Network Log's filter/
+    highlight uses) plus a per-(field, value) breakdown for the detail
+    panel's "Matches" tab."""
 
     entry: EntrySummary
-    badges: list[str]
     reasons: list[dict[str, str]]
 
 

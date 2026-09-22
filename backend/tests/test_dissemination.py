@@ -2,12 +2,12 @@ from app.core.models import build_entries_from_har_data
 from app.features.dissemination import (
     aggregate_by_domain,
     collect_occurrences,
-    dissemination_badge_labels,
     distinct_values,
     find_dissemination,
     key_options,
     value_timeline,
 )
+from app.shared.search import dissemination_badge_labels
 from tests.conftest import ENCODED_ONLY_VALUE
 
 

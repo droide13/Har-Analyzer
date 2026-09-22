@@ -21,7 +21,7 @@ from app.schemas import (
 )
 from app.shared.entry_summary import build_entry_summary
 from app.shared.naming import derive_metadata_from_entries, get_attrs_from_har_name
-from app.shared.search import ENCODING_OPTIONS, entry_matches, summarize_reasons
+from app.shared.search import ENCODING_OPTIONS, dissemination_badge_labels, entry_matches
 from app.store import UploadNotFoundError, UploadRecord, upload_store
 
 router = APIRouter(prefix="/api/har", tags=["har"])
@@ -142,13 +142,15 @@ async def list_entries(  # pylint: disable=too-many-arguments,too-many-positiona
             highlighted_count += 1
         filter_reasons = filter_results[entry.index].reasons
         summary = build_entry_summary(entry)
-        summary.filter_summary = summarize_reasons(filter_reasons) if q.strip() else None
         summary.highlighted = highlighted
-        summary.highlight_summary = (
-            summarize_reasons(highlight_result.reasons)
-            if highlighted and highlight_result
-            else None
-        )
+        # Mirrors Dissemination's badge logic: prefer the highlight query's
+        # own reasons when this row is highlighted (the more specific "why"),
+        # falling back to the filter query's reasons -- every visible row
+        # matched it, if one was given.
+        if highlighted and highlight_result:
+            summary.badges = dissemination_badge_labels(highlight_result.reasons)
+        elif q.strip():
+            summary.badges = dissemination_badge_labels(filter_reasons)
         items.append(summary)
 
     # highlighted_count above only covers the current page; recompute over

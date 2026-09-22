@@ -3,10 +3,10 @@ import { useQuery } from '@tanstack/react-query'
 import { searchDissemination } from '../../api/dissemination'
 import { useDebouncedValue } from '../../hooks/useDebouncedValue'
 import { EntryDetailPanel } from '../../components/EntryDetailPanel'
+import { EntryListTable } from '../../components/EntryListTable'
 import { DataTable, type DataTableColumn } from '../../components/DataTable'
 import { FormField, FormRow, fieldInputClasses } from '../../components/FormField'
 import { ErrorState, LoadingState } from '../../components/QueryState'
-import { DisseminationMatchList } from './DisseminationMatchList'
 
 interface DisseminationResultsProps {
   uploadId: string
@@ -97,7 +97,13 @@ export function DisseminationResults({ uploadId, submittedSearch }: Disseminatio
           rather than sitting inline, so this padding is what makes room for
           it instead of letting it cover the match list. */}
       <div className={selectedIndex !== null ? 'pr-[420px]' : ''}>
-        <DisseminationMatchList matches={data.matches} selectedIndex={selectedIndex} onSelectRow={setSelectedIndex} />
+        <EntryListTable
+          items={data.matches.map((m) => m.entry)}
+          selectedIndex={selectedIndex}
+          onSelectRow={setSelectedIndex}
+          showMatchedFields
+          emptyMessage="No matches for this filter."
+        />
       </div>
       {selectedIndex !== null && (
         <EntryDetailPanel

@@ -1,9 +1,9 @@
 import { useRef, type ReactNode } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
-import type { EntrySummary } from '../../api/types'
-import { Badge } from '../../components/Badge'
-import { statusTone } from '../../lib/statusColor'
-import { rowStateClassName } from '../../lib/rowState'
+import type { EntrySummary } from '../api/types'
+import { Badge } from './Badge'
+import { statusTone } from '../lib/statusColor'
+import { rowStateClassName } from '../lib/rowState'
 
 const ROW_HEIGHT_PX = 32
 
@@ -15,17 +15,12 @@ interface Column {
   /** Plain-text value for a hover tooltip, so a value truncated by column
    * width is still readable without having to open the row's detail panel
    * (which the row's own onClick already does, so cells don't duplicate
-   * that as a click action). */
-  title: (entry: EntrySummary) => string
+   * that as a click action). Omit for a column (like Matched Fields) whose
+   * content isn't plain text. */
+  title?: (entry: EntrySummary) => string
 }
 
-/**
- * Plain column config instead of a table library's column-def API: the
- * table needs no sorting/grouping (the backend already does the filtering),
- * so a full headless-table dependency would be more surface area than the
- * job needs. Pairs with react-virtual below for row virtualization.
- */
-const COLUMNS: Column[] = [
+const BASE_COLUMNS: Column[] = [
   {
     header: 'Status',
     widthPx: 70,
@@ -51,29 +46,57 @@ const COLUMNS: Column[] = [
   },
 ]
 
+const MATCHED_FIELDS_COLUMN: Column = {
+  header: 'Matched Fields',
+  widthPx: 260,
+  render: (e) => (
+    <div className="flex flex-nowrap items-center overflow-hidden">
+      {e.badges.map((badge) => (
+        <Badge key={badge} tone="orange">
+          {badge}
+        </Badge>
+      ))}
+    </div>
+  ),
+}
+
 function cellStyle(col: Column): React.CSSProperties {
   return col.grow ? { flex: `1 1 ${col.widthPx}px`, minWidth: col.widthPx } : { flex: `0 0 ${col.widthPx}px` }
 }
 
-interface EntryTableProps {
+interface EntryListTableProps {
   items: EntrySummary[]
   selectedIndex: number | null
   onSelectRow: (index: number) => void
+  /** Adds the Matched Fields column (badges) -- Network Log only has this
+   * while a filter/highlight query is active; Dissemination always does,
+   * since every row there only exists because it matched something. */
+  showMatchedFields?: boolean
+  emptyMessage?: string
 }
 
 /**
- * Virtualized replacement for the original's one-st.expander-per-row
- * pattern: only the rows actually scrolled into view are ever mounted,
- * regardless of how many entries are in the filtered result.
+ * Virtualized entry list shared by Network Log and Dissemination's match
+ * results -- one table implementation instead of two so their columns,
+ * row states, and match-reason display can't drift apart again. Only the
+ * rows actually scrolled into view are ever mounted, regardless of how many
+ * entries are in the result.
  *
- * Built from plain divs, not a real <table> -- a <tr> can't be
- * absolutely positioned (react-virtual's whole trick) while still
- * participating in normal table column-width layout, so a real table
- * here would render with columns that don't line up between rows. Flex
- * rows with matching fixed-width cells sidestep that entirely.
+ * Built from plain divs, not a real <table> -- a <tr> can't be absolutely
+ * positioned (react-virtual's whole trick) while still participating in
+ * normal table column-width layout, so a real table here would render with
+ * columns that don't line up between rows. Flex rows with matching
+ * fixed-width cells sidestep that entirely.
  */
-export function EntryTable({ items, selectedIndex, onSelectRow }: EntryTableProps) {
+export function EntryListTable({
+  items,
+  selectedIndex,
+  onSelectRow,
+  showMatchedFields = false,
+  emptyMessage = 'No entries match the current filter.',
+}: EntryListTableProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
+  const columns = showMatchedFields ? [...BASE_COLUMNS, MATCHED_FIELDS_COLUMN] : BASE_COLUMNS
 
   const virtualizer = useVirtualizer({
     count: items.length,
@@ -86,10 +109,10 @@ export function EntryTable({ items, selectedIndex, onSelectRow }: EntryTableProp
     <div className="h-[60vh] flex-1 min-w-0 overflow-auto rounded-md border border-border-strong shadow-sm" ref={scrollRef}>
       <div className="min-w-max" role="table">
         <div className="sticky top-0 z-10 flex border-b border-border bg-bg-subtle" role="row">
-          {COLUMNS.map((col) => (
+          {columns.map((col) => (
             <div
               key={col.header}
-              className="px-2 py-1 text-[13px] font-medium text-text-muted"
+              className="overflow-hidden text-ellipsis whitespace-nowrap px-2 py-1 text-[13px] font-medium text-text-muted"
               role="columnheader"
               style={cellStyle(col)}
             >
@@ -115,10 +138,10 @@ export function EntryTable({ items, selectedIndex, onSelectRow }: EntryTableProp
                   transform: `translateY(${virtualRow.start}px)`,
                 }}
               >
-                {COLUMNS.map((col) => (
+                {columns.map((col) => (
                   <div
                     key={col.header}
-                    title={col.title(entry)}
+                    title={col.title?.(entry)}
                     className="overflow-hidden text-ellipsis whitespace-nowrap px-2 py-1 text-[13px]"
                     role="cell"
                     style={cellStyle(col)}
@@ -131,7 +154,7 @@ export function EntryTable({ items, selectedIndex, onSelectRow }: EntryTableProp
           })}
         </div>
       </div>
-      {items.length === 0 && <p className="p-6 text-center text-text-muted">No entries match the current filter.</p>}
+      {items.length === 0 && <p className="p-6 text-center text-text-muted">{emptyMessage}</p>}
     </div>
   )
 }
