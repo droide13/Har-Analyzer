@@ -271,7 +271,16 @@ export function DataTable<T>({
             return (
               <tr
                 key={row.id}
-                onClick={() => row.toggleExpanded()}
+                onClick={() => {
+                  // Selecting text (e.g. to copy a value out of an expanded
+                  // row) is a mousedown-drag-mouseup sequence on the same
+                  // row, which the browser still fires as a click -- toggle
+                  // only when that click didn't leave a selection behind,
+                  // so releasing the mouse to hit Ctrl+C doesn't collapse
+                  // the row out from under you.
+                  if (window.getSelection()?.toString()) return
+                  row.toggleExpanded()
+                }}
                 className={`cursor-pointer border-b border-border hover:bg-bg-subtle/60 ${isExpanded ? 'bg-bg-subtle/40' : ''}`}
               >
                 {row.getVisibleCells().map((cell, i) => {
