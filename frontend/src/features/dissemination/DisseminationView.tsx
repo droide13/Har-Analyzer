@@ -148,6 +148,7 @@ export function DisseminationView({ uploadId, initialTarget, onInitialTargetCons
             <DisseminationSearchForm
               encodingOptions={encodingOptions}
               onSearch={(encodings) => setSubmittedSearch({ key: selectedKey, encodings })}
+              hasSearched={submittedSearch !== null}
             />
           )}
 

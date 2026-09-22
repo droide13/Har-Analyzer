@@ -1,10 +1,16 @@
 import { useEffect, useState } from 'react'
+import { Badge } from '../../components/Badge'
 import { Button } from '../../components/Button'
 import { EncodingCheckboxList } from '../../components/EncodingCheckboxList'
 
 interface DisseminationSearchFormProps {
   encodingOptions: string[]
   onSearch: (encodings: string[]) => void
+  /** A search has already run for the current key -- e.g. auto-triggered by
+   * the Identifiers tab's "Trace" button, which calls onSearch directly
+   * without this form ever being submitted. Shows a status badge next to
+   * the button so that isn't invisible. */
+  hasSearched?: boolean
 }
 
 /**
@@ -13,7 +19,7 @@ interface DisseminationSearchFormProps {
  * until "Search dissemination" is clicked -- unlike Network Log's
  * always-live filter controls.
  */
-export function DisseminationSearchForm({ encodingOptions, onSearch }: DisseminationSearchFormProps) {
+export function DisseminationSearchForm({ encodingOptions, onSearch, hasSearched = false }: DisseminationSearchFormProps) {
   const [draftEncodings, setDraftEncodings] = useState<Set<string>>(new Set())
 
   // All checked by default, matching the original -- set once options load.
@@ -46,9 +52,12 @@ export function DisseminationSearchForm({ encodingOptions, onSearch }: Dissemina
         selected={draftEncodings}
         onToggle={toggle}
       />
-      <Button type="submit" variant="primary" className="w-fit">
-        Search dissemination
-      </Button>
+      <div className="flex items-center gap-2">
+        <Button type="submit" variant="primary" className="w-fit">
+          Search dissemination
+        </Button>
+        {hasSearched && <Badge tone="ok">✓ Results below</Badge>}
+      </div>
     </form>
   )
 }
