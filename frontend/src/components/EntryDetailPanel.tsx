@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { fetchEntryDetail } from '../api/har'
 import type { EntryDetail, HeaderPair } from '../api/types'
@@ -28,7 +28,7 @@ type StandardTabKey = 'req-headers' | 'res-headers' | 'query' | 'cookies' | 'req
 
 const STANDARD_TABS: { key: StandardTabKey; label: string }[] = [
   { key: 'req-headers', label: 'Request Headers' },
-  { key: 'query', label: 'Query & Cookies' },
+  { key: 'query', label: 'Query Params' },
   { key: 'cookies', label: 'Cookies' },
   { key: 'res-headers', label: 'Response Headers' },
   { key: 'req-body', label: 'Post Data' },
@@ -182,10 +182,20 @@ function StandardTabContent({ tab, detail }: { tab: StandardTabKey; detail: Entr
  * expander-in-expander-per-row pattern (tabs/shared/entry_render.py) with a
  * single on-demand fetch. Shared by Network Log and Dissemination. */
 export function EntryDetailPanel({ uploadId, index, onClose, extraTabs = [] }: EntryDetailPanelProps) {
+  // Keeps the previous entry's detail on screen (instead of `detail`
+  // briefly going undefined) while the new one loads -- without this, the
+  // `detail && <Tabs .../>` block below unmounts and remounts Tabs on every
+  // entry switch, and a freshly-mounted Tabs always resets to its first tab.
   const { data: detail, isLoading, error } = useQuery({
     queryKey: ['entry-detail', uploadId, index],
     queryFn: () => fetchEntryDetail(uploadId, index),
+    placeholderData: (previous) => previous,
   })
+
+  // Lifted above the `detail &&` gate (rather than left to Tabs' own
+  // internal state) as a second guard: even if `detail` does go briefly
+  // undefined for some other reason, the chosen tab survives.
+  const [activeTab, setActiveTab] = useState<string | undefined>(undefined)
 
   const tabDefinitions: TabDefinition[] = detail
     ? [
@@ -223,7 +233,15 @@ export function EntryDetailPanel({ uploadId, index, onClose, extraTabs = [] }: E
           <p className="max-h-24 shrink-0 overflow-y-auto font-mono px-3 pt-2 text-xs break-all">
             {detail.method} {detail.url}
           </p>
-          <Tabs key={index} tabs={tabDefinitions} variant="panel" />
+          {/* Controlled (not left to Tabs' own state) so switching to a
+              different entry keeps whichever tab was open (e.g. still on
+              Cookies) instead of resetting to the first one every time. */}
+          <Tabs
+            tabs={tabDefinitions}
+            variant="panel"
+            activeTab={activeTab ?? tabDefinitions[0]?.key}
+            onActiveTabChange={setActiveTab}
+          />
         </>
       )}
     </aside>
