@@ -9,10 +9,9 @@ so the download can never disagree with what "Generate" produced, the same
 guarantee the original made.
 """
 
-from datetime import datetime
-
 from fastapi import APIRouter, HTTPException, Response
 
+from app.core.har_time import parse_started_date_time
 from app.core.models import embed_analysis, get_embedded_analysis, serialize_har
 from app.features.metadata import (
     StandardizeInputs,
@@ -27,22 +26,17 @@ from app.schemas import (
     MetadataResponse,
 )
 from app.shared.naming import derive_metadata_from_entries
-from app.store import UploadNotFoundError, UploadRecord, upload_store
+from app.store import upload_store
+
+from ._common import get_record_or_404
 
 router = APIRouter(prefix="/api/har", tags=["metadata"])
-
-
-def _get_record(upload_id: str) -> UploadRecord:
-    try:
-        return upload_store.get(upload_id)
-    except UploadNotFoundError as exc:
-        raise HTTPException(status_code=404, detail="Unknown upload_id") from exc
 
 
 @router.get("/{upload_id}/metadata", response_model=MetadataResponse)
 async def get_metadata(upload_id: str) -> MetadataResponse:
     """Detected domain/capture time from traffic, plus any existing embedded analysis."""
-    record = _get_record(upload_id)
+    record = get_record_or_404(upload_id)
 
     try:
         derived = derive_metadata_from_entries(record.entries)
@@ -69,15 +63,14 @@ async def generate_metadata(
     upload_id: str, body: GenerateMetadataRequest
 ) -> GenerateMetadataResponse:
     """Build the standardized filename, embed it, and stash the bytes for download."""
-    record = _get_record(upload_id)
+    record = get_record_or_404(upload_id)
 
     if not body.domain.strip():
         raise HTTPException(status_code=400, detail="Domain must not be empty.")
 
-    try:
-        captured_at = datetime.fromisoformat(body.captured_at)
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=f"Invalid captured_at: {exc}") from exc
+    captured_at = parse_started_date_time(body.captured_at)
+    if captured_at is None:
+        raise HTTPException(status_code=400, detail=f"Invalid captured_at: {body.captured_at!r}")
 
     inputs = StandardizeInputs(
         domain=body.domain,
@@ -108,7 +101,7 @@ async def generate_metadata(
 @router.get("/{upload_id}/metadata/download")
 async def download_standardized_har(upload_id: str) -> Response:
     """Serves whatever /metadata/generate last produced for this upload."""
-    record = _get_record(upload_id)
+    record = get_record_or_404(upload_id)
 
     if record.standardized_bytes is None or record.standardized_filename is None:
         raise HTTPException(

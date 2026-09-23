@@ -9,6 +9,7 @@ domains rather than entries), so that server round trip per slider tweak
 isn't needed here the way it is for Network Log's per-entry filtering.
 """
 
+from collections import Counter
 from dataclasses import dataclass
 from typing import Any, TypedDict, cast
 
@@ -89,9 +90,8 @@ def get_first_party_domain(entries: list[ParsedEntry], filename: str | None = No
     """
     if filename:
         attrs = get_attrs_from_har_name(filename)
-        domain = attrs.get("domain") if attrs else None
-        if domain:
-            return get_base_domain(str(domain).lower())
+        if attrs and attrs["domain"]:
+            return get_base_domain(attrs["domain"].lower())
 
     for entry in entries:
         if entry.domain and entry.domain != "unknown":
@@ -125,19 +125,12 @@ def calculate_overview_summary(entries: list[ParsedEntry]) -> OverviewSummary:
 
 def get_method_counts(entries: list[ParsedEntry]) -> dict[str, int]:
     """Calculates HTTP request distribution grouped by HTTP method."""
-    m_data: dict[str, int] = {}
-    for e in entries:
-        m_data[e.method] = m_data.get(e.method, 0) + 1
-    return m_data
+    return dict(Counter(e.method for e in entries))
 
 
 def get_status_counts(entries: list[ParsedEntry]) -> dict[str, int]:
     """Calculates HTTP response distribution grouped by status code."""
-    s_data: dict[str, int] = {}
-    for e in entries:
-        key = str(e.status) if e.status else "Incomplete"
-        s_data[key] = s_data.get(key, 0) + 1
-    return s_data
+    return dict(Counter(str(e.status) if e.status else "Incomplete" for e in entries))
 
 
 def build_domain_map(entries: list[ParsedEntry]) -> dict[str, RootDomainMetric]:
@@ -150,23 +143,19 @@ def build_domain_map(entries: list[ParsedEntry]) -> dict[str, RootDomainMetric]:
         size = max(0, e.body_size) + max(0, e.headers_size)
         sized = 1 if _has_measured_size(e) else 0
 
-        if base not in domain_map:
-            domain_map[base] = {"requests": 0, "bytes": 0, "sized_requests": 0, "subdomains": {}}
+        root = domain_map.setdefault(
+            base, {"requests": 0, "bytes": 0, "sized_requests": 0, "subdomains": {}}
+        )
+        root["requests"] += 1
+        root["bytes"] += size
+        root["sized_requests"] += sized
 
-        domain_map[base]["requests"] += 1
-        domain_map[base]["bytes"] += size
-        domain_map[base]["sized_requests"] += sized
-
-        if domain not in domain_map[base]["subdomains"]:
-            domain_map[base]["subdomains"][domain] = {
-                "requests": 0,
-                "bytes": 0,
-                "sized_requests": 0,
-            }
-
-        domain_map[base]["subdomains"][domain]["requests"] += 1
-        domain_map[base]["subdomains"][domain]["bytes"] += size
-        domain_map[base]["subdomains"][domain]["sized_requests"] += sized
+        sub = root["subdomains"].setdefault(
+            domain, {"requests": 0, "bytes": 0, "sized_requests": 0}
+        )
+        sub["requests"] += 1
+        sub["bytes"] += size
+        sub["sized_requests"] += sized
 
     return domain_map
 

@@ -14,7 +14,9 @@ fragment that re-runs live and a form that only submits on demand:
 from fastapi import APIRouter, HTTPException, Query
 
 from app.core.har_time import format_started_date_time
+from app.core.models import ParsedEntry
 from app.features.dissemination import (
+    Occurrence,
     aggregate_by_domain,
     build_initiator_chain,
     collect_occurrences,
@@ -34,18 +36,24 @@ from app.schemas import (
 )
 from app.shared.entry_summary import build_entry_summary
 from app.shared.search import dissemination_badge_labels, entry_matches
-from app.store import UploadNotFoundError, upload_store
+
+from ._common import get_record_or_404
 
 router = APIRouter(prefix="/api/har", tags=["dissemination"])
+
+
+def _occurrences_or_404(entries: list[ParsedEntry], key: str) -> list[Occurrence]:
+    """Every sighting of one key, or the 404 both key-scoped endpoints need."""
+    occurrences = collect_occurrences(entries).get(key)
+    if not occurrences:
+        raise HTTPException(status_code=404, detail="Unknown or unseen key")
+    return occurrences
 
 
 @router.get("/{upload_id}/dissemination/keys", response_model=list[str])
 async def get_dissemination_keys(upload_id: str) -> list[str]:
     """Key names sorted by sighting count, for the "Key to trace" picker."""
-    try:
-        record = upload_store.get(upload_id)
-    except UploadNotFoundError as exc:
-        raise HTTPException(status_code=404, detail="Unknown upload_id") from exc
+    record = get_record_or_404(upload_id)
 
     return key_options(collect_occurrences(record.entries))
 
@@ -56,15 +64,8 @@ async def get_dissemination_timeline(
 ) -> DisseminationTimelineResponse:
     """Sighting count + value-over-time timeline for one key. Always live --
     shown as soon as a key is picked, no scan of the rest of the HAR."""
-    try:
-        record = upload_store.get(upload_id)
-    except UploadNotFoundError as exc:
-        raise HTTPException(status_code=404, detail="Unknown upload_id") from exc
-
-    registry = collect_occurrences(record.entries)
-    occurrences = registry.get(key)
-    if not occurrences:
-        raise HTTPException(status_code=404, detail="Unknown or unseen key")
+    record = get_record_or_404(upload_id)
+    occurrences = _occurrences_or_404(record.entries, key)
 
     first_entry, first_origin, first_value = occurrences[0]
     when = (
@@ -104,19 +105,10 @@ async def post_dissemination_search(
     upload_id: str, body: DisseminationSearchRequest
 ) -> DisseminationSearchResponse:
     """Full dissemination scan for one key's values, optionally narrowed/highlighted."""
-    try:
-        record = upload_store.get(upload_id)
-    except UploadNotFoundError as exc:
-        raise HTTPException(status_code=404, detail="Unknown upload_id") from exc
+    record = get_record_or_404(upload_id)
+    occurrences = _occurrences_or_404(record.entries, body.key)
 
-    registry = collect_occurrences(record.entries)
-    occurrences = registry.get(body.key)
-    if not occurrences:
-        raise HTTPException(status_code=404, detail="Unknown or unseen key")
-
-    values = distinct_values(occurrences)
-    encodings = set(body.encodings)
-    matches = find_dissemination(record.entries, values, encodings)
+    matches = find_dissemination(record.entries, distinct_values(occurrences), set(body.encodings))
 
     # By-domain reflects the full (unnarrowed) scan; narrow/highlight only
     # affect the "Matching Entries" list below, matching the original.
@@ -133,13 +125,13 @@ async def post_dissemination_search(
     rows: list[DisseminationMatchRow] = []
     for entry, reasons in visible:
         summary = build_entry_summary(entry)
-        badges = dissemination_badge_labels(reasons)
+        summary.badges = dissemination_badge_labels(reasons)
         if highlight_active:
             highlight_result = entry_matches(entry, body.highlight, "any", set())
             summary.highlighted = highlight_result.matched
             if highlight_result.matched:
-                badges = dissemination_badge_labels(highlight_result.reasons)
-        summary.badges = badges
+                # The highlight query's own reasons are the more specific "why".
+                summary.badges = dissemination_badge_labels(highlight_result.reasons)
         rows.append(DisseminationMatchRow(entry=summary, reasons=reason_summary(reasons)))
 
     return DisseminationSearchResponse(by_domain=by_domain, matches=rows)

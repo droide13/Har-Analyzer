@@ -97,10 +97,7 @@ class TrackedKey:
     @property
     def all_domains(self) -> set[str]:
         """Union of every domain any value of this key was seen on."""
-        result: set[str] = set()
-        for v in self.values.values():
-            result |= v.domains
-        return result
+        return {domain for v in self.values.values() for domain in v.domains}
 
 
 def shannon_entropy(value: str) -> float:

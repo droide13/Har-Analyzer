@@ -3,9 +3,20 @@ import { useVirtualizer } from '@tanstack/react-virtual'
 import type { EntrySummary } from '../api/types'
 import { Badge } from './Badge'
 import { statusTone } from '../lib/statusColor'
-import { rowStateClassName } from '../lib/rowState'
 
 const ROW_HEIGHT_PX = 32
+
+/** Highlight (the row matched the highlight query) and selection (its detail
+ * panel is open) are independent, so a row can carry both at once. */
+function rowStateClassName(highlighted: boolean, selected: boolean): string {
+  return [
+    'cursor-pointer border-b border-border hover:bg-bg-subtle',
+    highlighted ? 'bg-highlight' : '',
+    selected ? 'outline outline-2 -outline-offset-2 outline-accent' : '',
+  ]
+    .filter(Boolean)
+    .join(' ')
+}
 
 interface Column {
   header: string

@@ -4,6 +4,7 @@ import { fetchIdentifiers } from '../../api/identifiers'
 import { useDebouncedValue } from '../../hooks/useDebouncedValue'
 import { Disclosure } from '../../components/Disclosure'
 import { FormField, FormRow, fieldInputClasses } from '../../components/FormField'
+import { HelpText } from '../../components/HelpText'
 import { ErrorState, LoadingState } from '../../components/QueryState'
 import { RangeField } from '../../components/RangeField'
 import { IdentifiersSection } from './IdentifiersSection'
@@ -62,11 +63,11 @@ export function IdentifiersView({ uploadId, onTraceKey }: IdentifiersViewProps) 
   return (
     <div>
       <h3 className="text-base font-semibold">Stable Identifier Detection</h3>
-      <p className="my-1 mb-3 text-[13px] text-text-muted">
+      <HelpText>
         Flags query params and cookies that appear often, take on few distinct values, and look sufficiently
         random/long to be a session, tracking, or auth token -- rather than an ordinary low-cardinality param like{' '}
         <code>sort</code> or <code>lang</code>.
-      </p>
+      </HelpText>
 
       <Disclosure summary="Common noise keys">
         <p className="text-[13px] text-text-muted">
@@ -129,10 +130,10 @@ export function IdentifiersView({ uploadId, onTraceKey }: IdentifiersViewProps) 
         <>
           <IdentifiersSection label="Query Parameters" identifiers={data.query_params} onTraceKey={onTraceKey} />
           <hr className="my-3 border-border" />
-          <p className="my-1 mb-3 text-[13px] text-text-muted">
+          <HelpText>
             First Seen As marks where a cookie turned up first: a Response Cookie was issued during this capture, a
             Request Cookie already existed.
-          </p>
+          </HelpText>
           <IdentifiersSection label="Cookies" identifiers={data.cookies} onTraceKey={onTraceKey} />
         </>
       )}

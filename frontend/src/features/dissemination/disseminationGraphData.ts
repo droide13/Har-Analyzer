@@ -118,10 +118,17 @@ export function buildGraphData(
     const existing = nodes.get(domain)
     if (existing) {
       if (role === 'destination' && existing.role !== 'origin') {
+        // A domain that was previously pinned as a chain hop (see the
+        // chainDomains positioning pass below) must be unpinned here too,
+        // or it stays stuck on the chain spine instead of fanning out like
+        // every other destination.
         existing.role = 'destination'
         existing.itemStyle = roleItemStyle('destination', colors)
         existing.symbolSize = Math.max(existing.symbolSize, size)
         existing.tooltip = tooltip
+        existing.x = x
+        existing.y = y
+        existing.fixed = fixed
       }
       return existing
     }
@@ -185,6 +192,11 @@ export function buildGraphData(
   // reads as overlapping/crossed-out text, whereas a line with real slope
   // passes beside each label instead of through it.
   chainDomains.forEach((domain, index) => {
+    // A chain hop can legitimately resolve to the origin's own domain (a
+    // same-origin script caused the request) -- skip it here, or this
+    // would overwrite the origin's pinned (0,0) anchor with a spine
+    // position instead.
+    if (domain === firstSeen.domain) return
     const node = nodes.get(domain)
     if (node) {
       const distanceFromOrigin = chainDomains.length - index

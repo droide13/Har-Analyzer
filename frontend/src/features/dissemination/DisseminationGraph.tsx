@@ -34,9 +34,16 @@ export function DisseminationGraph({ firstSeen, initiatorChain, byDomain, onSele
   // the whole force simulation and visibly reshuffle the layout on every
   // one of those interactions, including the very click this graph exists
   // to support.
+  //
+  // Keyed on a content signature, not the raw props: every narrow/highlight
+  // refetch hands back a brand-new byDomain array from the backend even
+  // when its contents are unchanged, which would otherwise bust this memo
+  // (by reference) on every one of those refetches too.
+  const dataSignature = JSON.stringify({ firstSeen, initiatorChain, byDomain })
   const { nodes, edges } = useMemo(
     () => buildGraphData(firstSeen, initiatorChain, byDomain, colors),
-    [firstSeen, initiatorChain, byDomain, colors],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [dataSignature, colors],
   )
 
   const option = useMemo(

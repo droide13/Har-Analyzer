@@ -40,23 +40,18 @@ def collect_occurrences(entries: list[ParsedEntry]) -> Registry:
     """Group every query-param/cookie sighting by key name."""
     registry: Registry = {}
     for entry in entries:
-        for qp in entry.query_params:
-            name = str(qp.get("name", "")).strip()
-            if name:
-                registry.setdefault(name, []).append(
-                    (entry, "Query Param", str(qp.get("value", "")))
-                )
-        # Walked per side rather than as one merged list, so a sighting
-        # records which side of the exchange the cookie came from.
-        for origin, cookies in (
+        # Cookies are walked per side rather than as one merged list, so a
+        # sighting records which side of the exchange it came from.
+        for origin, items in (
+            ("Query Param", entry.query_params),
             (COOKIE_LABELS["sent"], entry.req_cookies),
             (COOKIE_LABELS["received"], entry.res_cookies),
         ):
-            for cookie in cookies:
-                name = str(cookie.get("name", "")).strip()
+            for item in items:
+                name = str(item.get("name", "")).strip()
                 if name:
                     registry.setdefault(name, []).append(
-                        (entry, origin, str(cookie.get("value", "")))
+                        (entry, origin, str(item.get("value", "")))
                     )
 
     for occurrences in registry.values():
@@ -120,7 +115,13 @@ class InitiatorChainHop:
     initiator_type: str
 
 
-def build_initiator_chain(entries: list[ParsedEntry], start: ParsedEntry) -> list[InitiatorChainHop]:
+def _dangling_hop(url: str, initiator_type: str) -> InitiatorChainHop:
+    return InitiatorChainHop(found=False, entry=None, url=url, initiator_type=initiator_type)
+
+
+def build_initiator_chain(
+    entries: list[ParsedEntry], start: ParsedEntry
+) -> list[InitiatorChainHop]:
     """Walk backwards from `start` through each entry's initiator_url, one
     hop at a time, to reconstruct which script (transitively) caused it --
     e.g. the page loaded script A, which loaded script B, which made the
@@ -152,22 +153,32 @@ def build_initiator_chain(entries: list[ParsedEntry], start: ParsedEntry) -> lis
 
         candidates = by_url.get(initiator_url)
         if not candidates:
-            chain.append(
-                InitiatorChainHop(
-                    found=False, entry=None, url=initiator_url, initiator_type=current.initiator_type
-                )
-            )
+            chain.append(_dangling_hop(initiator_url, current.initiator_type))
             break
 
         current_key = chronological_key(current)
-        preceding = [e for e in candidates if chronological_key(e) <= current_key and e.index not in seen_indices]
-        next_entry = preceding[-1] if preceding else candidates[0]
-        if next_entry.index in seen_indices:
-            break  # Cycle guard -- shouldn't happen with real capture data.
+        preceding = [
+            e
+            for e in candidates
+            if chronological_key(e) <= current_key and e.index not in seen_indices
+        ]
+        if not preceding:
+            # Every captured occurrence of this initiator URL happened
+            # *after* `current` (or was already visited earlier in this
+            # walk) -- there's no candidate that could actually have caused
+            # it, so this is a dangling reference, not a cause to report.
+            chain.append(_dangling_hop(initiator_url, current.initiator_type))
+            break
 
+        next_entry = preceding[-1]
         seen_indices.add(next_entry.index)
         chain.append(
-            InitiatorChainHop(found=True, entry=next_entry, url=next_entry.url, initiator_type=next_entry.initiator_type)
+            InitiatorChainHop(
+                found=True,
+                entry=next_entry,
+                url=next_entry.url,
+                initiator_type=next_entry.initiator_type,
+            )
         )
         current = next_entry
 
@@ -216,9 +227,9 @@ def reason_summary(reasons: list[MatchReason]) -> list[dict[str, str]]:
 
     rows: list[dict[str, str]] = []
     for (field_name, value), forms in sorted(grouped.items()):
-        forms = dedupe_redundant_encodings(forms)
-        forms_sorted = sorted(forms, key=lambda f: (f != "plain", f))
-        rows.append({"Field": field_name, "Value": value, "Forms": ", ".join(forms_sorted)})
+        # Plain first, then the remaining encodings alphabetically.
+        ordered = sorted(dedupe_redundant_encodings(forms), key=lambda f: (f != "plain", f))
+        rows.append({"Field": field_name, "Value": value, "Forms": ", ".join(ordered)})
     return rows
 
 

@@ -67,7 +67,6 @@ export function QueryParamsView({ uploadId }: QueryParamsViewProps) {
       rawColumns={RAW_COLUMNS}
       records={data.records as unknown as QueryParamRecord[]}
       aggregated={data.aggregated as unknown as QueryParamAggregate[]}
-      rowKey={(row, i) => `${'Name' in row ? row.Name : i}-${i}`}
     />
   )
 }

@@ -1,7 +1,8 @@
 """Overview tab endpoints: summary metrics/domain map in one call, plus an
 opt-in DNS/WHOIS subdomain resolution endpoint."""
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
+from fastapi.concurrency import run_in_threadpool
 
 from app.features.overview import (
     build_domain_map,
@@ -16,7 +17,8 @@ from app.schemas import (
     ResolveSubdomainsRequest,
     SubdomainResolutionRow,
 )
-from app.store import UploadNotFoundError, upload_store
+
+from ._common import get_record_or_404
 
 router = APIRouter(prefix="/api/har", tags=["overview"])
 
@@ -24,10 +26,7 @@ router = APIRouter(prefix="/api/har", tags=["overview"])
 @router.get("/{upload_id}/overview", response_model=OverviewResponse)
 async def get_overview(upload_id: str) -> OverviewResponse:
     """Summary metrics, method/status distribution, and the domain map."""
-    try:
-        record = upload_store.get(upload_id)
-    except UploadNotFoundError as exc:
-        raise HTTPException(status_code=404, detail="Unknown upload_id") from exc
+    record = get_record_or_404(upload_id)
 
     entries = record.entries
     return OverviewResponse(
@@ -46,14 +45,13 @@ async def post_resolve_subdomains(
     upload_id: str, body: ResolveSubdomainsRequest
 ) -> list[SubdomainResolutionRow]:
     """Follows each subdomain's CNAME chain to an IP, then a WHOIS/RDAP owner
-    lookup -- slow and network-bound, so it's only ever called on an explicit
-    "Resolve subdomains" click, never automatically."""
-    try:
-        upload_store.get(upload_id)  # validate the id exists; entries aren't needed here
-    except UploadNotFoundError as exc:
-        raise HTTPException(status_code=404, detail="Unknown upload_id") from exc
+    lookup -- slow, network-bound, and synchronous, so it's run in a
+    threadpool (otherwise it would block the whole event loop, including
+    every other concurrent request, for the entire lookup) and only ever
+    called on an explicit "Resolve subdomains" click, never automatically."""
+    get_record_or_404(upload_id)  # validate the id exists; entries aren't needed here
 
-    rows = resolve_subdomains(sorted(set(body.subdomains)))
+    rows = await run_in_threadpool(resolve_subdomains, sorted(set(body.subdomains)))
     return [
         SubdomainResolutionRow(
             subdomain=r.subdomain, chain=r.chain, ips=r.ips, organization=r.organization

@@ -2,10 +2,11 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { searchDissemination } from '../../api/dissemination'
 import { useDebouncedValue } from '../../hooks/useDebouncedValue'
-import type { DisseminationFirstSeen, InitiatorChainLink } from '../../api/types'
+import type { DisseminationFirstSeen, DisseminationMatchRow, InitiatorChainLink } from '../../api/types'
 import { EntryListWithDetail } from '../../components/EntryListWithDetail'
 import { DataTable, type DataTableColumn } from '../../components/DataTable'
 import { FormField, FormRow, fieldInputClasses } from '../../components/FormField'
+import { HelpText } from '../../components/HelpText'
 import { ErrorState, LoadingState } from '../../components/QueryState'
 import { Tabs, type TabDefinition } from '../../components/Tabs'
 import { DisseminationGraph } from './DisseminationGraph'
@@ -29,6 +30,14 @@ const DOMAIN_COLUMNS: DataTableColumn<DomainRow>[] = [
   { header: 'Cookie origin', accessor: (r) => r['Cookie origin'] },
   { header: 'Fields', accessor: (r) => r.Fields },
   { header: 'Distinct Values Seen', accessor: (r) => r['Distinct Values Seen'] },
+]
+
+/** Why one entry matched -- shown as an extra tab on that entry's detail
+ * panel. */
+const REASON_COLUMNS: DataTableColumn<DisseminationMatchRow['reasons'][number]>[] = [
+  { header: 'Field', accessor: (r) => r.Field },
+  { header: 'Value', accessor: (r) => r.Value },
+  { header: 'Forms', accessor: (r) => r.Forms },
 ]
 
 /** Results for an already-submitted search: a switchable By Domain /
@@ -74,6 +83,7 @@ export function DisseminationResults({ uploadId, submittedSearch, initiatorChain
   // put in chronological order -- it's as far back as the trail goes.
   const danglingStart = initiatorChain[0]?.found === false ? initiatorChain[0] : null
   const tracedEntries = initiatorChain.flatMap((link) => (link.found && link.entry ? [link.entry] : []))
+  const byDomain = data.by_domain as unknown as DomainRow[]
 
   const topViewTabs: TabDefinition[] = [
     {
@@ -81,11 +91,11 @@ export function DisseminationResults({ uploadId, submittedSearch, initiatorChain
       label: 'By Domain',
       render: () => (
         <>
-          <p className="my-1 mb-3 text-[13px] text-text-muted">
+          <HelpText>
             Aggregated view: which hosts received/echoed this value, in how many entries, through which fields.
             Cookie origin is the earliest cookie hit on that host.
-          </p>
-          <DataTable columns={DOMAIN_COLUMNS} rows={data.by_domain as unknown as DomainRow[]} rowKey={(r) => r.Domain} />
+          </HelpText>
+          <DataTable columns={DOMAIN_COLUMNS} rows={byDomain} rowKey={(r) => r.Domain} />
         </>
       ),
     },
@@ -94,23 +104,23 @@ export function DisseminationResults({ uploadId, submittedSearch, initiatorChain
       label: 'Initiator Traced Entries',
       render: () => (
         <>
-          <p className="my-1 mb-3 text-[13px] text-text-muted">
+          <HelpText>
             The chain of requests that led up to this value's first sighting, following each entry's initiator back
             one hop at a time -- e.g. the page loaded a script, which loaded another, which made the request that
             first carried this value.
-          </p>
+          </HelpText>
           {tracedEntries.length === 0 && !danglingStart ? (
-            <p className="my-1 mb-3 text-[13px] text-text-muted">
+            <HelpText>
               No initiator recorded for the first sighting -- it was likely a top-level page load, not something
               triggered by another script.
-            </p>
+            </HelpText>
           ) : (
             <>
               {danglingStart && (
-                <p className="my-1 mb-3 text-[13px] text-text-muted">
+                <HelpText>
                   ⋯ trail starts here -- <code className="font-mono text-xs">{danglingStart.url}</code> (
                   {danglingStart.initiator_type}) wasn't captured in this HAR, so the chain can't go back further.
-                </p>
+                </HelpText>
               )}
               {tracedEntries.length > 0 && (
                 <EntryListWithDetail
@@ -132,14 +142,14 @@ export function DisseminationResults({ uploadId, submittedSearch, initiatorChain
       label: 'Dissemination Graph',
       render: () => (
         <>
-          <p className="my-1 mb-3 text-[13px] text-text-muted">
+          <HelpText>
             The whole story in one view: how this value's first sighting was caused, then where it spread
             afterward. Click a domain to narrow the Matching HAR Entries list below to it.
-          </p>
+          </HelpText>
           <DisseminationGraph
             firstSeen={firstSeen}
             initiatorChain={initiatorChain}
-            byDomain={data.by_domain as unknown as DomainRow[]}
+            byDomain={byDomain}
             onSelectDomain={(domain) => setNarrowQuery(`domain:${domain}`)}
           />
         </>
@@ -152,7 +162,7 @@ export function DisseminationResults({ uploadId, submittedSearch, initiatorChain
       <Tabs tabs={topViewTabs} variant="panel" activeTab={topView} onActiveTabChange={setTopView} />
 
       <h5 className="mt-3 text-sm font-semibold">Matching HAR Entries</h5>
-      <p className="my-1 mb-3 text-[13px] text-text-muted">Ordered by HAR timestamp, oldest first.</p>
+      <HelpText>Ordered by HAR timestamp, oldest first.</HelpText>
       <FormRow>
         <FormField label="Narrow these matches (discards)">
           <input
@@ -190,11 +200,7 @@ export function DisseminationResults({ uploadId, submittedSearch, initiatorChain
                   render: () => (
                     <DataTable
                       variant="compact"
-                      columns={[
-                        { header: 'Field', accessor: (r: (typeof selectedMatch.reasons)[number]) => r.Field },
-                        { header: 'Value', accessor: (r: (typeof selectedMatch.reasons)[number]) => r.Value },
-                        { header: 'Forms', accessor: (r: (typeof selectedMatch.reasons)[number]) => r.Forms },
-                      ]}
+                      columns={REASON_COLUMNS}
                       rows={selectedMatch.reasons}
                       rowKey={(_, i) => i}
                     />

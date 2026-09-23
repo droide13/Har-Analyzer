@@ -78,7 +78,6 @@ export function CookiesView({ uploadId }: CookiesViewProps) {
       rawColumns={RAW_COLUMNS}
       records={data.records as unknown as CookieRecord[]}
       aggregated={data.aggregated as unknown as CookieAggregate[]}
-      rowKey={(row, i) => `${'Name' in row ? row.Name : i}-${i}`}
     />
   )
 }
