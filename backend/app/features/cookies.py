@@ -5,7 +5,7 @@ aggregate. Ported from the Streamlit app's tabs/cookies.py.
 from typing import Any
 
 from app.core.models import ParsedEntry
-from app.shared.aggregation import describe_value, group_by_name
+from app.shared.aggregation import describe_value, group_by_name, join_distinct
 from app.shared.search import COOKIE_LABELS
 
 
@@ -48,27 +48,20 @@ def collect_cookie_records(entries: list[ParsedEntry]) -> list[dict[str, Any]]:
 
 def aggregate_cookie_records(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """One row per cookie name, summarizing Secure/HttpOnly/Value across occurrences."""
-    aggregated: list[dict[str, Any]] = []
-    for name, items in group_by_name(records).items():
-        secure_set: set[bool] = {bool(i["Secure"]) for i in items}
-        httponly_set: set[bool] = {bool(i["HttpOnly"]) for i in items}
-        value_set: set[str] = {str(i["Value"]) for i in items}
-        host_set: set[str] = {str(i["Host"]) for i in items}
-        scope_set: set[str] = {str(i["Scope"]) for i in items}
-
-        aggregated.append(
-            {
-                "Name": name,
-                # _collect returns records in time order and groups preserve it,
-                # so items[0] is this cookie's first sighting.
-                "First Seen As": items[0]["Scope"],
-                "Scope": ", ".join(sorted(scope_set)),
-                "Secure": _describe_flag(secure_set),
-                "HttpOnly": _describe_flag(httponly_set),
-                "Value": describe_value(value_set),
-                "Occurrences": len(items),
-                "Hosts": ", ".join(sorted(host_set)),
-            }
-        )
+    aggregated: list[dict[str, Any]] = [
+        {
+            "Name": name,
+            # collect_cookie_records returns records in time order and groups
+            # preserve it, so items[0] is this cookie's first sighting.
+            "First Seen As": items[0]["Scope"],
+            "Scope": join_distinct(items, "Scope"),
+            "Secure": _describe_flag({bool(i["Secure"]) for i in items}),
+            "HttpOnly": _describe_flag({bool(i["HttpOnly"]) for i in items}),
+            "Value": describe_value({str(i["Value"]) for i in items}),
+            "Occurrences": len(items),
+            "Hosts": join_distinct(items, "Host"),
+        }
+        for name, items in group_by_name(records).items()
+    ]
 
     return sorted(aggregated, key=lambda r: r["Occurrences"], reverse=True)

@@ -51,13 +51,6 @@ export function SearchControls({
     )
   }
 
-  function toggleEncoding(name: string) {
-    const next = new Set(selectedEncodings)
-    if (next.has(name)) next.delete(name)
-    else next.add(name)
-    onEncodingsChange(next)
-  }
-
   return (
     <div className="mb-3 flex flex-col gap-3 rounded-md border border-border bg-bg-subtle p-3">
       <Disclosure summary="Learn How to Search (Negations, Field Filters, etc.)">
@@ -126,7 +119,7 @@ export function SearchControls({
         summary="Encodings & Hashes for term matching (all applied by default)"
         options={encodingOptions}
         selected={selectedEncodings}
-        onToggle={toggleEncoding}
+        onChange={onEncodingsChange}
       />
     </div>
   )

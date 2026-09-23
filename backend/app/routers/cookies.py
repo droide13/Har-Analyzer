@@ -1,10 +1,11 @@
 """Cookies tab endpoint."""
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 
 from app.features.cookies import aggregate_cookie_records, collect_cookie_records
 from app.schemas import RecordsView
-from app.store import UploadNotFoundError, upload_store
+
+from ._common import get_record_or_404
 
 router = APIRouter(prefix="/api/har", tags=["cookies"])
 
@@ -12,10 +13,7 @@ router = APIRouter(prefix="/api/har", tags=["cookies"])
 @router.get("/{upload_id}/cookies", response_model=RecordsView)
 async def get_cookies(upload_id: str) -> RecordsView:
     """Per-occurrence cookie records plus a name-grouped aggregate."""
-    try:
-        record = upload_store.get(upload_id)
-    except UploadNotFoundError as exc:
-        raise HTTPException(status_code=404, detail="Unknown upload_id") from exc
+    record = get_record_or_404(upload_id)
 
     records = collect_cookie_records(record.entries)
     metrics = {

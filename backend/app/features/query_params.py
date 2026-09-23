@@ -6,41 +6,34 @@ tabs/query_params.py.
 from typing import Any
 
 from app.core.models import ParsedEntry
-from app.shared.aggregation import describe_value, group_by_name
+from app.shared.aggregation import describe_value, group_by_name, join_distinct
 
 
 def collect_query_param_records(entries: list[ParsedEntry]) -> list[dict[str, Any]]:
     """One record per query-string param occurrence across all requests."""
-    records: list[dict[str, Any]] = []
-    for e in entries:
-        for qp in e.query_params:
-            records.append(
-                {
-                    "Name": qp.get("name", "Unnamed"),
-                    "Value": qp.get("value", ""),
-                    "Method": e.method,
-                    "Host": e.domain,
-                }
-            )
-    return records
+    return [
+        {
+            "Name": qp.get("name", "Unnamed"),
+            "Value": qp.get("value", ""),
+            "Method": e.method,
+            "Host": e.domain,
+        }
+        for e in entries
+        for qp in e.query_params
+    ]
 
 
 def aggregate_query_param_records(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """One row per param name, summarizing Method/Value across occurrences."""
-    aggregated: list[dict[str, Any]] = []
-    for name, items in group_by_name(records).items():
-        method_set: set[str] = {str(i["Method"]) for i in items}
-        value_set: set[str] = {str(i["Value"]) for i in items}
-        host_set: set[str] = {str(i["Host"]) for i in items}
-
-        aggregated.append(
-            {
-                "Name": name,
-                "Method": ", ".join(sorted(method_set)),
-                "Value": describe_value(value_set),
-                "Occurrences": len(items),
-                "Hosts": ", ".join(sorted(host_set)),
-            }
-        )
+    aggregated: list[dict[str, Any]] = [
+        {
+            "Name": name,
+            "Method": join_distinct(items, "Method"),
+            "Value": describe_value({str(i["Value"]) for i in items}),
+            "Occurrences": len(items),
+            "Hosts": join_distinct(items, "Host"),
+        }
+        for name, items in group_by_name(records).items()
+    ]
 
     return sorted(aggregated, key=lambda r: r["Occurrences"], reverse=True)

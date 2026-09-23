@@ -71,6 +71,41 @@ VISIT_LABELS: dict[str, str] = {
 }
 
 
+def _labels_by_code(codes: dict[str, str], labels: dict[str, str]) -> dict[str, str]:
+    """Invert a key -> code table into the code -> label table filename parsing needs."""
+    return {code: labels[key] for key, code in codes.items()}
+
+
+# Built once at import: the code -> label tables and the filename pattern they
+# feed are pure functions of the constants above, so rebuilding and recompiling
+# them on every filename parse was wasted work.
+_PLATFORM_BY_CODE: dict[str, str] = _labels_by_code(PLATFORM_CODES, PLATFORM_LABELS)
+_INTERACT_BY_CODE: dict[str, str] = _labels_by_code(INTERACT_CODES, INTERACT_LABELS)
+_COOKIES_BY_CODE: dict[str, str] = _labels_by_code(COOKIES_CODES, COOKIES_LABELS)
+_VISIT_BY_CODE: dict[str, str] = _labels_by_code(VISIT_CODES, VISIT_LABELS)
+
+_HAR_NAME_RE = re.compile(
+    rf"^(?P<domain>.+)-platform-(?P<platform>{'|'.join(_PLATFORM_BY_CODE)})"
+    rf"-interact-(?P<interact>{'|'.join(_INTERACT_BY_CODE)})"
+    rf"-cookies-(?P<cookies>{'|'.join(_COOKIES_BY_CODE)})"
+    rf"-visit-(?P<visit>{'|'.join(_VISIT_BY_CODE)})"
+    r"-extra-(?P<extra>[A-Za-z0-9]{3})"
+    r"-(?P<yy>\d{2})-(?P<mm>\d{2})-(?P<dd>\d{2})-(?P<hh>\d{2})\.har$"
+)
+
+
+def normalize_extra_code(extra: str) -> str:
+    """Normalize the optional "extra context" field into the fixed 3-char
+    code the filename format uses and :func:`get_attrs_from_har_name`'s
+    parser requires exactly -- padded, not just truncated, so a 1-2
+    character value still round-trips instead of producing a filename the
+    parser can't read back (its pattern requires exactly 3 alnum chars)."""
+    extra_clean = extra.strip()
+    if not extra_clean:
+        return "000"
+    return extra_clean.upper()[:3].ljust(3, "0")
+
+
 @dataclass(frozen=True, slots=True)
 class DerivedHarMetadata:
     """Domain/date facts read directly from a HAR's own traffic."""
@@ -79,6 +114,16 @@ class DerivedHarMetadata:
     other_domains: list[str]
     captured_at: datetime | None
     entry_count: int
+
+
+def _code_for(field_name: str, value: str, codes: dict[str, str]) -> str:
+    """The filename code for one naming field's value, or a ValueError naming
+    every option that would have been accepted."""
+    key = value.strip().lower()
+    if key not in codes:
+        valid = ", ".join(sorted(codes))
+        raise ValueError(f"Invalid {field_name} '{value}'. Valid options: {valid}")
+    return codes[key]
 
 
 def get_har_filename(  # pylint: disable=too-many-arguments,too-many-positional-arguments
@@ -101,33 +146,20 @@ def get_har_filename(  # pylint: disable=too-many-arguments,too-many-positional-
     if not domain_clean:
         raise ValueError("Domain must not be empty.")
 
-    platform_key = platform.strip().lower()
-    interact_key = interact.strip().lower()
-    cookies_key = cookies.strip().lower()
-    visit_key = visit.strip().lower() if visit.strip() else DEFAULT_VISIT
+    platform_code = _code_for("platform", platform, PLATFORM_CODES)
+    interact_code = _code_for("interact", interact, INTERACT_CODES)
+    cookies_code = _code_for("cookies", cookies, COOKIES_CODES)
+    # An omitted/blank visit is the documented default, not an invalid value.
+    visit_code = _code_for("visit", visit.strip() or DEFAULT_VISIT, VISIT_CODES)
 
-    if platform_key not in PLATFORM_CODES:
-        valid = ", ".join(sorted(PLATFORM_CODES))
-        raise ValueError(f"Invalid platform '{platform}'. Valid options: {valid}")
-    if interact_key not in INTERACT_CODES:
-        valid = ", ".join(sorted(INTERACT_CODES))
-        raise ValueError(f"Invalid interact '{interact}'. Valid options: {valid}")
-    if cookies_key not in COOKIES_CODES:
-        valid = ", ".join(sorted(COOKIES_CODES))
-        raise ValueError(f"Invalid cookies '{cookies}'. Valid options: {valid}")
-    if visit_key not in VISIT_CODES:
-        valid = ", ".join(sorted(VISIT_CODES))
-        raise ValueError(f"Invalid visit '{visit}'. Valid options: {valid}")
-
-    extra_code = extra.strip().upper()[:3] if extra.strip() else "000"
     timestamp = (now or datetime.now()).strftime("%y-%m-%d-%H")
 
     return (
-        f"{domain_clean}-platform-{PLATFORM_CODES[platform_key]}"
-        f"-interact-{INTERACT_CODES[interact_key]}"
-        f"-cookies-{COOKIES_CODES[cookies_key]}"
-        f"-visit-{VISIT_CODES[visit_key]}"
-        f"-extra-{extra_code}"
+        f"{domain_clean}-platform-{platform_code}"
+        f"-interact-{interact_code}"
+        f"-cookies-{cookies_code}"
+        f"-visit-{visit_code}"
+        f"-extra-{normalize_extra_code(extra)}"
         f"-{timestamp}.har"
     )
 
@@ -137,37 +169,19 @@ def get_attrs_from_har_name(filename: str) -> dict[str, str] | None:
 
     Returns None if the filename doesn't match the structural pattern.
     """
-    platform_map = {code: PLATFORM_LABELS[key] for key, code in PLATFORM_CODES.items()}
-    interact_map = {code: INTERACT_LABELS[key] for key, code in INTERACT_CODES.items()}
-    cookies_map = {code: COOKIES_LABELS[key] for key, code in COOKIES_CODES.items()}
-    visit_map = {code: VISIT_LABELS[key] for key, code in VISIT_CODES.items()}
-
-    platform_pattern = "|".join(platform_map.keys())
-    interact_pattern = "|".join(interact_map.keys())
-    cookies_pattern = "|".join(cookies_map.keys())
-    visit_pattern = "|".join(visit_map.keys())
-
-    pattern = (
-        rf"^(?P<domain>.+)-platform-(?P<platform>{platform_pattern})"
-        rf"-interact-(?P<interact>{interact_pattern})"
-        rf"-cookies-(?P<cookies>{cookies_pattern})"
-        rf"-visit-(?P<visit>{visit_pattern})"
-        r"-extra-(?P<extra>[A-Za-z0-9]{3})"
-        r"-(?P<yy>\d{2})-(?P<mm>\d{2})-(?P<dd>\d{2})-(?P<hh>\d{2})\.har$"
-    )
-
-    match = re.match(pattern, filename)
+    match = _HAR_NAME_RE.match(filename)
     if not match:
         return None
 
+    # The pattern only admits known codes, so every lookup below is a hit.
     data = match.groupdict()
 
     return {
         "domain": data["domain"],
-        "platform": platform_map.get(data["platform"], data["platform"]),
-        "interaction": interact_map.get(data["interact"], data["interact"]),
-        "cookies": cookies_map.get(data["cookies"], data["cookies"]),
-        "visit": visit_map.get(data["visit"], data["visit"]),
+        "platform": _PLATFORM_BY_CODE[data["platform"]],
+        "interaction": _INTERACT_BY_CODE[data["interact"]],
+        "cookies": _COOKIES_BY_CODE[data["cookies"]],
+        "visit": _VISIT_BY_CODE[data["visit"]],
         "extra": data["extra"].upper(),
         "timestamp": f"20{data['yy']}-{data['mm']}-{data['dd']} @ {data['hh']}:00",
     }

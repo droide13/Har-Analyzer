@@ -5,6 +5,7 @@ import type { GenerateMetadataRequest } from '../../api/types'
 import { Button } from '../../components/Button'
 import { DataTable } from '../../components/DataTable'
 import { FormField, FormRow, fieldInputClasses } from '../../components/FormField'
+import { HelpText } from '../../components/HelpText'
 import { MetricsRow } from '../../components/MetricsRow'
 import { ErrorState, LoadingState } from '../../components/QueryState'
 
@@ -16,6 +17,30 @@ const CUSTOM_DOMAIN_LABEL = 'Custom domain...'
 
 function firstKey(labels: Record<string, string>): string {
   return Object.keys(labels)[0] ?? ''
+}
+
+interface NamingFieldProps {
+  label: string
+  /** internal-code -> display-label map from /api/naming/options. */
+  options: Record<string, string>
+  value: string
+  onChange: (value: string) => void
+}
+
+/** One of the classification dropdowns -- four of them differ only in which
+ * naming-option map they list, so the select markup lives here once. */
+function NamingField({ label, options, value, onChange }: NamingFieldProps) {
+  return (
+    <FormField label={label}>
+      <select className={fieldInputClasses} value={value} onChange={(e) => onChange(e.target.value)}>
+        {Object.entries(options).map(([key, optionLabel]) => (
+          <option key={key} value={key}>
+            {optionLabel}
+          </option>
+        ))}
+      </select>
+    </FormField>
+  )
 }
 
 /** Direct port of tabs/metadata/metadata_ui.py: review detected domain/
@@ -97,10 +122,10 @@ export function MetadataView({ uploadId }: MetadataViewProps) {
   return (
     <div>
       <h3 className="text-base font-semibold">Standardize &amp; Tag Current HAR File</h3>
-      <p className="my-1 mb-3 text-[13px] text-text-muted">
+      <HelpText>
         Domain and capture time are derived from the traffic itself, allowing you to confirm or override
         classification before generating an updated copy with embedded log._analysis metadata.
-      </p>
+      </HelpText>
 
       <h4 className="text-sm font-semibold">Detected from file contents</h4>
       <MetricsRow
@@ -153,45 +178,13 @@ export function MetadataView({ uploadId }: MetadataViewProps) {
                 <input type="text" className={fieldInputClasses} value={customDomain} onChange={(e) => setCustomDomain(e.target.value)} />
               </FormField>
             )}
-            <FormField label="Platform">
-              <select className={fieldInputClasses} value={platform} onChange={(e) => setPlatform(e.target.value)}>
-                {Object.entries(naming.platform).map(([key, label]) => (
-                  <option key={key} value={key}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </FormField>
-            <FormField label="Interaction type">
-              <select className={fieldInputClasses} value={interact} onChange={(e) => setInteract(e.target.value)}>
-                {Object.entries(naming.interact).map(([key, label]) => (
-                  <option key={key} value={key}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </FormField>
-            <FormField label="Cookie handling">
-              <select className={fieldInputClasses} value={cookies} onChange={(e) => setCookies(e.target.value)}>
-                {Object.entries(naming.cookies).map(([key, label]) => (
-                  <option key={key} value={key}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </FormField>
+            <NamingField label="Platform" options={naming.platform} value={platform} onChange={setPlatform} />
+            <NamingField label="Interaction type" options={naming.interact} value={interact} onChange={setInteract} />
+            <NamingField label="Cookie handling" options={naming.cookies} value={cookies} onChange={setCookies} />
           </FormRow>
 
           <FormRow>
-            <FormField label="Visit type">
-              <select className={fieldInputClasses} value={visit} onChange={(e) => setVisit(e.target.value)}>
-                {Object.entries(naming.visit).map(([key, label]) => (
-                  <option key={key} value={key}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </FormField>
+            <NamingField label="Visit type" options={naming.visit} value={visit} onChange={setVisit} />
             <FormField label="Extra context (optional)">
               <input type="text" className={fieldInputClasses} value={extra} onChange={(e) => setExtra(e.target.value)} maxLength={3} />
             </FormField>
@@ -208,7 +201,7 @@ export function MetadataView({ uploadId }: MetadataViewProps) {
           </FormRow>
 
           <h4 className="text-sm font-semibold">Experiment notes</h4>
-          <p className="my-1 mb-3 text-[13px] text-text-muted">Written into log._analysis inside the file itself, not just the filename.</p>
+          <HelpText>Written into log._analysis inside the file itself, not just the filename.</HelpText>
           <FormRow>
             <FormField label="Description">
               <textarea className={fieldInputClasses} value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
@@ -248,14 +241,14 @@ export function MetadataView({ uploadId }: MetadataViewProps) {
                   Download Standardized .har
                 </a>
               </p>
-              <p className="my-1 mb-3 text-[13px] text-text-muted">
+              <HelpText>
                 Note on browser save location: web browsers determine whether files download directly or open a
                 save dialog. To be prompted for a folder path on every download, enable "Ask where to save each
                 file before downloading" in your browser's settings.
-              </p>
+              </HelpText>
             </>
           ) : (
-            <p className="my-1 mb-3 text-[13px] text-text-muted">Fill in the fields above and click "Generate standardized file".</p>
+            <HelpText>Fill in the fields above and click "Generate standardized file".</HelpText>
           )}
         </>
       )}

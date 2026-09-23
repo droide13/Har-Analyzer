@@ -17,7 +17,7 @@ from typing import Any, cast
 from urllib.parse import urlparse
 
 from app.core.models import HarAnalysis, ParsedEntry
-from app.shared.naming import get_har_filename
+from app.shared.naming import get_har_filename, normalize_extra_code
 
 _CUSTOM_DOMAIN_LABEL = "Custom domain..."
 
@@ -56,14 +56,13 @@ def build_standardized_result(inputs: StandardizeInputs) -> tuple[str, HarAnalys
         now=inputs.captured_at,
     )
 
-    extra_clean = inputs.extra.strip()
     analysis = HarAnalysis(
         domain=inputs.domain.strip(),
         platform=inputs.platform.strip().lower(),
         interact=inputs.interact.strip().lower(),
         cookies=inputs.cookies.strip().lower(),
         visit=inputs.visit.strip().lower(),
-        extra=extra_clean.upper()[:3] if extra_clean else "000",
+        extra=normalize_extra_code(inputs.extra),
         captured_at=inputs.captured_at.isoformat(),
         standardized_filename=filename,
         description=inputs.description.strip(),

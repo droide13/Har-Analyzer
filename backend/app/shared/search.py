@@ -346,32 +346,8 @@ def dissemination_badge_labels(reasons: list[MatchReason]) -> list[str]:
     """One label per distinct field a set of reasons hit, order-preserving --
     the compact chip form used wherever a row needs to show *why* it matched
     (Network Log's filter/highlight, Dissemination's value scan) without the
-    per-encoding detail `summarize_reasons` spells out."""
+    per-encoding detail ``reason_summary`` spells out."""
     seen_labels: dict[str, None] = {}
     for reason in reasons:
         seen_labels.setdefault(reason_label(reason), None)
     return list(seen_labels)
-
-
-def summarize_reasons(reasons: list[MatchReason]) -> str:
-    """One entry per field, e.g. 'Response Headers (plain, MD5)' - collapses
-    redundant links of the URL-encoding chain and lists other encodings once.
-
-    Ported from the Streamlit app's ``tabs/networklog.py::_reason_summary``,
-    made public here since both the Network Log and Dissemination endpoints
-    need it.
-    """
-    by_attr: dict[str, list[str]] = {}
-    for reason in reasons:
-        label = reason_label(reason)
-        form = reason.encoding or "plain"
-        by_attr.setdefault(label, [])
-        if form not in by_attr[label]:
-            by_attr[label].append(form)
-
-    parts: list[str] = []
-    for label in sorted(by_attr):
-        forms = dedupe_redundant_encodings(by_attr[label])
-        forms_sorted = sorted(forms, key=lambda f: (f != "plain", f))
-        parts.append(f"{label} ({', '.join(forms_sorted)})")
-    return ", ".join(parts)

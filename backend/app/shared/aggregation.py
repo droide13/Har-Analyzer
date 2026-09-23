@@ -17,6 +17,11 @@ def group_by_name(records: list[dict[str, Any]]) -> dict[str, list[dict[str, Any
     return groups
 
 
+def join_distinct(records: list[dict[str, Any]], field: str) -> str:
+    """Every distinct value of ``field`` across ``records``, sorted and comma-joined."""
+    return ", ".join(sorted({str(record[field]) for record in records}))
+
+
 def describe_value(values: set[str]) -> str:
     """A single shared value, or how many distinct ones were seen."""
     if len(values) == 1:

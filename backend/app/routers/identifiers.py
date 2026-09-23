@@ -5,7 +5,7 @@ noise-key exclusion."""
 
 from typing import Callable, Literal
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Query
 
 from app.core.models import ParsedEntry
 from app.features.identifiers import (
@@ -18,7 +18,8 @@ from app.features.identifiers import (
     sort_identifiers,
 )
 from app.schemas import IdentifiersResponse, IdentifierSummaryRow, IdentifierValueRow
-from app.store import UploadNotFoundError, upload_store
+
+from ._common import get_record_or_404
 
 router = APIRouter(prefix="/api/har", tags=["identifiers"])
 
@@ -72,10 +73,7 @@ async def get_identifiers(  # pylint: disable=too-many-arguments,too-many-positi
     sort_by: SortBy = Query(default="Appearances"),
 ) -> IdentifiersResponse:
     """Query-param and cookie keys matching the 4-signal identifier filters."""
-    try:
-        record = upload_store.get(upload_id)
-    except UploadNotFoundError as exc:
-        raise HTTPException(status_code=404, detail="Unknown upload_id") from exc
+    record = get_record_or_404(upload_id)
 
     filters = {
         "min_appearances": min_appearances,

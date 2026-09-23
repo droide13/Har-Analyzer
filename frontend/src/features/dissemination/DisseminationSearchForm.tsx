@@ -27,13 +27,6 @@ export function DisseminationSearchForm({ encodingOptions, onSearch, hasSearched
     setDraftEncodings(new Set(encodingOptions))
   }, [encodingOptions])
 
-  function toggle(name: string) {
-    const next = new Set(draftEncodings)
-    if (next.has(name)) next.delete(name)
-    else next.add(name)
-    setDraftEncodings(next)
-  }
-
   return (
     <form
       className="mb-3 flex flex-col gap-2"
@@ -50,7 +43,7 @@ export function DisseminationSearchForm({ encodingOptions, onSearch, hasSearched
         summary="Encodings & Hashes for term matching (all applied by default)"
         options={encodingOptions}
         selected={draftEncodings}
-        onToggle={toggle}
+        onChange={setDraftEncodings}
       />
       <div className="flex items-center gap-2">
         <Button type="submit" variant="primary" className="w-fit">

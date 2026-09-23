@@ -4,6 +4,7 @@ import { fetchDisseminationKeys, fetchDisseminationTimeline } from '../../api/di
 import { fetchEncodingOptions } from '../../api/har'
 import { DataTable, type DataTableColumn } from '../../components/DataTable'
 import { Disclosure } from '../../components/Disclosure'
+import { HelpText } from '../../components/HelpText'
 import { MetricsRow } from '../../components/MetricsRow'
 import { Select } from '../../components/Select'
 import { DisseminationSearchForm } from './DisseminationSearchForm'
@@ -82,7 +83,7 @@ export function DisseminationView({ uploadId, initialTarget, onInitialTargetCons
     onInitialTargetConsumedRef.current?.()
   }, [initialTarget, encodingOptions])
 
-  const timelineQuery = useQuery({
+  const { data: timeline } = useQuery({
     queryKey: ['dissemination-timeline', uploadId, selectedKey],
     queryFn: () => fetchDisseminationTimeline(uploadId, selectedKey as string),
     enabled: selectedKey !== null,
@@ -95,10 +96,10 @@ export function DisseminationView({ uploadId, initialTarget, onInitialTargetCons
   return (
     <div>
       <h3 className="text-base font-semibold">Identifier Dissemination History</h3>
-      <p className="my-1 mb-3 text-[13px] text-text-muted">
+      <HelpText>
         Pick a query-param or cookie key to see how its value evolved over time, then search the whole HAR for every
         place that value shows up -- headers, URLs, bodies, other cookies -- beyond its original key.
-      </p>
+      </HelpText>
 
       {keys && (
         <label className="mb-2 flex max-w-xs flex-col gap-1 text-[13px] text-text-muted">
@@ -114,33 +115,33 @@ export function DisseminationView({ uploadId, initialTarget, onInitialTargetCons
       )}
 
       {selectedKey === null && (
-        <p className="my-1 mb-3 text-[13px] text-text-muted">Pick a key above to load its dissemination history.</p>
+        <HelpText>Pick a key above to load its dissemination history.</HelpText>
       )}
 
-      {timelineQuery.data && (
+      {timeline && (
         <>
           <MetricsRow
             metrics={[
-              { label: 'Sightings', value: timelineQuery.data.sightings },
-              { label: 'Distinct Values', value: timelineQuery.data.distinct_values },
-              { label: 'Source', value: timelineQuery.data.origins.join(' & ') },
+              { label: 'Sightings', value: timeline.sightings },
+              { label: 'Distinct Values', value: timeline.distinct_values },
+              { label: 'Source', value: timeline.origins.join(' & ') },
             ]}
           />
 
           <p className="my-2 rounded-md bg-bg-subtle px-3 py-2 text-[13px]">
-            First seen as a <strong>{timelineQuery.data.first_seen.origin}</strong> at{' '}
-            {timelineQuery.data.first_seen.when} ({timelineQuery.data.first_seen.method}{' '}
-            {timelineQuery.data.first_seen.domain}) with value <code>{timelineQuery.data.first_seen.value}</code>.
+            First seen as a <strong>{timeline.first_seen.origin}</strong> at{' '}
+            {timeline.first_seen.when} ({timeline.first_seen.method}{' '}
+            {timeline.first_seen.domain}) with value <code>{timeline.first_seen.value}</code>.
           </p>
 
           <Disclosure summary={<span className="text-sm font-semibold text-text">Value Timeline</span>}>
-            <p className="my-1 mb-3 text-[13px] text-text-muted">
+            <HelpText>
               One row per sighting, ordered by HAR timestamp. 'Value changed' flags a sighting whose value differs
               from the one immediately before it.
-            </p>
+            </HelpText>
             <DataTable
               columns={TIMELINE_COLUMNS}
-              rows={timelineQuery.data.timeline as unknown as TimelineRow[]}
+              rows={timeline.timeline as unknown as TimelineRow[]}
               rowKey={(_, i) => i}
             />
           </Disclosure>
@@ -158,11 +159,11 @@ export function DisseminationView({ uploadId, initialTarget, onInitialTargetCons
             <DisseminationResults
               uploadId={uploadId}
               submittedSearch={submittedSearch}
-              initiatorChain={timelineQuery.data.initiator_chain}
-              firstSeen={timelineQuery.data.first_seen}
+              initiatorChain={timeline.initiator_chain}
+              firstSeen={timeline.first_seen}
             />
           ) : (
-            <p className="my-1 mb-3 text-[13px] text-text-muted">No search run yet for this key and encoding selection.</p>
+            <HelpText>No search run yet for this key and encoding selection.</HelpText>
           )}
         </>
       )}

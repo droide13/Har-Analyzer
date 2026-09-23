@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { IdentifierSummaryRow } from '../../api/types'
+import type { IdentifierSummaryRow, IdentifierValueRow } from '../../api/types'
 import { Button } from '../../components/Button'
 import { DataTable, type DataTableColumn } from '../../components/DataTable'
 import { Disclosure } from '../../components/Disclosure'
@@ -23,8 +23,17 @@ export function IdentifiersSection({ label, identifiers, onTraceKey }: Identifie
   // force one open (and scroll to it) from outside.
   const [openKeys, setOpenKeys] = useState<Set<string>>(new Set())
 
+  function setKeyOpen(key: string, open: boolean) {
+    setOpenKeys((prev) => {
+      const next = new Set(prev)
+      if (open) next.add(key)
+      else next.delete(key)
+      return next
+    })
+  }
+
   function revealKey(key: string) {
-    setOpenKeys((prev) => new Set(prev).add(key))
+    setKeyOpen(key, true)
     requestAnimationFrame(() => {
       document.getElementById(anchorId(label, key))?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     })
@@ -59,6 +68,15 @@ export function IdentifiersSection({ label, identifiers, onTraceKey }: Identifie
     },
   ]
 
+  const valueColumns: DataTableColumn<IdentifierValueRow>[] = [
+    { header: 'Value', accessor: (v) => v.value },
+    ...(hasScope ? [{ header: 'First Seen As', accessor: (v: IdentifierValueRow) => v.first_seen_as }] : []),
+    { header: 'Appearances', accessor: (v) => v.appearances },
+    { header: 'Length', accessor: (v) => v.length },
+    { header: 'Entropy', accessor: (v) => v.entropy },
+    { header: 'Domains', accessor: (v) => v.domains },
+  ]
+
   return (
     <div>
       <h4 className="text-sm font-semibold">{label}</h4>
@@ -69,41 +87,9 @@ export function IdentifiersSection({ label, identifiers, onTraceKey }: Identifie
           <Disclosure
             summary={`Values for \`${tk.key}\``}
             open={openKeys.has(tk.key)}
-            onOpenChange={(open) =>
-              setOpenKeys((prev) => {
-                const next = new Set(prev)
-                if (open) next.add(tk.key)
-                else next.delete(tk.key)
-                return next
-              })
-            }
+            onOpenChange={(open) => setKeyOpen(tk.key, open)}
           >
-            <DataTable
-              variant="compact"
-              columns={[
-                { header: 'Value', accessor: (v: IdentifierSummaryRow['values'][number]) => v.value },
-                ...(hasScope
-                  ? [
-                      {
-                        header: 'First Seen As',
-                        accessor: (v: IdentifierSummaryRow['values'][number]) => v.first_seen_as,
-                      },
-                    ]
-                  : []),
-                {
-                  header: 'Appearances',
-                  accessor: (v: IdentifierSummaryRow['values'][number]) => v.appearances,
-                },
-                { header: 'Length', accessor: (v: IdentifierSummaryRow['values'][number]) => v.length },
-                {
-                  header: 'Entropy',
-                  accessor: (v: IdentifierSummaryRow['values'][number]) => v.entropy,
-                },
-                { header: 'Domains', accessor: (v: IdentifierSummaryRow['values'][number]) => v.domains },
-              ]}
-              rows={tk.values}
-              rowKey={(v) => v.value}
-            />
+            <DataTable variant="compact" columns={valueColumns} rows={tk.values} rowKey={(v) => v.value} />
             {onTraceKey && (
               <Button size="sm" className="mt-2" onClick={() => onTraceKey(tk.key)}>
                 Trace `{tk.key}` in Dissemination &rarr;

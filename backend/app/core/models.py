@@ -179,22 +179,6 @@ def cookies_to_text(req_cookies: list[dict[str, Any]], res_cookies: list[dict[st
     return "\n".join(req_lines + res_lines)
 
 
-def list_to_safe_dict(items: list[dict[str, Any]]) -> dict[str, Any]:
-    """Collapse a name/value item list into a dict, keeping repeats as lists."""
-    result: dict[str, Any] = {}
-    for item in items:
-        name = str(item.get("name", ""))
-        value = str(item.get("value", ""))
-        if name in result:
-            if isinstance(result[name], list):
-                result[name].append(value)
-            else:
-                result[name] = [result[name], value]
-        else:
-            result[name] = value
-    return result
-
-
 def format_bytes(size_bytes: int) -> str:
     """Human-readable size, e.g. "1.5 KB"."""
     if size_bytes <= 0:
@@ -259,15 +243,17 @@ def build_entries_from_har_data(har_data: dict[str, Any]) -> list[ParsedEntry]:
         req_c = cast(list[dict[str, Any]], request.get("cookies") or [])
         res_c = cast(list[dict[str, Any]], response.get("cookies") or [])
         qp = cast(list[dict[str, Any]], request.get("queryString") or [])
-        initiator_stack = flatten_initiator_stack(cast(dict[str, Any] | None, initiator.get("stack")))
+        raw_stack = cast(dict[str, Any] | None, initiator.get("stack"))
+        initiator_stack = flatten_initiator_stack(raw_stack)
+        url = str(request.get("url", ""))
 
         parsed.append(
             ParsedEntry(
                 index=i,
                 started_date_time=str(entry.get("startedDateTime", "")),
                 method=str(request.get("method", "")).upper(),
-                url=str(request.get("url", "")),
-                domain=get_domain(str(request.get("url", ""))),
+                url=url,
+                domain=get_domain(url),
                 status=str(response.get("status", "")),
                 status_text=str(response.get("statusText", "")),
                 mime=str(content.get("mimeType", "")),

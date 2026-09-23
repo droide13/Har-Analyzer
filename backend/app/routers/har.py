@@ -4,8 +4,8 @@ Filtering/highlighting semantics here are a direct port of the Streamlit
 app's Network Log tab (``tabs/networklog.py``): a filter query discards
 non-matching entries, an independent highlight query flags matches within
 what's left, both share the same scope/method/encoding controls, and
-``entry_matches``/``summarize_reasons`` from ``app.shared.search`` do the
-actual matching -- unchanged from the original.
+``entry_matches`` from ``app.shared.search`` does the actual matching --
+unchanged from the original.
 """
 
 from fastapi import APIRouter, HTTPException, Query, UploadFile
@@ -22,16 +22,11 @@ from app.schemas import (
 from app.shared.entry_summary import build_entry_summary
 from app.shared.naming import derive_metadata_from_entries, get_attrs_from_har_name
 from app.shared.search import ENCODING_OPTIONS, dissemination_badge_labels, entry_matches
-from app.store import UploadNotFoundError, UploadRecord, upload_store
+from app.store import UploadRecord, upload_store
+
+from ._common import get_record_or_404
 
 router = APIRouter(prefix="/api/har", tags=["har"])
-
-
-def _get_record(upload_id: str) -> UploadRecord:
-    try:
-        return upload_store.get(upload_id)
-    except UploadNotFoundError as exc:
-        raise HTTPException(status_code=404, detail="Unknown upload_id") from exc
 
 
 def _parse_csv(value: str | None) -> set[str] | None:
@@ -109,7 +104,7 @@ async def list_entries(  # pylint: disable=too-many-arguments,too-many-positiona
     page_size: int = Query(default=50, ge=10, le=500),
 ) -> EntriesPage:
     """Filtered, highlighted, paginated Network Log rows."""
-    record = _get_record(upload_id)
+    record = get_record_or_404(upload_id)
     entries = record.entries
 
     method_set = _parse_csv(methods) or set()
@@ -134,56 +129,44 @@ async def list_entries(  # pylint: disable=too-many-arguments,too-many-positiona
     start, end = (current_page - 1) * page_size, current_page * page_size
 
     items: list[EntrySummary] = []
-    highlighted_count = 0
     for entry in filtered[start:end]:
         highlight_result = highlight_results.get(entry.index)
-        highlighted = bool(highlight_result and highlight_result.matched)
-        if highlighted:
-            highlighted_count += 1
-        filter_reasons = filter_results[entry.index].reasons
         summary = build_entry_summary(entry)
-        summary.highlighted = highlighted
+        summary.highlighted = bool(highlight_result and highlight_result.matched)
         # Mirrors Dissemination's badge logic: prefer the highlight query's
         # own reasons when this row is highlighted (the more specific "why"),
         # falling back to the filter query's reasons -- every visible row
         # matched it, if one was given.
-        if highlighted and highlight_result:
+        if highlight_result is not None and highlight_result.matched:
             summary.badges = dissemination_badge_labels(highlight_result.reasons)
         elif q.strip():
-            summary.badges = dissemination_badge_labels(filter_reasons)
+            summary.badges = dissemination_badge_labels(filter_results[entry.index].reasons)
         items.append(summary)
 
-    # highlighted_count above only covers the current page; recompute over
-    # the full filtered set so the UI can show a true total, not a per-page one.
-    total_highlighted = (
-        sum(1 for e in filtered if highlight_results[e.index].matched) if h_active else 0
+    # Positions within the *whole* filtered set, not just the current page, so
+    # the UI can show a true total and offer jump-to-page buttons.
+    highlighted_positions = (
+        [i for i, e in enumerate(filtered) if highlight_results[e.index].matched]
+        if h_active
+        else []
     )
-
-    highlighted_pages: list[int] = []
-    if h_active:
-        seen_pages = {
-            i // page_size + 1
-            for i, e in enumerate(filtered)
-            if highlight_results[e.index].matched
-        }
-        highlighted_pages = sorted(seen_pages)
 
     return EntriesPage(
         total=len(entries),
         filtered=len(filtered),
-        highlighted=total_highlighted,
+        highlighted=len(highlighted_positions),
         page=current_page,
         page_size=page_size,
         total_pages=total_pages,
         items=items,
-        highlighted_pages=highlighted_pages,
+        highlighted_pages=sorted({i // page_size + 1 for i in highlighted_positions}),
     )
 
 
 @router.get("/{upload_id}/entries/{index}", response_model=EntryDetail)
 async def get_entry_detail(upload_id: str, index: int) -> EntryDetail:
     """Full request/response detail for one entry, for the row detail panel."""
-    record = _get_record(upload_id)
+    record = get_record_or_404(upload_id)
     entry: ParsedEntry | None = next((e for e in record.entries if e.index == index), None)
     if entry is None:
         raise HTTPException(status_code=404, detail="Unknown entry index")

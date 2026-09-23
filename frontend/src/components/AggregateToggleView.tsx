@@ -3,7 +3,13 @@ import { DataTable, type DataTableColumn } from './DataTable'
 import { MetricsRow } from './MetricsRow'
 import { SegmentedControl } from './SegmentedControl'
 
-interface AggregateToggleViewProps<TRaw, TAgg> {
+/** Both views here are "one row per name" (see VIEW_OPTIONS), so every row
+ * shape this takes carries a Name -- which is also what identifies a row. */
+interface NamedRow {
+  Name: string
+}
+
+interface AggregateToggleViewProps<TRaw extends NamedRow, TAgg extends NamedRow> {
   title: string
   metrics: { label: string; value: number }[]
   aggregatedCaption: string
@@ -11,7 +17,10 @@ interface AggregateToggleViewProps<TRaw, TAgg> {
   rawColumns: DataTableColumn<TRaw>[]
   records: TRaw[]
   aggregated: TAgg[]
-  rowKey: (row: TRaw | TAgg, index: number) => string | number
+}
+
+function rowKey(row: NamedRow, index: number): string {
+  return `${row.Name}-${index}`
 }
 
 const VIEW_OPTIONS = [
@@ -25,7 +34,7 @@ const VIEW_OPTIONS = [
  * tabs/query_params.py in the original are near-duplicates of exactly this
  * shape) -- factored out here since both call sites need it at once.
  */
-export function AggregateToggleView<TRaw, TAgg>({
+export function AggregateToggleView<TRaw extends NamedRow, TAgg extends NamedRow>({
   title,
   metrics,
   aggregatedCaption,
@@ -33,7 +42,6 @@ export function AggregateToggleView<TRaw, TAgg>({
   rawColumns,
   records,
   aggregated,
-  rowKey,
 }: AggregateToggleViewProps<TRaw, TAgg>) {
   const [view, setView] = useState<'aggregated' | 'raw'>('aggregated')
 
