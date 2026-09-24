@@ -24,7 +24,12 @@ export default function App() {
   function handleUploaded(upload: UploadResponse) {
     setSession(upload)
     setIsPickingFile(false)
-    setActiveTab('network-log')
+    // Mirrors the original: open straight on Metadata whenever the filename
+    // doesn't follow the naming convention or the HAR hasn't been through
+    // "Generate standardized file" yet, so there's an immediate nudge to fix
+    // it rather than a silent Network Log view with unreadable session info.
+    const { filename_valid, has_analysis } = upload.session_metadata
+    setActiveTab(filename_valid && has_analysis ? 'network-log' : 'metadata')
     setDisseminationTarget(null)
   }
 

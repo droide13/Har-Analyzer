@@ -342,6 +342,28 @@ def entry_matches(
     return MatchResult(matched=True, reasons=all_reasons)
 
 
+def reason_summary_line(reasons: list[MatchReason]) -> str:
+    """One comma-joined "Field (forms)" entry per distinct field a set of
+    reasons hit, e.g. "Response Body (Base64, MD5)" -- the compact one-line
+    form Network Log's Filtered-via/Highlighted-via badges use. Collapses
+    the URL-encoding chain the same way reason_summary's per-value rows do,
+    just grouped by field only (not field+value) for a single line."""
+    by_label: dict[str, list[str]] = {}
+    for reason in reasons:
+        label = reason_label(reason)
+        form = reason.encoding or "plain"
+        forms = by_label.setdefault(label, [])
+        if form not in forms:
+            forms.append(form)
+
+    parts: list[str] = []
+    for label in sorted(by_label):
+        forms = dedupe_redundant_encodings(by_label[label])
+        forms_sorted = sorted(forms, key=lambda f: (f != "plain", f))
+        parts.append(f"{label} ({', '.join(forms_sorted)})")
+    return ", ".join(parts)
+
+
 def dissemination_badge_labels(reasons: list[MatchReason]) -> list[str]:
     """One label per distinct field a set of reasons hit, order-preserving --
     the compact chip form used wherever a row needs to show *why* it matched

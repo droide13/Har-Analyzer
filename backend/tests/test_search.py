@@ -1,5 +1,5 @@
 from app.core.models import build_entries_from_har_data
-from app.shared.search import ENCODING_OPTIONS, entry_matches
+from app.shared.search import ENCODING_OPTIONS, entry_matches, reason_summary_line
 from tests.conftest import ENCODED_ONLY_VALUE
 
 
@@ -53,3 +53,17 @@ def test_all_encoding_options_are_registered() -> None:
     assert len(ENCODING_OPTIONS) >= 10
     assert "Base64" in ENCODING_OPTIONS
     assert "SHA256" in ENCODING_OPTIONS
+
+
+def test_reason_summary_line_names_field_and_encoding(sample_har_dict: dict) -> None:
+    # Network Log's Filtered/Highlighted-via badges: a plain match on the URL
+    # plus a Base64-only match on the response headers should read as two
+    # "Field (forms)" parts naming both the field and how each one matched.
+    entries = build_entries_from_har_data(sample_har_dict)
+    signed_entry = entries[4]
+
+    plain_result = entry_matches(signed_entry, "signed", "any", set())
+    assert reason_summary_line(plain_result.reasons) == "URL (plain)"
+
+    encoded_result = entry_matches(signed_entry, ENCODED_ONLY_VALUE, "any", set(), {"Base64"})
+    assert reason_summary_line(encoded_result.reasons) == "Response Headers (Base64)"

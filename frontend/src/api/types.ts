@@ -12,6 +12,7 @@ export interface SessionMetadata {
   extra: string | null
   captured_at: string | null
   filename_valid: boolean
+  has_analysis: boolean
 }
 
 export interface UploadResponse {
@@ -19,6 +20,11 @@ export interface UploadResponse {
   filename: string
   entry_count: number
   session_metadata: SessionMetadata
+}
+
+export interface EntryBadge {
+  label: string
+  tone: 'neutral' | 'orange'
 }
 
 export interface EntrySummary {
@@ -35,7 +41,7 @@ export interface EntrySummary {
   req_cookie_count: number
   res_cookie_count: number
   highlighted: boolean
-  badges: string[]
+  badges: EntryBadge[]
 }
 
 export interface EntriesPage {

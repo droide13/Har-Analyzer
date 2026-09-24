@@ -13,6 +13,7 @@ from fastapi import APIRouter, HTTPException, Query, UploadFile
 from app.core.models import METHOD_ORDER, SCOPE_OPTIONS, ParsedEntry, get_embedded_analysis
 from app.schemas import (
     EntriesPage,
+    EntryBadge,
     EntryDetail,
     EntrySummary,
     HeaderPair,
@@ -21,7 +22,7 @@ from app.schemas import (
 )
 from app.shared.entry_summary import build_entry_summary
 from app.shared.naming import derive_metadata_from_entries, get_attrs_from_har_name
-from app.shared.search import ENCODING_OPTIONS, dissemination_badge_labels, entry_matches
+from app.shared.search import ENCODING_OPTIONS, entry_matches, reason_summary_line
 from app.store import UploadRecord, upload_store
 
 from ._common import get_record_or_404
@@ -71,6 +72,7 @@ def _build_session_metadata(record: UploadRecord) -> SessionMetadata:
         extra=extra,
         captured_at=captured_at,
         filename_valid=attrs is not None,
+        has_analysis=existing is not None,
     )
 
 
@@ -133,14 +135,23 @@ async def list_entries(  # pylint: disable=too-many-arguments,too-many-positiona
         highlight_result = highlight_results.get(entry.index)
         summary = build_entry_summary(entry)
         summary.highlighted = bool(highlight_result and highlight_result.matched)
-        # Mirrors Dissemination's badge logic: prefer the highlight query's
-        # own reasons when this row is highlighted (the more specific "why"),
-        # falling back to the filter query's reasons -- every visible row
-        # matched it, if one was given.
+
+        # Filter and highlight are independent queries, so both badges can
+        # show on the same row at once -- a filter narrowed the list down to
+        # this entry *and* the highlight query separately flagged it. Each
+        # names which field(s) it matched through and, unlike Dissemination's
+        # bare field-name badges, which encoding/hash form did the matching
+        # (e.g. "Response Body (Base64, MD5)").
+        badges: list[EntryBadge] = []
+        filter_reasons = filter_results[entry.index].reasons
+        if filter_reasons:
+            filter_line = reason_summary_line(filter_reasons)
+            badges.append(EntryBadge(label=f"Filtered via: {filter_line}", tone="neutral"))
         if highlight_result is not None and highlight_result.matched:
-            summary.badges = dissemination_badge_labels(highlight_result.reasons)
-        elif q.strip():
-            summary.badges = dissemination_badge_labels(filter_results[entry.index].reasons)
+            highlight_line = reason_summary_line(highlight_result.reasons)
+            badges.append(EntryBadge(label=f"Highlighted via: {highlight_line}", tone="orange"))
+        summary.badges = badges
+
         items.append(summary)
 
     # Positions within the *whole* filtered set, not just the current page, so

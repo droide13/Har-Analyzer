@@ -1,15 +1,32 @@
 """Pydantic response models for the HAR API."""
 
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel
+
+
+class EntryBadge(BaseModel):
+    """One search-match chip for an entry row. Network Log gives its
+    Filtered/Highlighted-via badges distinct tones so both can show at once
+    on the same row without reading as the same kind of match; Dissemination
+    (a single match-reason list, no filter/highlight duality) always uses
+    "orange"."""
+
+    label: str
+    tone: Literal["neutral", "orange"]
 
 
 class SessionMetadata(BaseModel):
     """Best-effort session summary for the persistent header above the tabs --
     domain/platform/interaction/cookies/visit/extra come from the filename
     convention (``None`` if the filename doesn't follow it), captured_at from
-    the traffic itself so it's always available regardless of naming."""
+    the traffic itself so it's always available regardless of naming.
+
+    ``filename_valid`` and ``has_analysis`` are independent checks (a
+    properly-named file can still have never been through the Metadata tab's
+    "Generate standardized file" step, and vice versa) -- the frontend
+    defaults to the Metadata tab whenever either is false, the same
+    either-check the original made before deciding which tab to open on."""
 
     domain: str
     platform: str | None
@@ -19,6 +36,7 @@ class SessionMetadata(BaseModel):
     extra: str | None
     captured_at: str | None
     filename_valid: bool
+    has_analysis: bool
 
 
 class UploadResponse(BaseModel):
@@ -47,10 +65,11 @@ class EntrySummary(BaseModel):
     req_cookie_count: int
     res_cookie_count: int
     highlighted: bool = False
-    # Labels of the fields a filter/highlight query (Network Log) or value
-    # scan (Dissemination) matched through, e.g. ["URL", "Response Cookie"].
-    # Empty when no search is active.
-    badges: list[str] = []
+    # Chips describing why a filter/highlight query (Network Log) or value
+    # scan (Dissemination) matched -- field name plus, for Network Log,
+    # which encoding/hash form it matched through, e.g. "Response Body
+    # (Base64, MD5)". Empty when no search is active.
+    badges: list[EntryBadge] = []
 
 
 class EntriesPage(BaseModel):

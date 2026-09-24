@@ -50,12 +50,16 @@ const BASE_COLUMNS: Column[] = [
 
 const MATCHED_FIELDS_COLUMN: Column = {
   header: 'Matched Fields',
-  widthPx: 260,
+  // Badge text now spells out the matched encoding/hash form too (e.g.
+  // "Filtered via: Response Body (Base64, MD5)"), well past what a fixed
+  // 260px held -- grow like the URL column so it gets whatever room's left.
+  widthPx: 340,
+  grow: true,
   render: (e) => (
     <div className="flex flex-nowrap items-center overflow-hidden">
-      {e.badges.map((badge) => (
-        <Badge key={badge} tone="orange">
-          {badge}
+      {e.badges.map((badge, i) => (
+        <Badge key={i} tone={badge.tone}>
+          {badge.label}
         </Badge>
       ))}
     </div>

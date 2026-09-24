@@ -57,6 +57,13 @@ export function SessionBar({ session, onSwitchFile }: SessionBarProps) {
           Use the Metadata tab to classify and export a standardized copy.
         </p>
       )}
+
+      {meta.filename_valid && !meta.has_analysis && (
+        <p className="text-[13px] text-text-muted">
+          <code>{session.filename}</code> hasn't been through the Metadata tab yet -- use it to confirm
+          classification and export a standardized copy with the analysis embedded.
+        </p>
+      )}
     </div>
   )
 }

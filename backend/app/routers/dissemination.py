@@ -32,10 +32,11 @@ from app.schemas import (
     DisseminationSearchRequest,
     DisseminationSearchResponse,
     DisseminationTimelineResponse,
+    EntryBadge,
     InitiatorChainLink,
 )
 from app.shared.entry_summary import build_entry_summary
-from app.shared.search import dissemination_badge_labels, entry_matches
+from app.shared.search import MatchReason, dissemination_badge_labels, entry_matches
 
 from ._common import get_record_or_404
 
@@ -48,6 +49,12 @@ def _occurrences_or_404(entries: list[ParsedEntry], key: str) -> list[Occurrence
     if not occurrences:
         raise HTTPException(status_code=404, detail="Unknown or unseen key")
     return occurrences
+
+
+def _badges(reasons: list[MatchReason]) -> list[EntryBadge]:
+    """Dissemination has no filter/highlight duality -- every badge is just
+    "what matched", so all get the same tone."""
+    return [EntryBadge(label=label, tone="orange") for label in dissemination_badge_labels(reasons)]
 
 
 @router.get("/{upload_id}/dissemination/keys", response_model=list[str])
@@ -125,13 +132,13 @@ async def post_dissemination_search(
     rows: list[DisseminationMatchRow] = []
     for entry, reasons in visible:
         summary = build_entry_summary(entry)
-        summary.badges = dissemination_badge_labels(reasons)
+        summary.badges = _badges(reasons)
         if highlight_active:
             highlight_result = entry_matches(entry, body.highlight, "any", set())
             summary.highlighted = highlight_result.matched
             if highlight_result.matched:
                 # The highlight query's own reasons are the more specific "why".
-                summary.badges = dissemination_badge_labels(highlight_result.reasons)
+                summary.badges = _badges(highlight_result.reasons)
         rows.append(DisseminationMatchRow(entry=summary, reasons=reason_summary(reasons)))
 
     return DisseminationSearchResponse(by_domain=by_domain, matches=rows)
