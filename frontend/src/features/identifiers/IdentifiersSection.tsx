@@ -61,7 +61,18 @@ export function IdentifiersSection({ label, identifiers, onTraceKey }: Identifie
     {
       header: 'Values',
       accessor: (tk) => (
-        <Button size="sm" onClick={() => revealKey(tk.key)}>
+        <Button
+          size="sm"
+          onClick={(e) => {
+            // Otherwise this bubbles up to DataTable's own row-click
+            // handler, which toggles that row's independent expand-to-wrap
+            // state at the same moment revealKey's scrollIntoView animates
+            // -- the table's height changes mid-scroll, so the target
+            // position chases around instead of the scroll landing cleanly.
+            e.stopPropagation()
+            revealKey(tk.key)
+          }}
+        >
           Inspect values ↓
         </Button>
       ),

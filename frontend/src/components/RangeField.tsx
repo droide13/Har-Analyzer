@@ -8,11 +8,21 @@ interface RangeFieldProps {
   step?: number
   onChange: (value: number) => void
   formatValue?: (value: number) => string
+  disabled?: boolean
 }
 
 /** Labeled Radix Slider, replacing the unstyled native
  * <input type="range"> fields in Domain Explorer and Identifiers. */
-export function RangeField({ label, value, min, max, step = 1, onChange, formatValue }: RangeFieldProps) {
+export function RangeField({
+  label,
+  value,
+  min,
+  max,
+  step = 1,
+  onChange,
+  formatValue,
+  disabled,
+}: RangeFieldProps) {
   return (
     <label className="flex min-w-[200px] flex-1 flex-col gap-2 text-[13px] text-text-muted">
       <span>
@@ -24,7 +34,8 @@ export function RangeField({ label, value, min, max, step = 1, onChange, formatV
         step={step}
         value={[value]}
         onValueChange={([next]) => onChange(next)}
-        className="relative flex h-4 w-full items-center"
+        disabled={disabled}
+        className="relative flex h-4 w-full items-center data-[disabled]:opacity-50"
       >
         <Slider.Track className="relative h-1 grow rounded-full bg-border">
           <Slider.Range className="absolute h-full rounded-full bg-accent" />

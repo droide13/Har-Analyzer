@@ -5,8 +5,6 @@ import { SessionBar } from './components/SessionBar'
 import { Tabs, type TabDefinition } from './components/Tabs'
 import { NetworkLogView } from './features/networkLog/NetworkLogView'
 import { OverviewView } from './features/overview/OverviewView'
-import { CookiesView } from './features/cookies/CookiesView'
-import { QueryParamsView } from './features/queryParams/QueryParamsView'
 import { IdentifiersView } from './features/identifiers/IdentifiersView'
 import { DisseminationView } from './features/dissemination/DisseminationView'
 import { MetadataView } from './features/metadata/MetadataView'
@@ -39,8 +37,6 @@ export default function App() {
     ? [
         { key: 'network-log', label: 'Network Log', render: () => <NetworkLogView uploadId={session.upload_id} /> },
         { key: 'overview', label: 'HAR Analytics', render: () => <OverviewView uploadId={session.upload_id} /> },
-        { key: 'cookies', label: 'Cookies', render: () => <CookiesView uploadId={session.upload_id} /> },
-        { key: 'query-params', label: 'Query Params', render: () => <QueryParamsView uploadId={session.upload_id} /> },
         {
           key: 'identifiers',
           label: 'Identifiers',
