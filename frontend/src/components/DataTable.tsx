@@ -10,6 +10,7 @@ import {
   type ExpandedState,
   type SortingState,
 } from '@tanstack/react-table'
+import { useVirtualizer } from '@tanstack/react-virtual'
 
 export interface DataTableColumn<T> {
   header: string
@@ -40,6 +41,11 @@ const MIN_CONTENT_PX = 72
 const MAX_CONTENT_PX = 320
 const CELL_PADDING_PX = 20
 const CHARS_SAMPLED_ROWS = 200
+// Initial per-row height guess for the virtualizer -- corrected per row via
+// measureElement as soon as it mounts (a row can be taller than this once
+// expanded), so this only has to be roughly right for the collapsed case.
+const DEFAULT_ROW_HEIGHT_PX = 33
+const COMPACT_ROW_HEIGHT_PX = 27
 // A reasonable desktop table width to size the *initial* columns against,
 // used only for the very first paint before the container's real width can
 // be measured (see the layout effect below, which corrects this against
@@ -130,17 +136,26 @@ function computeInitialSizing<T>(
   return sizing
 }
 
-/** Plain (non-virtualized) table for record counts that don't need
- * row-level virtualization the way Network Log's full entry list does
- * (cookie/query-param occurrence counts run in the hundreds, not thousands
- * of rows with per-row detail fetches).
+/** Row-virtualized (via react-virtual, same library Network Log's
+ * EntryListTable uses) so a raw, ungrouped record count in the thousands
+ * (e.g. every cookie/query-param occurrence across a large HAR, not just
+ * the name-grouped aggregate) never mounts more <tr>s than the viewport
+ * actually shows.
+ *
+ * Unlike EntryListTable, this keeps a real <table> (column resize/sizing
+ * below depends on native <colgroup> layout, which a <tr> can't get while
+ * absolutely positioned) -- so instead of EntryListTable's
+ * transform-positioned rows, only the visible slice of rows renders in
+ * normal flow, padded above/below by two spacer <tr>s sized to the
+ * remaining (unrendered) scroll height. Each row's real height is
+ * remeasured once mounted (measureElement), since expanding a row wraps it
+ * to multiple lines -- rows aren't a fixed height.
  *
  * Column sizing/resizing and row-expansion state are delegated to
- * TanStack Table (the same maintainer/family as the react-query and
- * react-virtual this app already depends on) rather than hand-rolled --
- * only the *initial* content-aware widths above are custom, since no
- * generic table library can know what "a reasonable width for this data"
- * means for a given column. */
+ * TanStack Table (the same maintainer/family as react-query and
+ * react-virtual) rather than hand-rolled -- only the *initial* content-aware
+ * widths above are custom, since no generic table library can know what "a
+ * reasonable width for this data" means for a given column. */
 export function DataTable<T>({
   columns,
   rows,
@@ -213,6 +228,18 @@ export function DataTable<T>({
   })
 
   const leafColumns = table.getAllLeafColumns()
+  const tableRows = table.getRowModel().rows
+
+  const virtualizer = useVirtualizer({
+    count: tableRows.length,
+    getScrollElement: () => containerRef.current,
+    estimateSize: () => (variant === 'compact' ? COMPACT_ROW_HEIGHT_PX : DEFAULT_ROW_HEIGHT_PX),
+    overscan: 10,
+  })
+  const virtualRows = virtualizer.getVirtualItems()
+  const paddingTop = virtualRows.length > 0 ? virtualRows[0].start : 0
+  const paddingBottom =
+    virtualRows.length > 0 ? virtualizer.getTotalSize() - virtualRows[virtualRows.length - 1].end : 0
 
   return (
     <div ref={containerRef} className="mb-3 max-h-[60vh] overflow-auto rounded-md border border-border-strong shadow-sm">
@@ -265,12 +292,20 @@ export function DataTable<T>({
           </thead>
         )}
         <tbody>
-          {table.getRowModel().rows.map((row) => {
+          {paddingTop > 0 && (
+            <tr aria-hidden="true" style={{ height: paddingTop }}>
+              <td style={{ padding: 0, border: 0 }} colSpan={leafColumns.length} />
+            </tr>
+          )}
+          {virtualRows.map((virtualRow) => {
+            const row = tableRows[virtualRow.index]
             const isExpanded = row.getIsExpanded()
             const wrap = isExpanded ? 'whitespace-normal break-words' : 'whitespace-nowrap'
             return (
               <tr
                 key={row.id}
+                ref={virtualizer.measureElement}
+                data-index={virtualRow.index}
                 onClick={() => {
                   // Selecting text (e.g. to copy a value out of an expanded
                   // row) is a mousedown-drag-mouseup sequence on the same
@@ -300,6 +335,11 @@ export function DataTable<T>({
               </tr>
             )
           })}
+          {paddingBottom > 0 && (
+            <tr aria-hidden="true" style={{ height: paddingBottom }}>
+              <td style={{ padding: 0, border: 0 }} colSpan={leafColumns.length} />
+            </tr>
+          )}
         </tbody>
       </table>
       {rows.length === 0 && <p className="p-4 text-center text-text-muted">{emptyLabel}</p>}
