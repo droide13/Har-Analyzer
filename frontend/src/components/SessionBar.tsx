@@ -31,12 +31,12 @@ export function SessionBar({ session, onSwitchFile }: SessionBarProps) {
 
   return (
     <div className="flex flex-col gap-2 border-b border-border py-1.5 pb-3">
-      <div className="flex items-center justify-between gap-3">
-        <p className="m-0 text-[13px] text-text-muted">
-          {session.filename} &mdash; {session.entry_count} entries
-        </p>
-        <Button onClick={onSwitchFile}>Switch file</Button>
-      </div>
+      <p className="m-0 font-mono text-[15px] font-semibold text-text">
+        {session.filename}
+        <span className="ml-2 font-sans text-[13px] font-normal text-text-muted">
+          &mdash; {session.entry_count} entries
+        </span>
+      </p>
 
       {meta.filename_valid ? (
         <div className="flex flex-wrap gap-2">
@@ -64,6 +64,10 @@ export function SessionBar({ session, onSwitchFile }: SessionBarProps) {
           classification and export a standardized copy with the analysis embedded.
         </p>
       )}
+
+      <div>
+        <Button onClick={onSwitchFile}>Switch file</Button>
+      </div>
     </div>
   )
 }
