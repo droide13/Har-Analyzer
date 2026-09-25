@@ -12,6 +12,10 @@
   --color-ok: #1a7f37;
   --color-error: #cf222e;
   --color-highlight: rgba(255, 196, 0, 0.18);
+  /* A bolder wash for a specific matched substring (<mark>), as opposed to
+     --color-highlight's row-level "somewhere in here" wash -- needs to read
+     as unambiguously "found it" on its own. */
+  --color-highlight-strong: rgba(255, 196, 0, 0.55);
 
   --font-sans: 'Inter', system-ui, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, Consolas, monospace;
@@ -35,7 +39,11 @@
     --color-accent: #b39dff;
     --color-ok: #3fb950;
     --color-error: #f85149;
-    --color-highlight: rgba(255, 196, 0, 0.12);
+    /* Bumped up from light mode's 0.18 -- the same alpha reads much
+       fainter against this theme's near-black surfaces than it does
+       against white. */
+    --color-highlight: rgba(255, 196, 0, 0.28);
+    --color-highlight-strong: rgba(255, 196, 0, 0.65);
   }
 }
 

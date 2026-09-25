@@ -17,7 +17,11 @@ export function highlightText(text: string, needle: string): ReactNode {
   while (index !== -1) {
     if (index > cursor) parts.push(text.slice(cursor, index))
     parts.push(
-      <mark key={index} className="rounded-sm bg-highlight px-0.5 text-inherit">
+      // Fixed dark text rather than text-inherit -- in dark mode the
+      // surrounding text is near-white, which barely reads against a
+      // yellow wash. A <mark> is always yellow-on-dark-text regardless of
+      // theme, the same convention browsers use for find-in-page.
+      <mark key={index} className="rounded-sm bg-highlight-strong px-0.5 text-[#1f2328]">
         {text.slice(index, index + needle.length)}
       </mark>,
     )
