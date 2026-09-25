@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { fetchEncodingOptions, fetchEntries, fetchMethodOrder, fetchScopeOptions } from '../../api/har'
+import { fetchMetadata } from '../../api/metadata'
 import { useDebouncedValue } from '../../hooks/useDebouncedValue'
 import { ErrorState } from '../../components/QueryState'
 import { SearchControls } from './SearchControls'
@@ -24,6 +25,10 @@ export function NetworkLogView({ uploadId }: NetworkLogViewProps) {
   const { data: methodOrder } = useQuery({ queryKey: ['meta-methods'], queryFn: fetchMethodOrder })
   const { data: encodingOptions } = useQuery({ queryKey: ['meta-encodings'], queryFn: fetchEncodingOptions })
   const { data: scopeOptions } = useQuery({ queryKey: ['meta-scopes'], queryFn: fetchScopeOptions })
+  // Shared with the Metadata tab's query cache -- whichever tab loads first
+  // fetches it, the other just reads the cached result.
+  const { data: metadata } = useQuery({ queryKey: ['metadata', uploadId], queryFn: () => fetchMetadata(uploadId) })
+  const groundTruth = metadata?.existing_analysis?.ground_truth ?? []
 
   // Raw values drive the input fields directly (instant typing feedback);
   // debounced values drive the actual query, so a fast typist doesn't fire
@@ -39,6 +44,12 @@ export function NetworkLogView({ uploadId }: NetworkLogViewProps) {
   // one, this becomes a real Set that fully owns the checked state.
   const [customEncodings, setCustomEncodings] = useState<Set<string> | null>(null)
   const selectedEncodings = customEncodings ?? new Set(encodingOptions ?? [])
+  // Unlike encodings, null here means "not searching at all" -- checking
+  // every ground-truth value against every entry/field/encoding is a real
+  // full scan, so it stays off until the user explicitly starts it via
+  // GroundTruthSearchControl's button. Once started, this is which keys
+  // are currently included (all of them, until one's excluded).
+  const [groundTruthKeys, setGroundTruthKeys] = useState<Set<string> | null>(null)
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [page, setPage] = useState(1)
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
@@ -51,6 +62,7 @@ export function NetworkLogView({ uploadId }: NetworkLogViewProps) {
     scope,
     selectedMethods,
     [...selectedEncodings].sort(),
+    groundTruthKeys === null ? null : [...groundTruthKeys].sort(),
   ])
   useEffect(() => {
     setPage(1)
@@ -65,6 +77,7 @@ export function NetworkLogView({ uploadId }: NetworkLogViewProps) {
         scope,
         methods: selectedMethods,
         encodings: [...selectedEncodings],
+        gtKeys: groundTruthKeys === null ? undefined : [...groundTruthKeys],
         page,
         page_size: pageSize,
       }),
@@ -73,6 +86,7 @@ export function NetworkLogView({ uploadId }: NetworkLogViewProps) {
   })
 
   const data = entriesQuery.data
+  const groundTruthActive = groundTruthKeys !== null && groundTruthKeys.size > 0
 
   return (
     <div>
@@ -91,6 +105,9 @@ export function NetworkLogView({ uploadId }: NetworkLogViewProps) {
           encodingOptions={encodingOptions}
           selectedEncodings={selectedEncodings}
           onEncodingsChange={setCustomEncodings}
+          groundTruth={groundTruth}
+          groundTruthKeys={groundTruthKeys}
+          onSearchGroundTruth={setGroundTruthKeys}
           pageSize={pageSize}
           onPageSizeChange={setPageSize}
         />
@@ -100,8 +117,8 @@ export function NetworkLogView({ uploadId }: NetworkLogViewProps) {
         <>
           <p className="text-[13px] text-text-muted">
             Showing <strong>{data.filtered}</strong> items
-            {debouncedHighlightQuery.trim() && ` (${data.highlighted} highlighted)`} out of {data.total} total
-            entries.
+            {(debouncedHighlightQuery.trim() || groundTruthActive) && ` (${data.highlighted} highlighted)`} out of{' '}
+            {data.total} total entries.
           </p>
           <Pagination
             page={data.page}
@@ -115,7 +132,7 @@ export function NetworkLogView({ uploadId }: NetworkLogViewProps) {
             selectedIndex={selectedIndex}
             onSelectRow={setSelectedIndex}
             onClose={() => setSelectedIndex(null)}
-            showMatchedFields={Boolean(debouncedFilterQuery.trim() || debouncedHighlightQuery.trim())}
+            showMatchedFields={Boolean(debouncedFilterQuery.trim() || debouncedHighlightQuery.trim() || groundTruthActive)}
           />
         </>
       )}

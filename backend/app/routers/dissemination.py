@@ -14,7 +14,7 @@ fragment that re-runs live and a form that only submits on demand:
 from fastapi import APIRouter, HTTPException, Query
 
 from app.core.har_time import format_started_date_time
-from app.core.models import ParsedEntry
+from app.core.models import ParsedEntry, get_embedded_analysis
 from app.features.dissemination import (
     Occurrence,
     aggregate_by_domain,
@@ -23,21 +23,27 @@ from app.features.dissemination import (
     distinct_values,
     find_dissemination,
     key_options,
-    reason_summary,
     value_timeline,
 )
 from app.schemas import (
     BadgeFieldMatch,
     DisseminationFirstSeen,
-    DisseminationMatchRow,
     DisseminationSearchRequest,
     DisseminationSearchResponse,
     DisseminationTimelineResponse,
     EntryBadge,
+    EntrySummary,
     InitiatorChainLink,
 )
 from app.shared.entry_summary import build_entry_summary
-from app.shared.search import MatchReason, dissemination_badge_labels, entry_matches, reason_field_matches
+from app.shared.search import (
+    MatchReason,
+    dissemination_badge_labels,
+    entry_matches,
+    ground_truth_reasons_by_entry,
+    reason_field_matches,
+    reason_summary_line,
+)
 
 from ._common import get_record_or_404
 
@@ -62,6 +68,19 @@ def _badges(reasons: list[MatchReason]) -> list[EntryBadge]:
         matches = [BadgeFieldMatch(attr=match.attr, label=match.field_label, text=match.text)] if match else []
         badges.append(EntryBadge(label=label, tone="orange", matches=matches))
     return badges
+
+
+def _ground_truth_badges(gt_matches: list[tuple[str, list[MatchReason]]]) -> list[EntryBadge]:
+    """One badge per matched ground-truth key -- see
+    app.shared.search.ground_truth_reasons_by_entry."""
+    return [
+        EntryBadge(
+            label=f"{key} match: {reason_summary_line(reasons)}",
+            tone="error",
+            matches=[BadgeFieldMatch(attr=m.attr, label=m.label, text=m.text) for m in reason_field_matches(reasons)],
+        )
+        for key, reasons in gt_matches
+    ]
 
 
 @router.get("/{upload_id}/dissemination/keys", response_model=list[str])
@@ -135,8 +154,19 @@ async def post_dissemination_search(
         else matches
     )
 
+    # Ground truth check mirrors Network Log's: an opt-in full scan (None
+    # means "don't run it"), one badge per matched key, same tone/label
+    # convention -- see app.shared.search.ground_truth_reasons_by_entry.
+    gt_reasons_by_index: dict[int, list[tuple[str, list[MatchReason]]]] = {}
+    if body.gt_keys is not None:
+        existing_analysis = get_embedded_analysis(record.har_data)
+        if existing_analysis is not None:
+            gt_reasons_by_index = ground_truth_reasons_by_entry(
+                [e for e, _ in visible], existing_analysis.ground_truth, set(body.gt_keys), set(body.encodings)
+            )
+
     highlight_active = bool(body.highlight.strip())
-    rows: list[DisseminationMatchRow] = []
+    rows: list[EntrySummary] = []
     for entry, reasons in visible:
         summary = build_entry_summary(entry)
         summary.badges = _badges(reasons)
@@ -146,6 +176,10 @@ async def post_dissemination_search(
             if highlight_result.matched:
                 # The highlight query's own reasons are the more specific "why".
                 summary.badges = _badges(highlight_result.reasons)
-        rows.append(DisseminationMatchRow(entry=summary, reasons=reason_summary(reasons)))
+        gt_matches = gt_reasons_by_index.get(entry.index)
+        if gt_matches:
+            summary.highlighted = True
+            summary.badges = [*summary.badges, *_ground_truth_badges(gt_matches)]
+        rows.append(summary)
 
     return DisseminationSearchResponse(by_domain=by_domain, matches=rows)

@@ -16,8 +16,17 @@ export interface DisseminationSearchQuery {
   encodings: string[]
   narrow?: string
   highlight?: string
+  /** Ground-truth keys to check for; omit entirely to skip the check (it's
+   * a full scan, opt-in only), pass [] to run it with none included. */
+  gtKeys?: string[]
 }
 
 export function searchDissemination(uploadId: string, query: DisseminationSearchQuery): Promise<DisseminationSearchResponse> {
-  return apiPostJson<DisseminationSearchResponse>(`/api/har/${uploadId}/dissemination/search`, query)
+  return apiPostJson<DisseminationSearchResponse>(`/api/har/${uploadId}/dissemination/search`, {
+    key: query.key,
+    encodings: query.encodings,
+    narrow: query.narrow,
+    highlight: query.highlight,
+    gt_keys: query.gtKeys,
+  })
 }

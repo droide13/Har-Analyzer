@@ -1,3 +1,5 @@
+import json
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -89,6 +91,45 @@ def test_list_entries_pagination(client: TestClient, upload_id: str) -> None:
     ).json()
     assert clamped["page"] == 1
     assert [item["index"] for item in clamped["items"]] == [0, 1, 2, 3, 4]
+
+
+def test_list_entries_ground_truth_flags_matches(
+    client: TestClient, sample_har_dict: dict
+) -> None:
+    sample_har_dict["log"]["_analysis"] = {
+        "domain": "example.com",
+        "platform": "web",
+        "interact": "login",
+        "cookies": "accept",
+        "visit": "first",
+        "extra": "000",
+        "captured_at": "2026-01-01T10:00:00+00:00",
+        "standardized_filename": "x.har",
+        "ground_truth": [
+            {"key": "E-mail", "value": "alice"},
+            {"key": "IP Address", "value": "10.0.0.1"},  # never appears in the fixture
+        ],
+    }
+    upload = client.post(
+        "/api/har/upload",
+        files={"file": ("tagged.har", json.dumps(sample_har_dict).encode("utf-8"), "application/json")},
+    )
+    upload_id = upload.json()["upload_id"]
+
+    # Ground truth search is opt-in (a full scan) -- omitting gt_keys entirely
+    # runs no check at all, not "check every tagged key".
+    unrequested = client.get(f"/api/har/{upload_id}/entries").json()
+    assert all(not item["highlighted"] for item in unrequested["items"])
+
+    body = client.get(f"/api/har/{upload_id}/entries", params={"gt_keys": "E-mail,IP Address"}).json()
+    flagged = [item["index"] for item in body["items"] if item["highlighted"]]
+    assert flagged == [1]  # only the login POST body ("user=alice&pass=secret") mentions it
+    badge_labels = [b["label"] for b in body["items"][1]["badges"]]
+    assert any(label == "E-mail match: POST Data (plain)" for label in badge_labels)
+
+    # Excluding the matching key drops the match entirely, not just its highlight.
+    excluded = client.get(f"/api/har/{upload_id}/entries", params={"gt_keys": "IP Address"}).json()
+    assert all(not item["highlighted"] for item in excluded["items"])
 
 
 def test_list_entries_unknown_upload_id_returns_404(client: TestClient) -> None:

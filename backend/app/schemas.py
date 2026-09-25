@@ -23,7 +23,7 @@ class EntryBadge(BaseModel):
     "orange"."""
 
     label: str
-    tone: Literal["neutral", "orange"]
+    tone: Literal["neutral", "orange", "error"]
     matches: list[BadgeFieldMatch] = []
 
 
@@ -302,24 +302,23 @@ class DisseminationSearchRequest(BaseModel):
     encodings: list[str]
     narrow: str = ""
     highlight: str = ""
-
-
-class DisseminationMatchRow(BaseModel):
-    """One matching entry: its Network-Log-shaped summary (reused so the
-    frontend's row/detail-panel components need no dissemination-specific
-    variant -- including its `badges`, the same field Network Log's filter/
-    highlight uses) plus a per-(field, value) breakdown for the detail
-    panel's "Matches" tab."""
-
-    entry: EntrySummary
-    reasons: list[dict[str, str]]
+    # Ground truth is opt-in like Network Log's -- None means "don't check
+    # it at all" (the frontend only sends a list once the user has turned
+    # ground truth search on), an empty list means "checked on, nothing
+    # included".
+    gt_keys: list[str] | None = None
 
 
 class DisseminationSearchResponse(BaseModel):
-    """The full dissemination scan result: domain aggregate + matching entries."""
+    """The full dissemination scan result: domain aggregate + matching
+    entries, each a Network-Log-shaped summary (reused so the frontend's
+    row/detail-panel components need no dissemination-specific variant --
+    including its `badges`, the same field Network Log's filter/highlight/
+    ground-truth checks use, and what the entry detail panel's Matched
+    Fields tab reads)."""
 
     by_domain: list[dict[str, Any]]
-    matches: list[DisseminationMatchRow]
+    matches: list[EntrySummary]
 
 
 # --- Metadata ---

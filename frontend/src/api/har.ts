@@ -16,6 +16,9 @@ export interface EntriesQuery {
   methods?: string[]
   /** Omit entirely for "all encodings" (the backend's default); pass [] for "none". */
   encodings?: string[]
+  /** Ground-truth keys to check for (see the file's own log._analysis.ground_truth).
+   * Omit entirely for "all tagged keys" (the backend's default); pass [] for "none". */
+  gtKeys?: string[]
   page: number
   page_size: number
 }
@@ -27,6 +30,7 @@ export function fetchEntries(uploadId: string, query: EntriesQuery): Promise<Ent
     scope: query.scope,
     methods: query.methods?.length ? query.methods.join(',') : undefined,
     encodings: query.encodings === undefined ? undefined : query.encodings.join(','),
+    gt_keys: query.gtKeys === undefined ? undefined : query.gtKeys.join(','),
     page: query.page,
     page_size: query.page_size,
   })

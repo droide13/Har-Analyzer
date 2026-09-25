@@ -21,7 +21,14 @@ from app.schemas import (
 )
 from app.shared.entry_summary import build_entry_summary
 from app.shared.naming import derive_metadata_from_entries, get_attrs_from_har_name
-from app.shared.search import ENCODING_OPTIONS, entry_matches, reason_field_matches, reason_summary_line
+from app.shared.search import (
+    ENCODING_OPTIONS,
+    MatchReason,
+    entry_matches,
+    ground_truth_reasons_by_entry,
+    reason_field_matches,
+    reason_summary_line,
+)
 from app.store import UploadRecord, upload_store
 
 from ._common import get_record_or_404
@@ -101,6 +108,12 @@ async def list_entries(  # pylint: disable=too-many-arguments,too-many-positiona
     encodings: str | None = Query(
         default=None, description="Comma-separated encodings; omit for all, empty string for none"
     ),
+    gt_keys: str | None = Query(
+        default=None,
+        description="Comma-separated ground-truth keys to check for (see the file's own "
+        "log._analysis.ground_truth); omit entirely to skip the check (it's a full scan, "
+        "opt-in only), empty string to run it with none included",
+    ),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=50, ge=10, le=500),
 ) -> EntriesPage:
@@ -125,6 +138,23 @@ async def list_entries(  # pylint: disable=too-many-arguments,too-many-positiona
         else {}
     )
 
+    # Ground truth values (the real email/name/IP/... tagged on this file)
+    # get checked for the same way Dissemination checks a traced value --
+    # any of them appearing anywhere (any field, any selected encoding)
+    # flags the entry, independent of the filter/highlight query text. This
+    # is a real full scan, so it's opt-in: gt_keys left out entirely (as
+    # opposed to passed empty) means "don't run it at all" -- the frontend
+    # only sends it once the user has explicitly turned ground truth search
+    # on, same as Dissemination's own explicit-submit search.
+    included_gt_keys = _parse_csv(gt_keys)
+    gt_reasons_by_index: dict[int, list[tuple[str, list[MatchReason]]]] = {}
+    if included_gt_keys is not None:
+        existing_analysis = get_embedded_analysis(record.har_data)
+        if existing_analysis is not None:
+            gt_reasons_by_index = ground_truth_reasons_by_entry(
+                filtered, existing_analysis.ground_truth, included_gt_keys, encoding_set
+            )
+
     total_pages = max(1, (len(filtered) + page_size - 1) // page_size)
     current_page = min(page, total_pages)
     start, end = (current_page - 1) * page_size, current_page * page_size
@@ -132,8 +162,9 @@ async def list_entries(  # pylint: disable=too-many-arguments,too-many-positiona
     items: list[EntrySummary] = []
     for entry in filtered[start:end]:
         highlight_result = highlight_results.get(entry.index)
+        gt_matches = gt_reasons_by_index.get(entry.index)
         summary = build_entry_summary(entry)
-        summary.highlighted = bool(highlight_result and highlight_result.matched)
+        summary.highlighted = bool(highlight_result and highlight_result.matched) or bool(gt_matches)
 
         # Filter and highlight are independent queries, so both badges can
         # show on the same row at once -- a filter narrowed the list down to
@@ -167,17 +198,34 @@ async def list_entries(  # pylint: disable=too-many-arguments,too-many-positiona
                     ],
                 )
             )
+        # One badge per matched ground-truth key (not merged into one line)
+        # so it's obvious *which* value leaked, e.g. "E-mail match: ..." vs
+        # "First Name match: ...".
+        for gt_key, gt_reasons in gt_matches or []:
+            gt_line = reason_summary_line(gt_reasons)
+            badges.append(
+                EntryBadge(
+                    label=f"{gt_key} match: {gt_line}",
+                    tone="error",
+                    matches=[
+                        BadgeFieldMatch(attr=m.attr, label=m.label, text=m.text)
+                        for m in reason_field_matches(gt_reasons)
+                    ],
+                )
+            )
         summary.badges = badges
 
         items.append(summary)
 
     # Positions within the *whole* filtered set, not just the current page, so
-    # the UI can show a true total and offer jump-to-page buttons.
-    highlighted_positions = (
-        [i for i, e in enumerate(filtered) if highlight_results[e.index].matched]
-        if h_active
-        else []
-    )
+    # the UI can show a true total and offer jump-to-page buttons. A position
+    # counts if either the highlight query matched there or a ground truth
+    # value did -- either is a reason to jump to that page.
+    highlighted_positions = [
+        i
+        for i, e in enumerate(filtered)
+        if (h_active and highlight_results[e.index].matched) or e.index in gt_reasons_by_index
+    ]
 
     return EntriesPage(
         total=len(entries),

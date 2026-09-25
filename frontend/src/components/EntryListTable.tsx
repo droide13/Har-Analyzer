@@ -82,11 +82,17 @@ export function EntryListTable({
       rows={items}
       rowKey={(e) => e.index}
       onRowClick={(e) => onSelectRow(e.index)}
-      rowClassName={(e) =>
-        [e.highlighted ? 'bg-highlight' : '', e.index === selectedIndex ? 'outline outline-2 -outline-offset-2 outline-accent' : '']
+      rowClassName={(e) => {
+        // A ground truth match is a more alarming kind of "found it" than a
+        // plain search-query highlight -- gets its own wash color instead
+        // of collapsing into the same bg-highlight yellow every other
+        // highlighted row uses, so the two don't read as the same thing.
+        const hasGroundTruthMatch = e.badges.some((b) => b.tone === 'error')
+        const rowTint = hasGroundTruthMatch ? 'bg-error-wash' : e.highlighted ? 'bg-highlight' : ''
+        return [rowTint, e.index === selectedIndex ? 'outline outline-2 -outline-offset-2 outline-accent' : '']
           .filter(Boolean)
           .join(' ')
-      }
+      }}
       emptyLabel={emptyMessage}
     />
   )

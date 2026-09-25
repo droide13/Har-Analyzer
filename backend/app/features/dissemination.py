@@ -16,7 +16,6 @@ from app.shared.search import (
     MatchReason,
     collect_reasons,
     dedupe_overlapping_reasons,
-    dedupe_redundant_encodings,
     encode_variants,
     reason_label,
 )
@@ -211,25 +210,6 @@ def find_dissemination(
         if reasons:
             results.append((entry, reasons))
     return sorted(results, key=lambda match: chronological_key(match[0]))
-
-
-def reason_summary(reasons: list[MatchReason]) -> list[dict[str, str]]:
-    """One row per (field, value): collapses redundant links of the
-    URL-encoding chain and lists other matched forms alongside it."""
-    grouped: dict[tuple[str, str], list[str]] = {}
-    for reason in reasons:
-        key = (reason_label(reason), reason.term)
-        forms = grouped.setdefault(key, [])
-        form = reason.encoding or "plain"
-        if form not in forms:
-            forms.append(form)
-
-    rows: list[dict[str, str]] = []
-    for (field_name, value), forms in sorted(grouped.items()):
-        # Plain first, then the remaining encodings alphabetically.
-        ordered = sorted(dedupe_redundant_encodings(forms), key=lambda f: (f != "plain", f))
-        rows.append({"Field": field_name, "Value": value, "Forms": ", ".join(ordered)})
-    return rows
 
 
 @dataclass(slots=True)

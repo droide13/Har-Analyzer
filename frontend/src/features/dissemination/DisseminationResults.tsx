@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { searchDissemination } from '../../api/dissemination'
+import { fetchMetadata } from '../../api/metadata'
 import { useDebouncedValue } from '../../hooks/useDebouncedValue'
-import type { DisseminationFirstSeen, DisseminationMatchRow, InitiatorChainLink } from '../../api/types'
+import type { DisseminationFirstSeen, InitiatorChainLink } from '../../api/types'
 import { EntryListWithDetail } from '../../components/EntryListWithDetail'
 import { DataTable, type DataTableColumn } from '../../components/DataTable'
 import { FormField, FormRow, fieldInputClasses } from '../../components/FormField'
+import { GroundTruthSearchControl } from '../../components/GroundTruthSearchControl'
 import { HelpText } from '../../components/HelpText'
 import { ErrorState, LoadingState } from '../../components/QueryState'
 import { Tabs, type TabDefinition } from '../../components/Tabs'
@@ -32,14 +34,6 @@ const DOMAIN_COLUMNS: DataTableColumn<DomainRow>[] = [
   { header: 'Distinct Values Seen', accessor: (r) => r['Distinct Values Seen'] },
 ]
 
-/** Why one entry matched -- shown as an extra tab on that entry's detail
- * panel. */
-const REASON_COLUMNS: DataTableColumn<DisseminationMatchRow['reasons'][number]>[] = [
-  { header: 'Field', accessor: (r) => r.Field },
-  { header: 'Value', accessor: (r) => r.Value },
-  { header: 'Forms', accessor: (r) => r.Forms },
-]
-
 /** Results for an already-submitted search: a switchable By Domain /
  * Initiator Traced Entries view, then the live narrow/highlight filters
  * over the matching-entries list. Re-queries the backend on a narrow/
@@ -57,14 +51,30 @@ export function DisseminationResults({ uploadId, submittedSearch, initiatorChain
   const [initiatorSelectedIndex, setInitiatorSelectedIndex] = useState<number | null>(null)
   const [matchesSelectedIndex, setMatchesSelectedIndex] = useState<number | null>(null)
 
+  // Shared with Network Log/Metadata's query cache for this file. null =
+  // ground truth search off (a full scan is real work, opt-in only via
+  // GroundTruthSearchControl's button below) -- same convention as Network
+  // Log's, so the two tables behave identically.
+  const { data: metadata } = useQuery({ queryKey: ['metadata', uploadId], queryFn: () => fetchMetadata(uploadId) })
+  const groundTruth = metadata?.existing_analysis?.ground_truth ?? []
+  const [groundTruthKeys, setGroundTruthKeys] = useState<Set<string> | null>(null)
+
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['dissemination-search', uploadId, submittedSearch, debouncedNarrow, debouncedHighlight],
+    queryKey: [
+      'dissemination-search',
+      uploadId,
+      submittedSearch,
+      debouncedNarrow,
+      debouncedHighlight,
+      groundTruthKeys === null ? null : [...groundTruthKeys].sort(),
+    ],
     queryFn: () =>
       searchDissemination(uploadId, {
         key: submittedSearch.key,
         encodings: submittedSearch.encodings,
         narrow: debouncedNarrow,
         highlight: debouncedHighlight,
+        gtKeys: groundTruthKeys === null ? undefined : [...groundTruthKeys],
       }),
     placeholderData: (previous) => previous,
   })
@@ -75,8 +85,6 @@ export function DisseminationResults({ uploadId, submittedSearch, initiatorChain
   if (data.matches.length === 0 && data.by_domain.length === 0) {
     return <p>No further dissemination found beyond the key's own occurrences.</p>
   }
-
-  const selectedMatch = data.matches.find((m) => m.entry.index === matchesSelectedIndex)
 
   // A hop the chain couldn't resolve (its initiating URL wasn't captured in
   // this HAR) always ends up first once build_initiator_chain's result is
@@ -163,52 +171,39 @@ export function DisseminationResults({ uploadId, submittedSearch, initiatorChain
 
       <h5 className="mt-3 text-sm font-semibold">Matching HAR Entries</h5>
       <HelpText>Ordered by HAR timestamp, oldest first.</HelpText>
-      <FormRow>
-        <FormField label="Narrow these matches (discards)">
-          <input
-            type="text"
-            className={fieldInputClasses}
-            value={narrowQuery}
-            onChange={(e) => setNarrowQuery(e.target.value)}
-            placeholder="e.g. domain:example.com, status:200"
-          />
-        </FormField>
-        <FormField label="Highlight within matches (keeps all)">
-          <input
-            type="text"
-            className={fieldInputClasses}
-            value={highlightQuery}
-            onChange={(e) => setHighlightQuery(e.target.value)}
-            placeholder="e.g. cookie, status:200"
-          />
-        </FormField>
-      </FormRow>
+
+      <div className="mb-3 flex flex-col gap-3 rounded-md border border-border bg-bg-subtle p-3">
+        <FormRow>
+          <FormField label="Narrow these matches (discards)">
+            <input
+              type="text"
+              className={fieldInputClasses}
+              value={narrowQuery}
+              onChange={(e) => setNarrowQuery(e.target.value)}
+              placeholder="e.g. domain:example.com, status:200"
+            />
+          </FormField>
+          <FormField label="Highlight within matches (keeps all)">
+            <input
+              type="text"
+              className={fieldInputClasses}
+              value={highlightQuery}
+              onChange={(e) => setHighlightQuery(e.target.value)}
+              placeholder="e.g. cookie, status:200"
+            />
+          </FormField>
+        </FormRow>
+        <GroundTruthSearchControl groundTruth={groundTruth} active={groundTruthKeys} onSearch={setGroundTruthKeys} />
+      </div>
+
       <EntryListWithDetail
         uploadId={uploadId}
-        items={data.matches.map((m) => m.entry)}
+        items={data.matches}
         selectedIndex={matchesSelectedIndex}
         onSelectRow={setMatchesSelectedIndex}
         onClose={() => setMatchesSelectedIndex(null)}
         showMatchedFields
         emptyMessage="No matches for this filter."
-        extraTabs={
-          selectedMatch
-            ? [
-                {
-                  key: 'matches',
-                  label: 'Matches',
-                  render: () => (
-                    <DataTable
-                      variant="compact"
-                      columns={REASON_COLUMNS}
-                      rows={selectedMatch.reasons}
-                      rowKey={(_, i) => i}
-                    />
-                  ),
-                },
-              ]
-            : []
-        }
       />
     </div>
   )

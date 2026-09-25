@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from functools import lru_cache
 from typing import Callable, Literal, Mapping, Sequence
 
-from app.core.models import FIELD_MAP, ParsedEntry
+from app.core.models import FIELD_MAP, GroundTruthEntry, ParsedEntry
 
 # Checkbox label -> function turning raw bytes into the encoded/hashed string.
 ENCODERS: dict[str, Callable[[bytes], str]] = {
@@ -411,6 +411,45 @@ def reason_field_matches(reasons: list[MatchReason]) -> list[FieldMatch]:
         forms_sorted = sorted(forms, key=lambda f: (f != "plain", f))
         matches.append(FieldMatch(attr=info["attr"], field_label=label, forms=forms_sorted, text=info["text"]))
     return matches
+
+
+def ground_truth_reasons_by_entry(
+    entries: Sequence[ParsedEntry],
+    ground_truth: Sequence[GroundTruthEntry],
+    included_keys: set[str] | None,
+    encodings: set[str],
+) -> dict[int, list[tuple[str, list[MatchReason]]]]:
+    """For each entry, which of `ground_truth`'s keys matched and via which
+    reasons -- one ``(key, reasons)`` pair per matched key, kept separate
+    rather than merged into one combined line, so a caller can badge
+    "<key> match: <field(s)>" per key and tell which specific value leaked
+    where. Shared by Network Log and Dissemination so both check ground
+    truth the same way.
+
+    `included_keys` follows the same convention as the checkbox-style
+    filters above: None means every ground_truth entry, a set means only
+    those keys. A key with a blank value is always skipped.
+
+    This is a real full scan (every entry x every included value x every
+    selected encoding) -- callers should only run it on an explicit
+    "search ground truth" action, not on every keystroke.
+    """
+    attrs = [a for a in FIELD_MAP["any"] if a != "domain"]
+    included = [g for g in ground_truth if g.value and (included_keys is None or g.key in included_keys)]
+    if not included:
+        return {}
+
+    result: dict[int, list[tuple[str, list[MatchReason]]]] = {}
+    for entry in entries:
+        per_entry: list[tuple[str, list[MatchReason]]] = []
+        for g in included:
+            variants = encode_variants(g.value, encodings)
+            reasons = dedupe_overlapping_reasons(collect_reasons(entry, attrs, g.value, variants))
+            if reasons:
+                per_entry.append((g.key, reasons))
+        if per_entry:
+            result[entry.index] = per_entry
+    return result
 
 
 def dissemination_badge_labels(reasons: list[MatchReason]) -> list[str]:

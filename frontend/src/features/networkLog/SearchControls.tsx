@@ -1,8 +1,9 @@
-import type { ScopeOptions } from '../../api/types'
+import type { GroundTruthEntry, ScopeOptions } from '../../api/types'
 import { CheckboxGroup } from '../../components/CheckboxGroup'
 import { Disclosure } from '../../components/Disclosure'
 import { EncodingCheckboxList } from '../../components/EncodingCheckboxList'
 import { FormField, FormRow, fieldInputClasses } from '../../components/FormField'
+import { GroundTruthSearchControl } from '../../components/GroundTruthSearchControl'
 
 interface SearchControlsProps {
   filterQuery: string
@@ -18,6 +19,11 @@ interface SearchControlsProps {
   encodingOptions: string[]
   selectedEncodings: Set<string>
   onEncodingsChange: (encodings: Set<string>) => void
+  /** This file's own tagged ground-truth values (Metadata tab) -- empty
+   * when none have been tagged, in which case the section doesn't render. */
+  groundTruth: GroundTruthEntry[]
+  groundTruthKeys: Set<string> | null
+  onSearchGroundTruth: (keys: Set<string>) => void
   pageSize: number
   onPageSizeChange: (size: number) => void
 }
@@ -40,6 +46,9 @@ export function SearchControls({
   encodingOptions,
   selectedEncodings,
   onEncodingsChange,
+  groundTruth,
+  groundTruthKeys,
+  onSearchGroundTruth,
   pageSize,
   onPageSizeChange,
 }: SearchControlsProps) {
@@ -121,6 +130,8 @@ export function SearchControls({
         selected={selectedEncodings}
         onChange={onEncodingsChange}
       />
+
+      <GroundTruthSearchControl groundTruth={groundTruth} active={groundTruthKeys} onSearch={onSearchGroundTruth} />
     </div>
   )
 }

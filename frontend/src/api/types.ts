@@ -35,7 +35,7 @@ export interface BadgeFieldMatch {
 
 export interface EntryBadge {
   label: string
-  tone: 'neutral' | 'orange'
+  tone: 'neutral' | 'orange' | 'error'
   matches: BadgeFieldMatch[]
 }
 
@@ -200,14 +200,9 @@ export interface DisseminationTimelineResponse {
   timeline: Record<string, unknown>[]
 }
 
-export interface DisseminationMatchRow {
-  entry: EntrySummary
-  reasons: { Field: string; Value: string; Forms: string }[]
-}
-
 export interface DisseminationSearchResponse {
   by_domain: Record<string, unknown>[]
-  matches: DisseminationMatchRow[]
+  matches: EntrySummary[]
 }
 
 // --- Metadata ---

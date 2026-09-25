@@ -1,3 +1,5 @@
+import json
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -52,7 +54,7 @@ def test_dissemination_search_finds_matches_and_aggregates_by_domain(
     )
     body = response.json()
     assert response.status_code == 200
-    assert [row["entry"]["index"] for row in body["matches"]] == [0, 3]
+    assert [row["index"] for row in body["matches"]] == [0, 3]
     assert body["by_domain"][0]["Domain"] == "example.com"
     assert body["by_domain"][0]["Entries Hit"] == 2
 
@@ -65,14 +67,14 @@ def test_dissemination_search_narrow_discards_and_highlight_flags(
         f"/api/har/{upload_id}/dissemination/search",
         json={"key": "token", "encodings": [], "narrow": "status:404"},
     ).json()
-    assert [row["entry"]["index"] for row in narrowed["matches"]] == [3]
+    assert [row["index"] for row in narrowed["matches"]] == [3]
     assert narrowed["by_domain"][0]["Entries Hit"] == 2  # unaffected by narrow
 
     highlighted = client.post(
         f"/api/har/{upload_id}/dissemination/search",
         json={"key": "token", "encodings": [], "highlight": "status:404"},
     ).json()
-    flags = {row["entry"]["index"]: row["entry"]["highlighted"] for row in highlighted["matches"]}
+    flags = {row["index"]: row["highlighted"] for row in highlighted["matches"]}
     assert flags == {0: False, 3: True}
 
 
@@ -82,3 +84,40 @@ def test_dissemination_search_unknown_key_returns_404(client: TestClient, upload
         json={"key": "does-not-exist", "encodings": []},
     )
     assert response.status_code == 404
+
+
+def test_dissemination_search_ground_truth_is_opt_in_and_badges_per_key(
+    client: TestClient, sample_har_dict: dict
+) -> None:
+    sample_har_dict["log"]["_analysis"] = {
+        "domain": "example.com",
+        "platform": "web",
+        "interact": "login",
+        "cookies": "accept",
+        "visit": "first",
+        "extra": "000",
+        "captured_at": "2026-01-01T10:00:00+00:00",
+        "standardized_filename": "x.har",
+        "ground_truth": [{"key": "Session Token", "value": "abc123"}],
+    }
+    upload = client.post(
+        "/api/har/upload",
+        files={"file": ("tagged.har", json.dumps(sample_har_dict).encode("utf-8"), "application/json")},
+    )
+    upload_id = upload.json()["upload_id"]
+
+    # Omitting gt_keys entirely runs no ground-truth check at all.
+    unrequested = client.post(
+        f"/api/har/{upload_id}/dissemination/search", json={"key": "token", "encodings": []}
+    ).json()
+    assert all(not row["highlighted"] for row in unrequested["matches"])
+
+    body = client.post(
+        f"/api/har/{upload_id}/dissemination/search",
+        json={"key": "token", "encodings": [], "gt_keys": ["Session Token"]},
+    ).json()
+    # Both entries traced for "token" (0 and 3) also carry the ground-truth value.
+    flags = {row["index"]: row["highlighted"] for row in body["matches"]}
+    assert flags == {0: True, 3: True}
+    badge_labels = [b["label"] for b in body["matches"][0]["badges"]]
+    assert "Session Token match: Query Params (plain)" in badge_labels
