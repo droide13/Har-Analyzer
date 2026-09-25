@@ -27,6 +27,7 @@ from app.features.dissemination import (
     value_timeline,
 )
 from app.schemas import (
+    BadgeFieldMatch,
     DisseminationFirstSeen,
     DisseminationMatchRow,
     DisseminationSearchRequest,
@@ -36,7 +37,7 @@ from app.schemas import (
     InitiatorChainLink,
 )
 from app.shared.entry_summary import build_entry_summary
-from app.shared.search import MatchReason, dissemination_badge_labels, entry_matches
+from app.shared.search import MatchReason, dissemination_badge_labels, entry_matches, reason_field_matches
 
 from ._common import get_record_or_404
 
@@ -54,7 +55,13 @@ def _occurrences_or_404(entries: list[ParsedEntry], key: str) -> list[Occurrence
 def _badges(reasons: list[MatchReason]) -> list[EntryBadge]:
     """Dissemination has no filter/highlight duality -- every badge is just
     "what matched", so all get the same tone."""
-    return [EntryBadge(label=label, tone="orange") for label in dissemination_badge_labels(reasons)]
+    field_matches = {m.field_label: m for m in reason_field_matches(reasons)}
+    badges = []
+    for label in dissemination_badge_labels(reasons):
+        match = field_matches.get(label)
+        matches = [BadgeFieldMatch(attr=match.attr, label=match.field_label, text=match.text)] if match else []
+        badges.append(EntryBadge(label=label, tone="orange", matches=matches))
+    return badges
 
 
 @router.get("/{upload_id}/dissemination/keys", response_model=list[str])

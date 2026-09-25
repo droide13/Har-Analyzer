@@ -119,6 +119,11 @@ class MatchReason:
     # Only set for `cookies_text` hits, and only to label them in the UI.
     # None means "not a cookie hit, or the side couldn't be determined".
     scope: CookieScope | None = None
+    # The literal substring that matched, in the form it actually appears in
+    # the field -- `term` itself for a plain match, the encoded variant for
+    # an encoded one. Lets a caller highlight exactly what matched instead
+    # of just naming the field it matched in.
+    matched_text: str = ""
 
 
 def reason_label(reason: MatchReason) -> str:
@@ -251,12 +256,14 @@ def collect_reasons(
         if term.lower() in text.lower():
             # The plain check folds case, so the scope lookup must too.
             for scope in _scopes_for(entry, attr, term, fold_case=True):
-                reasons.append(MatchReason(term=term, attr=attr, encoding=None, scope=scope))
+                reasons.append(MatchReason(term=term, attr=attr, encoding=None, scope=scope, matched_text=term))
         for name, variant in variants.items():
             if variant in text:
                 # Encoded forms are matched verbatim, so the scope lookup is too.
                 for scope in _scopes_for(entry, attr, variant, fold_case=False):
-                    reasons.append(MatchReason(term=term, attr=attr, encoding=name, scope=scope))
+                    reasons.append(
+                        MatchReason(term=term, attr=attr, encoding=name, scope=scope, matched_text=variant)
+                    )
     return reasons
 
 
@@ -289,7 +296,7 @@ def match_term(
         reasons: list[MatchReason] = []
         if field_name == "status" and re.fullmatch(r"[1-5]xx", value.lower()):
             if entry.status.startswith(value[0]):
-                reasons.append(MatchReason(term=value, attr="status", encoding=None))
+                reasons.append(MatchReason(term=value, attr="status", encoding=None, matched_text=value))
         else:
             variants = encode_variants(value, encodings)
             reasons = collect_reasons(entry, FIELD_MAP[field_name], value, variants)
@@ -321,7 +328,7 @@ def entry_matches(
     if methods:
         if entry.method not in methods:
             return MatchResult(matched=False)
-        method_reasons.append(MatchReason(term=entry.method, attr="method", encoding=None))
+        method_reasons.append(MatchReason(term=entry.method, attr="method", encoding=None, matched_text=entry.method))
 
     if not query:
         return MatchResult(matched=True, reasons=method_reasons)
@@ -362,6 +369,48 @@ def reason_summary_line(reasons: list[MatchReason]) -> str:
         forms_sorted = sorted(forms, key=lambda f: (f != "plain", f))
         parts.append(f"{label} ({', '.join(forms_sorted)})")
     return ", ".join(parts)
+
+
+@dataclass(frozen=True)
+class FieldMatch:
+    """One distinct field a set of reasons hit, structured rather than
+    formatted -- the counterpart to reason_summary_line/
+    dissemination_badge_labels for a caller that needs to *act* on a match
+    (jump to the field's detail tab, highlight the literal substring) rather
+    than just display it."""
+
+    attr: str
+    field_label: str
+    forms: list[str]
+    text: str
+
+    @property
+    def label(self) -> str:
+        return f"{self.field_label} ({', '.join(self.forms)})"
+
+
+def reason_field_matches(reasons: list[MatchReason]) -> list[FieldMatch]:
+    """One FieldMatch per distinct field a set of reasons hit -- same field
+    grouping and encoding-chain dedup as reason_summary_line, kept as a
+    parallel implementation (rather than reason_summary_line calling this)
+    since dissemination_badge_labels' un-sorted, first-seen field order must
+    stay independent of this function's alphabetical grouping."""
+    by_label: dict[str, dict[str, object]] = {}
+    for reason in reasons:
+        label = reason_label(reason)
+        form = reason.encoding or "plain"
+        info = by_label.setdefault(label, {"attr": reason.attr, "forms": [], "text": reason.matched_text})
+        forms = info["forms"]
+        if form not in forms:
+            forms.append(form)
+
+    matches: list[FieldMatch] = []
+    for label in sorted(by_label):
+        info = by_label[label]
+        forms = dedupe_redundant_encodings(info["forms"])
+        forms_sorted = sorted(forms, key=lambda f: (f != "plain", f))
+        matches.append(FieldMatch(attr=info["attr"], field_label=label, forms=forms_sorted, text=info["text"]))
+    return matches
 
 
 def dissemination_badge_labels(reasons: list[MatchReason]) -> list[str]:

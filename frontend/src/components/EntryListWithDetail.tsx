@@ -47,6 +47,8 @@ export function EntryListWithDetail({
     return table
   }
 
+  const selectedBadges = items.find((item) => item.index === selectedIndex)?.badges
+
   return (
     <Group orientation="horizontal" style={{ height: '70vh' }}>
       <Panel minSize="30%" className="pr-3">
@@ -54,7 +56,7 @@ export function EntryListWithDetail({
       </Panel>
       <Separator className="w-1.5 shrink-0 cursor-col-resize rounded-full bg-border transition-colors hover:bg-accent active:bg-accent" />
       <Panel defaultSize={420} minSize={320} maxSize={800}>
-        <EntryDetailPanel uploadId={uploadId} index={selectedIndex} onClose={onClose} extraTabs={extraTabs} />
+        <EntryDetailPanel uploadId={uploadId} index={selectedIndex} onClose={onClose} extraTabs={extraTabs} badges={selectedBadges} />
       </Panel>
     </Group>
   )

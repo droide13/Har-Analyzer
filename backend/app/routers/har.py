@@ -12,6 +12,7 @@ from fastapi import APIRouter, HTTPException, Query, UploadFile
 
 from app.core.models import METHOD_ORDER, SCOPE_OPTIONS, ParsedEntry, get_embedded_analysis
 from app.schemas import (
+    BadgeFieldMatch,
     EntriesPage,
     EntryBadge,
     EntryDetail,
@@ -22,7 +23,7 @@ from app.schemas import (
 )
 from app.shared.entry_summary import build_entry_summary
 from app.shared.naming import derive_metadata_from_entries, get_attrs_from_har_name
-from app.shared.search import ENCODING_OPTIONS, entry_matches, reason_summary_line
+from app.shared.search import ENCODING_OPTIONS, entry_matches, reason_field_matches, reason_summary_line
 from app.store import UploadRecord, upload_store
 
 from ._common import get_record_or_404
@@ -146,10 +147,28 @@ async def list_entries(  # pylint: disable=too-many-arguments,too-many-positiona
         filter_reasons = filter_results[entry.index].reasons
         if filter_reasons:
             filter_line = reason_summary_line(filter_reasons)
-            badges.append(EntryBadge(label=f"Filtered via: {filter_line}", tone="neutral"))
+            badges.append(
+                EntryBadge(
+                    label=f"Filtered via: {filter_line}",
+                    tone="neutral",
+                    matches=[
+                        BadgeFieldMatch(attr=m.attr, label=m.label, text=m.text)
+                        for m in reason_field_matches(filter_reasons)
+                    ],
+                )
+            )
         if highlight_result is not None and highlight_result.matched:
             highlight_line = reason_summary_line(highlight_result.reasons)
-            badges.append(EntryBadge(label=f"Highlighted via: {highlight_line}", tone="orange"))
+            badges.append(
+                EntryBadge(
+                    label=f"Highlighted via: {highlight_line}",
+                    tone="orange",
+                    matches=[
+                        BadgeFieldMatch(attr=m.attr, label=m.label, text=m.text)
+                        for m in reason_field_matches(highlight_result.reasons)
+                    ],
+                )
+            )
         summary.badges = badges
 
         items.append(summary)

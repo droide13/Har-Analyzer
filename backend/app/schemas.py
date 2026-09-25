@@ -5,6 +5,16 @@ from typing import Any, Literal
 from pydantic import BaseModel
 
 
+class BadgeFieldMatch(BaseModel):
+    """One field a badge's reasons hit, structured rather than formatted --
+    lets the entry detail panel jump to that field's tab and highlight the
+    literal text that matched, instead of only showing EntryBadge.label."""
+
+    attr: str
+    label: str
+    text: str
+
+
 class EntryBadge(BaseModel):
     """One search-match chip for an entry row. Network Log gives its
     Filtered/Highlighted-via badges distinct tones so both can show at once
@@ -14,6 +24,7 @@ class EntryBadge(BaseModel):
 
     label: str
     tone: Literal["neutral", "orange"]
+    matches: list[BadgeFieldMatch] = []
 
 
 class SessionMetadata(BaseModel):

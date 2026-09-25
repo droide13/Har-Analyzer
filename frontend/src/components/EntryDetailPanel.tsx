@@ -1,12 +1,14 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { fetchEntryDetail } from '../api/har'
-import type { EntryDetail, HeaderPair } from '../api/types'
+import type { EntryBadge, EntryDetail, HeaderPair } from '../api/types'
+import { Badge } from './Badge'
 import { Button } from './Button'
 import { DataTable } from './DataTable'
 import { JsonBlock } from './JsonBlock'
 import { ErrorState, LoadingState } from './QueryState'
 import { Tabs, type TabDefinition } from './Tabs'
+import { highlightText } from '../lib/highlightText'
 
 export interface ExtraDetailTab {
   key: string
@@ -22,6 +24,11 @@ interface EntryDetailPanelProps {
    * mirrors the original's render_entry_expander(leading_tabs=...), used by
    * Dissemination for its "Matches" tab. */
   extraTabs?: ExtraDetailTab[]
+  /** The row's own search-match badges (Network Log's Filtered/Highlighted-
+   * via, Dissemination's match reasons) -- powers the "Matched Fields" tab
+   * below, which shows them uncut (the table row's badges truncate) and
+   * jumps to + highlights the matched text in its actual field's tab. */
+  badges?: EntryBadge[]
 }
 
 type StandardTabKey = 'req-headers' | 'res-headers' | 'query' | 'cookies' | 'req-body' | 'res-body' | 'initiator' | 'timing' | 'details'
@@ -38,31 +45,78 @@ const STANDARD_TABS: { key: StandardTabKey; label: string }[] = [
   { key: 'details', label: 'Details' },
 ]
 
+// Which standard tab a matched field's backend attribute (see
+// backend/app/shared/search.py's ATTR_LABELS) lives in -- a field left out
+// here (url, domain, method, status, mime) is already visible elsewhere in
+// the panel (the top URL bar, the row itself), so its match chip isn't made
+// clickable.
+const ATTR_TO_TAB: Partial<Record<string, StandardTabKey>> = {
+  req_headers_text: 'req-headers',
+  res_headers_text: 'res-headers',
+  req_body: 'req-body',
+  res_body: 'res-body',
+  cookies_text: 'cookies',
+  query_params_text: 'query',
+}
+
 const TIMING_PHASES = ['blocked', 'dns', 'connect', 'ssl', 'send', 'wait', 'receive'] as const
 
 function formatDurationMs(value: number): string {
   return value >= 0 ? `${value.toFixed(1)} ms` : '—'
 }
 
-function PairTable({ pairs }: { pairs: HeaderPair[] }) {
+/** Scrolls the first <mark> under `ref` into view whenever `text` changes --
+ * shared by BodyText and JsonBlock so jumping to a match via the Matched
+ * Fields tab doesn't leave the highlight scrolled out of sight below a long
+ * body/JSON dump. */
+function useScrollToMark(ref: RefObject<HTMLElement | null>, text: string) {
+  useEffect(() => {
+    if (!text) return
+    ref.current?.querySelector('mark')?.scrollIntoView({ block: 'center' })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [text])
+}
+
+function PairTable({ pairs, highlight }: { pairs: HeaderPair[]; highlight?: string }) {
   if (pairs.length === 0) return <p className="text-sm text-text-muted">None.</p>
+  const needle = highlight?.toLowerCase()
   return (
     <DataTable
       variant="compact"
       showHeader={false}
       columns={[
-        { header: 'Name', accessor: (p: HeaderPair) => p.name, className: 'font-semibold' },
-        { header: 'Value', accessor: (p: HeaderPair) => p.value },
+        {
+          header: 'Name',
+          accessor: (p: HeaderPair) => (highlight ? highlightText(p.name, highlight) : p.name),
+          sizingText: (p) => p.name,
+          className: 'font-semibold',
+        },
+        {
+          header: 'Value',
+          accessor: (p: HeaderPair) => (highlight ? highlightText(p.value, highlight) : p.value),
+          sizingText: (p) => p.value,
+        },
       ]}
       rows={pairs}
       rowKey={(p, i) => `${p.name}-${i}`}
+      rowClassName={
+        needle
+          ? (p) => (p.name.toLowerCase().includes(needle) || p.value.toLowerCase().includes(needle) ? 'bg-highlight/60' : '')
+          : undefined
+      }
     />
   )
 }
 
-function BodyText({ text, placeholder }: { text: string; placeholder: string }) {
+function BodyText({ text, placeholder, highlight }: { text: string; placeholder: string; highlight?: string }) {
+  const ref = useRef<HTMLPreElement>(null)
+  useScrollToMark(ref, highlight ?? '')
   if (!text) return <p className="text-sm text-text-muted">{placeholder}</p>
-  return <pre className="font-mono whitespace-pre-wrap break-all rounded bg-bg-inset p-2 text-xs">{text}</pre>
+  return (
+    <pre ref={ref} className="font-mono whitespace-pre-wrap break-all rounded bg-bg-inset p-2 text-xs">
+      {highlight ? highlightText(text, highlight) : text}
+    </pre>
+  )
 }
 
 function InitiatorTab({ detail }: { detail: EntryDetail }) {
@@ -155,25 +209,65 @@ function DetailsTab({ detail }: { detail: EntryDetail }) {
   )
 }
 
-function StandardTabContent({ tab, detail }: { tab: StandardTabKey; detail: EntryDetail }) {
+/** Full, un-truncated list of every field this entry matched, across both
+ * Filtered-via and Highlighted-via (Network Log) or the single match-reason
+ * list (Dissemination) -- the table row's own badges only show as much as
+ * fits before wrapping/truncating. A field that lives in one of the panel's
+ * own tabs (headers, cookies, query params, bodies) is clickable: it jumps
+ * there and highlights the literal text that matched. */
+function MatchedFieldsTab({ badges, onJump }: { badges: EntryBadge[]; onJump: (attr: string, text: string) => void }) {
+  const seen = new Map<string, { tone: EntryBadge['tone']; attr: string; label: string; text: string }>()
+  for (const badge of badges) {
+    for (const match of badge.matches) {
+      seen.set(`${match.attr}::${match.text}`, { tone: badge.tone, attr: match.attr, label: match.label, text: match.text })
+    }
+  }
+  const matches = [...seen.values()]
+
+  if (matches.length === 0) {
+    return <p className="text-sm text-text-muted">No structured match info for this entry.</p>
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      {matches.map((match) => {
+        const navigable = Boolean(ATTR_TO_TAB[match.attr])
+        return (
+          <button
+            key={`${match.attr}::${match.text}`}
+            type="button"
+            disabled={!navigable}
+            onClick={() => onJump(match.attr, match.text)}
+            className={`flex flex-col items-start gap-0.5 rounded-md border border-border p-2 text-left ${navigable ? 'cursor-pointer hover:border-accent hover:bg-bg-subtle' : 'cursor-default'}`}
+          >
+            <Badge tone={match.tone}>{match.label}</Badge>
+            <span className="font-mono text-xs break-all text-text">{match.text}</span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+function StandardTabContent({ tab, detail, highlight }: { tab: StandardTabKey; detail: EntryDetail; highlight?: string }) {
   switch (tab) {
     case 'req-headers':
-      return <PairTable pairs={detail.req_headers} />
+      return <PairTable pairs={detail.req_headers} highlight={highlight} />
     case 'res-headers':
-      return <PairTable pairs={detail.res_headers} />
+      return <PairTable pairs={detail.res_headers} highlight={highlight} />
     case 'query':
-      return <PairTable pairs={detail.query_params} />
+      return <PairTable pairs={detail.query_params} highlight={highlight} />
     case 'cookies':
       return (
         <div>
-          <JsonBlock title="Request Cookies" value={detail.req_cookies} />
-          <JsonBlock title="Response Cookies" value={detail.res_cookies} />
+          <JsonBlock title="Request Cookies" value={detail.req_cookies} highlight={highlight} />
+          <JsonBlock title="Response Cookies" value={detail.res_cookies} highlight={highlight} />
         </div>
       )
     case 'req-body':
-      return <BodyText text={detail.req_body} placeholder="No request body found." />
+      return <BodyText text={detail.req_body} placeholder="No request body found." highlight={highlight} />
     case 'res-body':
-      return <BodyText text={detail.res_body} placeholder="No body content." />
+      return <BodyText text={detail.res_body} placeholder="No body content." highlight={highlight} />
     case 'initiator':
       return <InitiatorTab detail={detail} />
     case 'timing':
@@ -187,7 +281,7 @@ function StandardTabContent({ tab, detail }: { tab: StandardTabKey; detail: Entr
  * only when a row is opened -- replaces the original's nested
  * expander-in-expander-per-row pattern (tabs/shared/entry_render.py) with a
  * single on-demand fetch. Shared by Network Log and Dissemination. */
-export function EntryDetailPanel({ uploadId, index, onClose, extraTabs = [] }: EntryDetailPanelProps) {
+export function EntryDetailPanel({ uploadId, index, onClose, extraTabs = [], badges = [] }: EntryDetailPanelProps) {
   // Keeps the previous entry's detail on screen (instead of `detail`
   // briefly going undefined) while the new one loads -- without this, the
   // `detail && <Tabs .../>` block below unmounts and remounts Tabs on every
@@ -202,11 +296,31 @@ export function EntryDetailPanel({ uploadId, index, onClose, extraTabs = [] }: E
   // internal state) as a second guard: even if `detail` does go briefly
   // undefined for some other reason, the chosen tab survives.
   const [activeTab, setActiveTab] = useState<string | undefined>(undefined)
+  // Which tab + literal substring a Matched Fields chip jumped to, so that
+  // tab's content can highlight it -- cleared implicitly by just not
+  // matching once the user navigates to a different tab on their own.
+  const [highlight, setHighlight] = useState<{ tab: StandardTabKey; text: string } | null>(null)
+
+  function jumpToMatch(attr: string, text: string) {
+    const tab = ATTR_TO_TAB[attr]
+    if (!tab) return
+    setHighlight({ tab, text })
+    setActiveTab(tab)
+  }
+
+  const hasMatches = badges.some((b) => b.matches.length > 0)
 
   const tabDefinitions: TabDefinition[] = detail
     ? [
         ...extraTabs.map((t) => ({ key: t.key, label: t.label, render: () => t.render(detail) })),
-        ...STANDARD_TABS.map((t) => ({ key: t.key, label: t.label, render: () => <StandardTabContent tab={t.key} detail={detail} /> })),
+        ...(hasMatches
+          ? [{ key: 'matched-fields', label: 'Matched Fields', render: () => <MatchedFieldsTab badges={badges} onJump={jumpToMatch} /> }]
+          : []),
+        ...STANDARD_TABS.map((t) => ({
+          key: t.key,
+          label: t.label,
+          render: () => <StandardTabContent tab={t.key} detail={detail} highlight={highlight?.tab === t.key ? highlight.text : undefined} />,
+        })),
       ]
     : []
 

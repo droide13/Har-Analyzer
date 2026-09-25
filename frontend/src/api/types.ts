@@ -22,9 +22,21 @@ export interface UploadResponse {
   session_metadata: SessionMetadata
 }
 
+/** One field a badge's reasons hit, structured rather than just formatted
+ * into the badge's label -- `attr` is a ParsedEntry attribute name (see
+ * backend/app/shared/search.py's ATTR_LABELS), used to route a click to the
+ * matching entry-detail tab; `text` is the literal substring that matched,
+ * for highlighting there. */
+export interface BadgeFieldMatch {
+  attr: string
+  label: string
+  text: string
+}
+
 export interface EntryBadge {
   label: string
   tone: 'neutral' | 'orange'
+  matches: BadgeFieldMatch[]
 }
 
 export interface EntrySummary {
