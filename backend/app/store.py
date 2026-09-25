@@ -1,10 +1,9 @@
 """In-memory store for uploaded HAR files.
 
 This is a local, single-user tool (no auth, no multi-tenant concerns), so a
-plain process-lifetime dict keyed by an opaque upload id replaces Streamlit's
-``st.session_state``: each upload is parsed once, kept in memory, and looked
-up by id on every subsequent request instead of being re-uploaded or
-re-parsed per view.
+plain process-lifetime dict keyed by an opaque upload id holds each upload:
+parsed once, kept in memory, and looked up by id on every subsequent
+request instead of being re-uploaded or re-parsed per view.
 """
 
 import json
@@ -26,13 +25,11 @@ class UploadRecord:
     """Everything derived from one uploaded HAR file.
 
     ``har_data`` stays the pristine parsed upload for the record's whole
-    lifetime -- it's never mutated in place, matching the original's
-    ``load_raw_har(file_bytes)`` always re-reading the untouched original
-    bytes. A Metadata "Generate standardized file" call produces a
-    *separate* embed_analysis'd copy, stashed in ``standardized_bytes``/
-    ``standardized_filename`` for the download endpoint -- the same role
-    Streamlit's ``st.session_state`` played for freezing what the download
-    button serves.
+    lifetime -- it's never mutated in place. A Metadata "Generate
+    standardized file" call produces a *separate* embed_analysis'd copy,
+    stashed in ``standardized_bytes``/``standardized_filename`` for the
+    download endpoint, so the download button keeps serving whatever was
+    last generated regardless of further edits to the live entries.
     """
 
     upload_id: str

@@ -45,12 +45,11 @@ const CONTENT_CLASSES = {
 }
 
 /**
- * Replaces TabShell (and EntryDetailPanel's own parallel hand-rolled tab
- * bar) with a single Radix Tabs-based component. Only the active tab's
- * `render()` is ever called -- Radix Tabs.Content would happily accept
- * every tab's content up front, but only the currently-active one is ever
- * constructed here, preserving the "switching tabs costs nothing for the
- * others" behavior this app was rewritten from Streamlit to get.
+ * A single Radix Tabs-based component shared by every tab bar in the app.
+ * Only the active tab's `render()` is ever called -- Radix Tabs.Content
+ * would happily accept every tab's content up front, but only the
+ * currently-active one is ever constructed here, so switching tabs costs
+ * nothing for the others.
  */
 export function Tabs({ tabs, variant = 'page', activeTab: controlledActive, onActiveTabChange }: TabsProps) {
   const [internalActive, setInternalActive] = useState(tabs[0]?.key)

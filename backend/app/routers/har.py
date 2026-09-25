@@ -1,11 +1,9 @@
 """HAR upload and Network Log endpoints.
 
-Filtering/highlighting semantics here are a direct port of the Streamlit
-app's Network Log tab (``tabs/networklog.py``): a filter query discards
-non-matching entries, an independent highlight query flags matches within
-what's left, both share the same scope/method/encoding controls, and
-``entry_matches`` from ``app.shared.search`` does the actual matching --
-unchanged from the original.
+A filter query discards non-matching entries, an independent highlight
+query flags matches within what's left, both share the same
+scope/method/encoding controls, and ``entry_matches`` from
+``app.shared.search`` does the actual matching.
 """
 
 from fastapi import APIRouter, HTTPException, Query, UploadFile

@@ -1,5 +1,5 @@
 """Data structures and extraction/filtering logic for stable identifier
-detection. Ported from the Streamlit app's tabs/identifiers/identifiers.py.
+detection.
 
 Combines four signals to separate real identifiers (session/tracking/auth
 tokens) from ordinary low-cardinality params (status, lang, sort order):

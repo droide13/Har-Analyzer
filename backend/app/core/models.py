@@ -1,10 +1,8 @@
 """Strictly typed data structures and parsing for HAR files.
 
-Ported from the original Streamlit app's ``core/models.py``. Behavior is
-unchanged; the only structural difference is that entry-building is split
-out into :func:`build_entries_from_har_data` so callers that already have
-the parsed HAR dict (e.g. the upload store) don't have to parse the same
-JSON twice.
+Entry-building is split out into :func:`build_entries_from_har_data` so
+callers that already have the parsed HAR dict (e.g. the upload store)
+don't have to parse the same JSON twice.
 """
 
 import json

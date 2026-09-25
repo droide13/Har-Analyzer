@@ -1,5 +1,5 @@
 """Cookies view logic: one record per cookie sighting, plus a name-grouped
-aggregate. Ported from the Streamlit app's tabs/cookies.py.
+aggregate.
 """
 
 from typing import Any

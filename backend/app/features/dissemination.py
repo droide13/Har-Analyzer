@@ -1,8 +1,7 @@
 """Pure logic for tracing the dissemination history of a query-param/cookie key.
 
-Ported from the Streamlit app's tabs/dissemination/dissemination.py. Sightings
-of a key are grouped by name and ordered by their actual HAR timestamp
-(startedDateTime) so first appearance and value drift read as a timeline.
+Sightings of a key are grouped by name and ordered by their actual HAR
+timestamp (startedDateTime) so first appearance and value drift read as a timeline.
 ``find_dissemination`` then reuses the literal matching primitives from
 app.shared.search to locate every other place in the HAR (headers, URL,
 bodies, other cookies) where any of those values reappear.

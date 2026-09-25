@@ -1,6 +1,5 @@
 """Query Params view logic: one record per query-string param occurrence,
-plus a name-grouped aggregate. Ported from the Streamlit app's
-tabs/query_params.py.
+plus a name-grouped aggregate.
 """
 
 from typing import Any

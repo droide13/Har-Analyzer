@@ -1,12 +1,10 @@
 """Overview tab logic: summary metrics, domain/subdomain aggregation, and
 opt-in DNS + WHOIS resolution.
 
-Ported from the Streamlit app's tabs/overview/overview.py. The pandas-based
-``get_top_domains_df``/``build_subdomain_table_data`` helpers are dropped --
-the frontend gets the full ``domain_map`` once and does its own
+The frontend gets the full ``domain_map`` once and does its own
 sort/limit/selection client-side (the map is tiny, bounded by distinct
-domains rather than entries), so that server round trip per slider tweak
-isn't needed here the way it is for Network Log's per-entry filtering.
+domains rather than entries), so no server round trip per slider tweak is
+needed here the way it is for Network Log's per-entry filtering.
 """
 
 from collections import Counter

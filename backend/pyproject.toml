@@ -16,16 +16,14 @@ max-line-length = 100
 # schemas.py's Pydantic models intentionally mirror core/models.py's
 # dataclasses field-for-field (EntrySummary/EntryDetail <-> ParsedEntry,
 # HarAnalysisModel <-> HarAnalysis) -- that's the API/domain boundary
-# doing its job, not copy-paste. Same reasoning the original Streamlit
-# app's pyproject.toml documented for StandardizeInputs vs HarAnalysis.
+# doing its job, not copy-paste.
 disable = ["duplicate-code"]
 
 [tool.pylint.design]
 # Building an API response object field-by-field (EntrySummary, HAR entry
 # parsing, ...) naturally collects one local per field; that's verbosity,
 # not complexity, so the default of 15 is too tight for this codebase's
-# own pattern -- mirrors the same reasoning the original Streamlit app's
-# pyproject.toml used for its render methods.
+# own pattern.
 max-locals = 20
 
 [tool.black]

@@ -1,14 +1,10 @@
 """Core logic for standardizing an existing HAR file and tagging it with
-experiment metadata (``log._analysis``).
+experiment metadata (``log._analysis``). Pure functions of their arguments
+throughout.
 
-Ported from the Streamlit app's tabs/metadata/metadata.py. Pure functions of
-their arguments throughout, same as the original.
-
-``build_signature``/staleness detection is deliberately not ported: it
-compared the current form to what was last generated purely so the frontend
-could show a "regenerate to update the download" warning, which is now a
-plain client-side object comparison (see frontend/src/features/metadata) --
-no backend round trip needed for it.
+Staleness detection (whether the form has changed since the last generated
+download) is a plain client-side object comparison instead -- see
+frontend/src/features/metadata -- no backend round trip needed for it.
 """
 
 from dataclasses import dataclass

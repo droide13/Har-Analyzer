@@ -22,10 +22,10 @@ interface SearchControlsProps {
   onPageSizeChange: (size: number) => void
 }
 
-/** Direct port of the Streamlit Network Log tab's search panel
- * (tabs/networklog.py::_render_search_controls): same fields, same
- * semantics (filter discards, highlight flags), same default of "all
- * encodings checked". */
+/** Network Log's search panel: a filter query (discards non-matching
+ * entries), an independent highlight query (flags matches without
+ * discarding), and the shared scope/method/encoding controls both use --
+ * defaults to every encoding checked. */
 export function SearchControls({
   filterQuery,
   onFilterQueryChange,
