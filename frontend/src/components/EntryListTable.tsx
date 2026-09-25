@@ -24,7 +24,7 @@ const BASE_COLUMNS: DataTableColumn<EntrySummary>[] = [
 const MATCHED_FIELDS_COLUMN: DataTableColumn<EntrySummary> = {
   header: 'Matched Fields',
   accessor: (e) => (
-    <div className="flex flex-nowrap items-center overflow-hidden">
+    <div className="flex flex-nowrap items-center">
       {e.badges.map((badge, i) => (
         <Badge key={i} tone={badge.tone}>
           {badge.label}
@@ -32,11 +32,19 @@ const MATCHED_FIELDS_COLUMN: DataTableColumn<EntrySummary> = {
       ))}
     </div>
   ),
+  // Sized to whichever row's badges are longest rather than capped/shrunk
+  // to fit -- a row with many matched fields would otherwise have its
+  // badges cut off with no way to see the rest. The table scrolls
+  // horizontally instead.
+  sizeToContent: true,
   // Badge text spells out the matched encoding/hash form too (e.g.
   // "Filtered via: Response Body (Base64, MD5)"), so this column needs the
   // real concatenated label text to size against -- the accessor's JSX
-  // would otherwise size it against "[object Object]".
-  sizingText: (e) => e.badges.map((b) => b.label).join(', '),
+  // would otherwise size it against "[object Object]". Each badge pill also
+  // has its own padding/margin the char-count heuristic can't see, so pad a
+  // few extra chars per badge -- erring wide is fine here, erring narrow
+  // reintroduces the clipping this column exists to avoid.
+  sizingText: (e) => e.badges.map((b) => `${b.label}   `).join(''),
 }
 
 interface EntryListTableProps {

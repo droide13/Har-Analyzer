@@ -26,6 +26,12 @@ export interface DataTableColumn<T> {
    * unbroken values (URLs, tokens) instead of the default single-line
    * ellipsis truncation. */
   className?: string
+  /** Size this column to fit its widest sampled row in full instead of
+   * capping at MAX_CONTENT_PX/shrinking to help the table fit its
+   * container -- for a column whose content (e.g. a variable-length list
+   * of badges) shouldn't ever be cut off, at the cost of the table needing
+   * a horizontal scrollbar to show it. */
+  sizeToContent?: boolean
 }
 
 interface DataTableProps<T> {
@@ -85,7 +91,9 @@ function cellText(value: ReactNode): string {
  * doesn't dilute how much room short enum-like columns (Name, Method,
  * Secure...) get. Only once the total exceeds the container do the
  * long/flexible columns (the ones that hit the max-width cap) give space
- * back, so the table fills its container exactly with no default scroll.
+ * back, so the table fills its container exactly with no default scroll --
+ * unless a column opts out via `sizeToContent`, which always gets its full
+ * content width even if that pushes the table wider than its container.
  */
 function computeInitialSizing<T>(
   columns: DataTableColumn<T>[],
@@ -99,7 +107,8 @@ function computeInitialSizing<T>(
       const text = col.sizingText ? col.sizingText(row) : String(col.accessor(row) ?? '')
       if (text.length > longest) longest = text.length
     }
-    return Math.min(MAX_CONTENT_PX, Math.max(MIN_CONTENT_PX, longest * 7.2 + CELL_PADDING_PX))
+    const needed = longest * 7.2 + CELL_PADDING_PX
+    return col.sizeToContent ? Math.max(MIN_CONTENT_PX, needed) : Math.min(MAX_CONTENT_PX, Math.max(MIN_CONTENT_PX, needed))
   })
 
   const sizes = [...contentPx]
@@ -110,7 +119,7 @@ function computeInitialSizing<T>(
     // Room to spare: hand it to whichever column(s) wanted more than the
     // cap could give (the "flexible" long-text columns), or the single
     // widest column if none were capped.
-    const capped = contentPx.map((px, i) => ({ i, px })).filter((d) => d.px === MAX_CONTENT_PX)
+    const capped = contentPx.map((px, i) => ({ i, px })).filter((d) => d.px === MAX_CONTENT_PX && !columns[d.i].sizeToContent)
     if (capped.length > 0) {
       for (const d of capped) sizes[d.i] += leftover / capped.length
     } else {
@@ -119,12 +128,16 @@ function computeInitialSizing<T>(
   } else {
     // Too tight for the container: shrink proportionally, but never below
     // a readable floor -- take the shortfall from whichever columns have
-    // the most room above that floor first.
+    // the most room above that floor first. A sizeToContent column is
+    // never a donor -- it keeps its full content width and the table
+    // scrolls horizontally instead of cutting it off.
     for (let i = 0; i < sizes.length; i++) {
       if (sizes[i] < MIN_CONTENT_PX) sizes[i] = MIN_CONTENT_PX
     }
     const deficit = sizes.reduce((sum, px) => sum + px, 0) - containerPx
-    const donors = sizes.map((px, i) => ({ i, room: px - MIN_CONTENT_PX })).filter((d) => d.room > 0)
+    const donors = sizes
+      .map((px, i) => ({ i, room: px - MIN_CONTENT_PX }))
+      .filter((d) => d.room > 0 && !columns[d.i].sizeToContent)
     const donorRoom = donors.reduce((sum, d) => sum + d.room, 0)
     if (deficit > 0 && donorRoom > 0) {
       for (const d of donors) {
@@ -137,9 +150,11 @@ function computeInitialSizing<T>(
   // over the container width -- a fraction of a pixel Chrome still treats
   // as "content overflows," painting a full (if practically empty)
   // scrollbar track. Trim any such sliver off the widest column so the
-  // table never triggers one by accident.
+  // table never triggers one by accident. Capped at 1px so this can never
+  // eat into a sizeToContent column's real, intentional overflow -- that's
+  // a genuine "needs a scrollbar" case, not a rounding artifact.
   const overshoot = sizes.reduce((sum, px) => sum + px, 0) - containerPx
-  if (overshoot > 0) {
+  if (overshoot > 0 && overshoot < 1) {
     sizes[sizes.indexOf(Math.max(...sizes))] -= overshoot + 0.5
   }
 
@@ -233,6 +248,41 @@ export function DataTable<T>({
     return () => observer.disconnect()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [columnKey])
+
+  // sizeToContent columns need to track the *current* rows, not just react
+  // to a column-shape change -- Network Log and Dissemination keep the same
+  // DataTable instance mounted across every filter/highlight/narrow edit
+  // (only `rows` changes, never the column set), so without this a Matched
+  // Fields column sized against an early, narrower page of results would
+  // stay stuck too narrow once a later page's badges need more room. Only
+  // ever grows -- never shrinks back down as shorter rows come in -- so the
+  // table doesn't restlessly resize itself while the user is typing, and
+  // (like the resize observer above) backs off once a column's been resized
+  // by hand.
+  useLayoutEffect(() => {
+    if (manuallyResizedRef.current) return
+    const sample = rows.slice(0, CHARS_SAMPLED_ROWS)
+    setColumnSizing((prev) => {
+      if (prev.key !== columnKey) return prev
+      let changed = false
+      const next = { ...prev.sizing }
+      for (const col of columns) {
+        if (!col.sizeToContent) continue
+        let longest = col.header.length
+        for (const row of sample) {
+          const text = col.sizingText ? col.sizingText(row) : String(col.accessor(row) ?? '')
+          if (text.length > longest) longest = text.length
+        }
+        const needed = Math.max(MIN_CONTENT_PX, longest * 7.2 + CELL_PADDING_PX)
+        if (needed > (next[col.header] ?? 0)) {
+          next[col.header] = needed
+          changed = true
+        }
+      }
+      return changed ? { key: columnKey, sizing: next } : prev
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, columnKey])
 
   const colDefs: ColumnDef<T>[] = columns.map((col) => ({
     id: col.header,
