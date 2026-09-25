@@ -12,7 +12,7 @@ guarantee the original made.
 from fastapi import APIRouter, HTTPException, Response
 
 from app.core.har_time import parse_started_date_time
-from app.core.models import embed_analysis, get_embedded_analysis, serialize_har
+from app.core.models import GroundTruthEntry, embed_analysis, get_embedded_analysis, serialize_har
 from app.features.metadata import (
     StandardizeInputs,
     build_standardized_result,
@@ -81,7 +81,7 @@ async def generate_metadata(
         extra=body.extra,
         captured_at=captured_at,
         description=body.description,
-        email_used=body.email_used,
+        ground_truth=tuple(GroundTruthEntry(key=g.key, value=g.value) for g in body.ground_truth),
         notes=body.notes,
     )
 

@@ -212,6 +212,11 @@ export interface DisseminationSearchResponse {
 
 // --- Metadata ---
 
+export interface GroundTruthEntry {
+  key: string
+  value: string
+}
+
 export interface HarAnalysis {
   tool_version: string
   domain: string
@@ -223,7 +228,7 @@ export interface HarAnalysis {
   captured_at: string
   standardized_filename: string
   description: string
-  email_used: string
+  ground_truth: GroundTruthEntry[]
   notes: string
 }
 
@@ -247,7 +252,7 @@ export interface GenerateMetadataRequest {
   extra?: string
   captured_at: string
   description?: string
-  email_used?: string
+  ground_truth?: GroundTruthEntry[]
   notes?: string
 }
 
@@ -262,4 +267,5 @@ export interface NamingOptions {
   interact: Record<string, string>
   cookies: Record<string, string>
   visit: Record<string, string>
+  ground_truth_keys: string[]
 }

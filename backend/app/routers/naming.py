@@ -7,6 +7,7 @@ from fastapi import APIRouter
 from app.schemas import NamingOptions
 from app.shared.naming import (
     COOKIES_LABELS,
+    GROUND_TRUTH_KEY_OPTIONS,
     INTERACT_LABELS,
     PLATFORM_LABELS,
     VISIT_LABELS,
@@ -23,4 +24,5 @@ async def get_naming_options() -> NamingOptions:
         interact=INTERACT_LABELS,
         cookies=COOKIES_LABELS,
         visit=VISIT_LABELS,
+        ground_truth_keys=GROUND_TRUTH_KEY_OPTIONS,
     )

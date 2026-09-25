@@ -325,6 +325,13 @@ class DisseminationSearchResponse(BaseModel):
 # --- Metadata ---
 
 
+class GroundTruthEntryModel(BaseModel):
+    """Mirrors core.models.GroundTruthEntry."""
+
+    key: str
+    value: str
+
+
 class HarAnalysisModel(BaseModel):  # pylint: disable=too-many-instance-attributes
     """Mirrors core.models.HarAnalysis.to_dict()."""
 
@@ -338,7 +345,7 @@ class HarAnalysisModel(BaseModel):  # pylint: disable=too-many-instance-attribut
     captured_at: str
     standardized_filename: str
     description: str = ""
-    email_used: str = ""
+    ground_truth: list[GroundTruthEntryModel] = []
     notes: str = ""
 
 
@@ -368,7 +375,7 @@ class GenerateMetadataRequest(BaseModel):  # pylint: disable=too-many-instance-a
     extra: str = ""
     captured_at: str  # ISO 8601; parsed the same way HAR's own timestamps are
     description: str = ""
-    email_used: str = ""
+    ground_truth: list[GroundTruthEntryModel] = []
     notes: str = ""
 
 
@@ -381,9 +388,11 @@ class GenerateMetadataResponse(BaseModel):
 
 class NamingOptions(BaseModel):
     """label tables from app.shared.naming, single source of truth for the
-    Metadata form's Platform/Interaction/Cookie/Visit selects."""
+    Metadata form's Platform/Interaction/Cookie/Visit selects and the ground
+    truth key picker."""
 
     platform: dict[str, str]
     interact: dict[str, str]
     cookies: dict[str, str]
     visit: dict[str, str]
+    ground_truth_keys: list[str]

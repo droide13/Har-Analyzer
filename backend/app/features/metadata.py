@@ -12,7 +12,7 @@ from datetime import datetime
 from typing import Any, cast
 from urllib.parse import urlparse
 
-from app.core.models import HarAnalysis, ParsedEntry
+from app.core.models import GroundTruthEntry, HarAnalysis, ParsedEntry
 from app.shared.naming import get_har_filename, normalize_extra_code
 
 _CUSTOM_DOMAIN_LABEL = "Custom domain..."
@@ -32,7 +32,7 @@ class StandardizeInputs:  # pylint: disable=too-many-instance-attributes
     extra: str
     captured_at: datetime
     description: str = ""
-    email_used: str = ""
+    ground_truth: tuple[GroundTruthEntry, ...] = ()
     notes: str = ""
 
 
@@ -52,6 +52,14 @@ def build_standardized_result(inputs: StandardizeInputs) -> tuple[str, HarAnalys
         now=inputs.captured_at,
     )
 
+    # Drop rows the user started but never filled in (either side blank) --
+    # a half-entered key/value pair isn't ground truth worth embedding.
+    ground_truth = tuple(
+        GroundTruthEntry(key=g.key.strip(), value=g.value.strip())
+        for g in inputs.ground_truth
+        if g.key.strip() and g.value.strip()
+    )
+
     analysis = HarAnalysis(
         domain=inputs.domain.strip(),
         platform=inputs.platform.strip().lower(),
@@ -62,7 +70,7 @@ def build_standardized_result(inputs: StandardizeInputs) -> tuple[str, HarAnalys
         captured_at=inputs.captured_at.isoformat(),
         standardized_filename=filename,
         description=inputs.description.strip(),
-        email_used=inputs.email_used.strip(),
+        ground_truth=ground_truth,
         notes=inputs.notes.strip(),
     )
     return filename, analysis

@@ -2,7 +2,7 @@ from datetime import datetime
 
 import pytest
 
-from app.core.models import build_entries_from_har_data
+from app.core.models import GroundTruthEntry, build_entries_from_har_data
 from app.features.metadata import (
     StandardizeInputs,
     analysis_table_rows,
@@ -23,7 +23,7 @@ def test_build_standardized_result_builds_filename_and_analysis() -> None:
         extra="extra context",
         captured_at=datetime(2026, 7, 17, 17, 0),
         description="  a test capture  ",
-        email_used="test@example.com",
+        ground_truth=(GroundTruthEntry(key="E-mail", value="test@example.com"), GroundTruthEntry(key="", value="")),
         notes="",
     )
     filename, analysis = build_standardized_result(inputs)
@@ -37,6 +37,8 @@ def test_build_standardized_result_builds_filename_and_analysis() -> None:
     assert analysis.extra == "EXT"
     assert analysis.description == "a test capture"
     assert analysis.standardized_filename == filename
+    # The blank second row is dropped rather than embedded.
+    assert analysis.ground_truth == (GroundTruthEntry(key="E-mail", value="test@example.com"),)
 
 
 def test_build_standardized_result_rejects_invalid_codes() -> None:

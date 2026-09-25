@@ -93,6 +93,18 @@ class ParsedEntry:  # pylint: disable=too-many-instance-attributes
 
 
 @dataclass(frozen=True, slots=True)
+class GroundTruthEntry:
+    """One known-real value (an email, a name, an IP...) used to set up the
+    capture -- tagged onto the file so a later pass can check where, if
+    anywhere, it leaks into the traffic itself. ``key`` is free text at this
+    layer; the Metadata form is what keeps it consistent across files (see
+    ``app.shared.naming.GROUND_TRUTH_KEY_OPTIONS``)."""
+
+    key: str
+    value: str
+
+
+@dataclass(frozen=True, slots=True)
 class HarAnalysis:  # pylint: disable=too-many-instance-attributes
     """Experiment-level metadata embedded into a HAR file's ``log._analysis``.
 
@@ -112,7 +124,7 @@ class HarAnalysis:  # pylint: disable=too-many-instance-attributes
     captured_at: str
     standardized_filename: str
     description: str = ""
-    email_used: str = ""
+    ground_truth: tuple[GroundTruthEntry, ...] = ()
     notes: str = ""
     tool_version: str = field(default_factory=get_app_version)
 
@@ -129,13 +141,30 @@ class HarAnalysis:  # pylint: disable=too-many-instance-attributes
             "captured_at": self.captured_at,
             "standardized_filename": self.standardized_filename,
             "description": self.description,
-            "email_used": self.email_used,
+            "ground_truth": [{"key": g.key, "value": g.value} for g in self.ground_truth],
             "notes": self.notes,
         }
 
     @staticmethod
     def from_dict(data: dict[str, Any]) -> "HarAnalysis":
-        """Parse a previously embedded ``log._analysis`` dict back out."""
+        """Parse a previously embedded ``log._analysis`` dict back out.
+
+        A file tagged before ground_truth existed only has the old single
+        ``email_used`` string -- migrated into a one-entry ground_truth list
+        (keyed "E-mail", the first entry in the canonical key list) instead
+        of silently dropping it.
+        """
+        raw_ground_truth = data.get("ground_truth")
+        if isinstance(raw_ground_truth, list):
+            ground_truth = tuple(
+                GroundTruthEntry(key=str(g.get("key", "")), value=str(g.get("value", "")))
+                for g in raw_ground_truth
+                if isinstance(g, dict) and str(g.get("key", "")).strip() and str(g.get("value", "")).strip()
+            )
+        else:
+            legacy_email = str(data.get("email_used", "")).strip()
+            ground_truth = (GroundTruthEntry(key="E-mail", value=legacy_email),) if legacy_email else ()
+
         return HarAnalysis(
             domain=str(data.get("domain", "")),
             platform=str(data.get("platform", "")),
@@ -146,7 +175,7 @@ class HarAnalysis:  # pylint: disable=too-many-instance-attributes
             captured_at=str(data.get("captured_at", "")),
             standardized_filename=str(data.get("standardized_filename", "")),
             description=str(data.get("description", "")),
-            email_used=str(data.get("email_used", "")),
+            ground_truth=ground_truth,
             notes=str(data.get("notes", "")),
             tool_version=str(data.get("tool_version", get_app_version())),
         )

@@ -70,6 +70,22 @@ VISIT_LABELS: dict[str, str] = {
     "delete": "Delete cookies & reload (regenerate from scratch)",
 }
 
+# Suggested keys for the Metadata form's ground-truth picker. Not exhaustive
+# -- the form also accepts a free-typed key.
+GROUND_TRUTH_KEY_OPTIONS: list[str] = [
+    "E-mail",
+    "First Name",
+    "Last Name",
+    "Username",
+    "Phone",
+    "IP Address",
+    "Date of Birth",
+    "Postal Code",
+    "Address",
+    "Country of Residence",
+    "Password",
+]
+
 
 def _labels_by_code(codes: dict[str, str], labels: dict[str, str]) -> dict[str, str]:
     """Invert a key -> code table into the code -> label table filename parsing needs."""
