@@ -68,18 +68,24 @@ function BodyText({ text, placeholder }: { text: string; placeholder: string }) 
 function InitiatorTab({ detail }: { detail: EntryDetail }) {
   return (
     <div>
-      <p className="text-sm text-text-muted">Type: {detail.initiator_type}</p>
-      {detail.initiator_url && <p className="text-sm text-text-muted">Source URL: {detail.initiator_url}</p>}
+      <p className="text-sm text-text-muted">
+        Type: <span className="font-mono text-text">{detail.initiator_type}</span>
+      </p>
+      {detail.initiator_url && (
+        <p className="text-sm text-text-muted break-all">
+          Source URL: <span className="font-mono text-text">{detail.initiator_url}</span>
+        </p>
+      )}
       {detail.initiator_stack.length === 0 ? (
         <p className="text-sm text-text-muted">No JS call stack available for this request.</p>
       ) : (
         <DataTable
           variant="compact"
           columns={[
-            { header: 'Function', accessor: (f) => String(f.functionName ?? '(anonymous)') },
-            { header: 'URL', accessor: (f) => String(f.url ?? '') },
-            { header: 'Line', accessor: (f) => String(f.lineNumber ?? '') },
-            { header: 'Column', accessor: (f) => String(f.columnNumber ?? '') },
+            { header: 'Function', accessor: (f) => String(f.functionName ?? '(anonymous)'), className: 'font-mono' },
+            { header: 'URL', accessor: (f) => String(f.url ?? ''), className: 'font-mono' },
+            { header: 'Line', accessor: (f) => String(f.lineNumber ?? ''), className: 'font-mono' },
+            { header: 'Column', accessor: (f) => String(f.columnNumber ?? ''), className: 'font-mono' },
           ]}
           rows={detail.initiator_stack}
           rowKey={(_, i) => i}
@@ -230,7 +236,7 @@ export function EntryDetailPanel({ uploadId, index, onClose, extraTabs = [] }: E
               the panel's height and squeeze the tabs below out of view --
               the tabs area always keeps the rest of the panel regardless of
               how many lines this wraps to. */}
-          <p className="max-h-24 shrink-0 overflow-y-auto font-mono px-3 pt-2 text-xs break-all">
+          <p className="max-h-40 shrink-0 overflow-y-auto font-mono px-3 pt-2 text-[13px] leading-normal break-all">
             {detail.method} {detail.url}
           </p>
           {/* Controlled (not left to Tabs' own state) so switching to a

@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import {
   useReactTable,
   getCoreRowModel,
@@ -15,6 +15,12 @@ import { useVirtualizer } from '@tanstack/react-virtual'
 export interface DataTableColumn<T> {
   header: string
   accessor: (row: T) => ReactNode
+  /** Plain text to size the column's default width against. Only needed
+   * when `accessor` renders JSX (a badge, an icon) instead of a plain
+   * string/number -- without it, initial sizing would fall back to
+   * stringifying the rendered element (e.g. "[object Object]") instead of
+   * reflecting what's actually in the column. */
+  sizingText?: (row: T) => string
   /** Cell/header content classes -- text alignment, mono, etc. Pass
    * `whitespace-normal break-all` here for a column that should wrap long
    * unbroken values (URLs, tokens) instead of the default single-line
@@ -35,6 +41,14 @@ interface DataTableProps<T> {
   /** 'compact' is a smaller 12px variant for tables nested inside the
    * already-dense entry detail panel. */
   variant?: 'default' | 'compact'
+  /** When set, a row click calls this instead of the default
+   * expand/collapse toggle -- for tables that navigate to an external
+   * detail view (Network Log, Dissemination) rather than expanding in
+   * place. */
+  onRowClick?: (row: T, index: number) => void
+  /** Extra classes for a row (selection outline, search-match highlight),
+   * computed per row. */
+  rowClassName?: (row: T, index: number) => string
 }
 
 const MIN_CONTENT_PX = 72
@@ -82,7 +96,7 @@ function computeInitialSizing<T>(
   const contentPx = columns.map((col) => {
     let longest = col.header.length
     for (const row of sample) {
-      const text = String(col.accessor(row) ?? '')
+      const text = col.sizingText ? col.sizingText(row) : String(col.accessor(row) ?? '')
       if (text.length > longest) longest = text.length
     }
     return Math.min(MAX_CONTENT_PX, Math.max(MIN_CONTENT_PX, longest * 7.2 + CELL_PADDING_PX))
@@ -136,20 +150,22 @@ function computeInitialSizing<T>(
   return sizing
 }
 
-/** Row-virtualized (via react-virtual, same library Network Log's
- * EntryListTable uses) so a raw, ungrouped record count in the thousands
- * (e.g. every cookie/query-param occurrence across a large HAR, not just
- * the name-grouped aggregate) never mounts more <tr>s than the viewport
+/** Row-virtualized (via react-virtual) so a raw, ungrouped record count in
+ * the thousands (e.g. every cookie/query-param occurrence across a large
+ * HAR, not just the name-grouped aggregate, or Network Log/Dissemination's
+ * entry lists via EntryListTable) never mounts more <tr>s than the viewport
  * actually shows.
  *
- * Unlike EntryListTable, this keeps a real <table> (column resize/sizing
- * below depends on native <colgroup> layout, which a <tr> can't get while
- * absolutely positioned) -- so instead of EntryListTable's
- * transform-positioned rows, only the visible slice of rows renders in
- * normal flow, padded above/below by two spacer <tr>s sized to the
- * remaining (unrendered) scroll height. Each row's real height is
- * remeasured once mounted (measureElement), since expanding a row wraps it
- * to multiple lines -- rows aren't a fixed height.
+ * Keeps a real <table> (column resize/sizing below depends on native
+ * <colgroup> layout, which a <tr> can't get while absolutely positioned) --
+ * only the visible slice of rows renders in normal flow, padded above/below
+ * by two spacer <tr>s sized to the remaining (unrendered) scroll height.
+ * This is what keeps the header and body columns pixel-aligned under
+ * horizontal scroll and while an adjacent panel resizes this table's
+ * container -- the two can never drift apart the way a hand-rolled flex-row
+ * + position:absolute layout can. Each row's real height is remeasured once
+ * mounted (measureElement), since expanding a row wraps it to multiple
+ * lines -- rows aren't a fixed height.
  *
  * Column sizing/resizing and row-expansion state are delegated to
  * TanStack Table (the same maintainer/family as react-query and
@@ -163,10 +179,18 @@ export function DataTable<T>({
   showHeader = true,
   emptyLabel = 'No rows.',
   variant = 'default',
+  onRowClick,
+  rowClassName,
 }: DataTableProps<T>) {
   const cellPadding = variant === 'compact' ? 'px-2 py-1 text-xs' : 'px-2 py-1 text-[13px]'
   const containerRef = useRef<HTMLDivElement>(null)
   const columnKey = columns.map((c) => c.header).join('␟')
+  // Tracks whether the user has dragged a resize handle -- once they have,
+  // their widths are intentional and the container-resize effect below
+  // must stop overwriting them (e.g. every pixel of dragging the entry
+  // detail panel's own splitter would otherwise fight a manual column
+  // resize).
+  const manuallyResizedRef = useRef(false)
 
   const [columnSizing, setColumnSizing] = useState<{ key: string; sizing: ColumnSizingState }>(() => ({
     key: columnKey,
@@ -183,8 +207,30 @@ export function DataTable<T>({
   // corrects that before the browser paints.
   useLayoutEffect(() => {
     const measured = containerRef.current?.clientWidth || ASSUMED_CONTAINER_PX
+    manuallyResizedRef.current = false
     setColumnSizing({ key: columnKey, sizing: computeInitialSizing(columns, rows, measured) })
     setSorting((prev) => (prev.key === columnKey ? prev : { key: columnKey, state: [] }))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [columnKey])
+
+  // Re-fit column widths whenever the container itself resizes -- opening
+  // an adjacent detail panel or dragging its splitter changes this table's
+  // available width without changing its column *shape*, so the effect
+  // above (keyed only on columnKey) never re-runs for it. Only auto-fits
+  // while the user hasn't manually resized a column, so this can't fight a
+  // deliberate drag.
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    let lastWidth = el.clientWidth
+    const observer = new ResizeObserver(() => {
+      const width = el.clientWidth
+      if (Math.abs(width - lastWidth) < 2 || manuallyResizedRef.current) return
+      lastWidth = width
+      setColumnSizing({ key: columnKey, sizing: computeInitialSizing(columns, rows, width) })
+    })
+    observer.observe(el)
+    return () => observer.disconnect()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [columnKey])
 
@@ -214,11 +260,13 @@ export function DataTable<T>({
       expanded,
       sorting: sorting.key === columnKey ? sorting.state : [],
     },
-    onColumnSizingChange: (updater) =>
+    onColumnSizingChange: (updater) => {
+      manuallyResizedRef.current = true
       setColumnSizing((prev) => ({
         key: columnKey,
         sizing: typeof updater === 'function' ? updater(prev.sizing) : updater,
-      })),
+      }))
+    },
     onExpandedChange: setExpanded,
     onSortingChange: (updater) =>
       setSorting((prev) => ({
@@ -309,14 +357,15 @@ export function DataTable<T>({
                 onClick={() => {
                   // Selecting text (e.g. to copy a value out of an expanded
                   // row) is a mousedown-drag-mouseup sequence on the same
-                  // row, which the browser still fires as a click -- toggle
+                  // row, which the browser still fires as a click -- act
                   // only when that click didn't leave a selection behind,
                   // so releasing the mouse to hit Ctrl+C doesn't collapse
-                  // the row out from under you.
+                  // the row (or navigate away) out from under you.
                   if (window.getSelection()?.toString()) return
-                  row.toggleExpanded()
+                  if (onRowClick) onRowClick(row.original, virtualRow.index)
+                  else row.toggleExpanded()
                 }}
-                className={`cursor-pointer border-b border-border hover:bg-bg-subtle/60 ${isExpanded ? 'bg-bg-subtle/40' : ''}`}
+                className={`cursor-pointer border-b border-border hover:bg-bg-subtle/60 ${isExpanded ? 'bg-bg-subtle/40' : ''} ${rowClassName ? rowClassName(row.original, virtualRow.index) : ''}`}
               >
                 {row.getVisibleCells().map((cell, i) => {
                   const colDef = columns[i]
