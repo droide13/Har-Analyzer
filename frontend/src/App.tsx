@@ -8,6 +8,7 @@ import { OverviewView } from './features/overview/OverviewView'
 import { IdentifiersView } from './features/identifiers/IdentifiersView'
 import { DisseminationView } from './features/dissemination/DisseminationView'
 import { MetadataView } from './features/metadata/MetadataView'
+import { PreCaptureNotes } from './features/metadata/PreCaptureNotes'
 import type { UploadResponse } from './api/types'
 
 export default function App() {
@@ -66,7 +67,12 @@ export default function App() {
     <div className="mx-auto flex min-h-[100svh] w-full max-w-[1400px] flex-col gap-3 px-6 pt-4 pb-24">
       <PageHeader title="HAR Analyzer" />
 
-      {!session && <FileUpload onUploaded={handleUploaded} />}
+      {!session && (
+        <>
+          <FileUpload onUploaded={handleUploaded} />
+          <PreCaptureNotes />
+        </>
+      )}
 
       {session && (
         <>
