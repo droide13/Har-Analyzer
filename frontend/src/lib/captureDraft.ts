@@ -20,10 +20,42 @@ export interface CaptureDraft {
   notes: string
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
+function asString(value: unknown): string {
+  return typeof value === 'string' ? value : ''
+}
+
+/** Coerce parsed JSON of unknown/possibly-stale shape (e.g. a draft saved
+ * by an older build) into a well-formed CaptureDraft field-by-field,
+ * instead of trusting `as CaptureDraft` and letting a missing/renamed
+ * field (groundTruth in particular) surface as a crash deep in
+ * GroundTruthEditor later. */
+function sanitizeDraft(raw: unknown): CaptureDraft | null {
+  if (!isRecord(raw)) return null
+  const groundTruth = Array.isArray(raw.groundTruth)
+    ? raw.groundTruth.filter(
+        (g): g is GroundTruthEntry => isRecord(g) && typeof g.key === 'string' && typeof g.value === 'string',
+      )
+    : []
+  return {
+    platform: asString(raw.platform),
+    interact: asString(raw.interact),
+    cookies: asString(raw.cookies),
+    visit: asString(raw.visit),
+    extra: asString(raw.extra),
+    description: asString(raw.description),
+    groundTruth,
+    notes: asString(raw.notes),
+  }
+}
+
 export function loadCaptureDraft(): CaptureDraft | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    return raw ? (JSON.parse(raw) as CaptureDraft) : null
+    return raw ? sanitizeDraft(JSON.parse(raw)) : null
   } catch {
     return null
   }

@@ -32,9 +32,16 @@ export function PreCaptureNotes() {
   const { data: naming } = useQuery({ queryKey: ['naming-options'], queryFn: fetchNamingOptions })
   const [draft, setDraft] = useState<CaptureDraft>(EMPTY_DRAFT)
   const [hydrated, setHydrated] = useState(false)
+  // True only once the user has actually typed/picked something -- distinct
+  // from `draft` just holding naming-derived defaults. Gates persistence so
+  // an untouched panel never writes a default-filled draft to storage that
+  // MetadataView would then mistake for a real one and "prefill" from.
+  const [dirty, setDirty] = useState(false)
 
   // Load whatever was saved last, once, then default the code fields once
-  // naming options arrive -- mirrors MetadataView's own seeding.
+  // naming options arrive -- mirrors MetadataView's own seeding. Neither
+  // marks the draft dirty: this is restoring/defaulting state, not the
+  // user expressing intent to save something.
   useEffect(() => {
     setDraft((prev) => ({ ...prev, ...loadCaptureDraft() }))
     setHydrated(true)
@@ -51,20 +58,22 @@ export function PreCaptureNotes() {
     }))
   }, [naming])
 
-  // Persist on every change, once initial hydration has happened (otherwise
-  // the first render's empty defaults would stomp a saved draft before it's
-  // read back in).
+  // Persist on every change, but only once initial hydration has happened
+  // (otherwise the first render's empty defaults would stomp a saved draft
+  // before it's read back in) and only once the user has touched something.
   useEffect(() => {
-    if (!hydrated) return
+    if (!hydrated || !dirty) return
     saveCaptureDraft(draft)
-  }, [draft, hydrated])
+  }, [draft, hydrated, dirty])
 
   function update<K extends keyof CaptureDraft>(key: K, value: CaptureDraft[K]) {
     setDraft((prev) => ({ ...prev, [key]: value }))
+    setDirty(true)
   }
 
   function handleClear() {
     clearCaptureDraft()
+    setDirty(false)
     setDraft(naming ? { ...EMPTY_DRAFT, platform: firstKey(naming.platform), interact: firstKey(naming.interact), cookies: firstKey(naming.cookies), visit: firstKey(naming.visit) } : EMPTY_DRAFT)
   }
 
