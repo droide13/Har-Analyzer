@@ -152,6 +152,14 @@ The standardizer generates (and the app parses) filenames of the form:
 
 This format is defined in one place — `backend/app/shared/naming.py`'s `get_har_filename` (building it) and `get_attrs_from_har_name` (parsing it back) — used by both the standardizer and the upload's file-format check. `GET /api/naming/options` serves the same code/label tables to the frontend, so they can't drift apart.
 
+### Ground truth & experiment notes
+
+Beyond the filename fields, the Metadata tab also records a free-text **description**, free-text **notes**, and a repeatable **ground truth** key/value list (email, name, phone, IP, etc. — pick from the canonical list or type a custom key). None of this affects the filename; all of it is written into `log._analysis` inside the file itself, so the context survives a rename or move. See **Ground Truth** below for how it's later used to scan for leaks.
+
+### Capture notes (pre-upload)
+
+Remembering exactly which platform/interaction/cookie choice/ground-truth values you used *after* you've already recorded and closed a capture is easy to get wrong. The upload screen has a collapsible **Capture notes** panel (below the dropzone) for jotting those down before or while recording instead. It's saved to `localStorage` in your browser — not the backend, since there's no upload yet to attach it to — and the next time you upload a `.har` that doesn't already have `log._analysis` embedded, the Metadata tab prefills itself from that draft and clears it. Domain and capture time are never part of the draft; both are always read straight out of the uploaded file's own traffic.
+
 ---
 
 ## Tabs
@@ -162,7 +170,7 @@ High-level summary of the loaded HAR file: request/size/domain/latency metrics, 
 
 ### Network Log
 
-The main request/response browser: a virtualized table (handles large captures without the browser choking) plus a detail panel per row with tabs for Request/Response Headers, Post data, Query & Cookies, Response Body, Initiator, Timing, and Details. Supports the full filter/highlight search described below.
+The main request/response browser: a virtualized table (handles large captures without the browser choking) plus a detail panel per row with tabs for Request/Response Headers, Post data, Query & Cookies, Response Body, Initiator, Timing, Details, and (when the entry has any) **Matched Fields**. Supports the full filter/highlight search described below, plus the opt-in **ground-truth search** — see **Ground Truth** below.
 
 ### Query Params
 
@@ -182,7 +190,9 @@ Traces a single query-param or cookie key across the whole capture — not just 
 * Builds a **value timeline**: one row per sighting, flagging whenever the value changes from the sighting immediately before it. Useful for spotting session rotation, token refresh, or a value that never changes when it probably should.
 * Runs a **dissemination scan**: takes every distinct value ever seen under that key and searches *every* field of *every* entry — headers, URLs, request/response bodies, other cookies — not just the field the value originally came from. This is how you catch a session cookie quietly leaking into a third-party request URL or an analytics payload.
 * Summarizes the scan **by domain**: which hosts received or echoed the value, in how many entries, and through which fields — a quick way to gauge third-party exposure before drilling into individual requests.
-* Matching entries share the same detail-panel UI as the Network Log tab, with an extra **Matches** tab showing exactly which field and encoding triggered the hit.
+* Renders a **flow graph**: a node-link diagram of the traced value's whole story — the initiator chain that caused its first sighting, pinned in a straight line, flowing into the origin domain, then fanning out (force-directed layout) to every domain it later reached. Edge color/style encodes *why* two domains are connected (initiator, cookie, query param, URL, other); node size reflects how many entries a destination was hit in. Clicking a node narrows the Matching HAR Entries list via the same `domain:` search syntax used elsewhere.
+* Matching entries share the same detail-panel UI as the Network Log tab, including its **Matched Fields** tab (see below) showing exactly which field, encoding, and literal text triggered each hit.
+* Supports the same opt-in **ground-truth search** as Network Log (see **Ground Truth** below) against the "Matching HAR Entries" list, so a real tagged value's disappearance/reappearance can be checked the same way as any other traced key.
 
 **How to use it:**
 
@@ -196,6 +206,20 @@ The dissemination scan is a full sweep over every entry's every field, so it's g
 ### Identifiers
 
 Detection and scoring of likely identifier values (tokens, session IDs, etc.) found in the capture, feeding into the same value/field matching machinery used elsewhere in the app.
+
+### Metadata
+
+Confirms or overrides the domain/platform/interaction/cookie-handling/visit classification for the loaded file, records free-text description/notes and any ground-truth values (see below), then generates a standardized copy of the `.har` with all of it embedded in `log._analysis`. See **File Standardizer** below for the full naming convention.
+
+### Matched Fields (per entry)
+
+Network Log and Dissemination's entry tables truncate their match badges to keep rows scannable. Opening an entry's detail panel shows a **Matched Fields** tab (only present when the entry has matches) listing every match uncut — which field, which encoding, and the literal on-the-wire text that triggered it — and clicking one jumps straight to that field's own tab with the match highlighted.
+
+## Ground Truth
+
+A **ground truth** entry is a real, known value used to set up a capture — the email actually registered with, a name actually typed in, the IP you captured from — tagged onto the file (via the Metadata tab, see below) so later analysis can check whether, and where, that exact value leaks into the traffic itself.
+
+Once a file has ground truth tagged, both **Network Log** and **Dissemination** offer an opt-in **ground-truth search**: every tagged key/value is listed pre-checked, and clicking "Search ground truth values" scans every entry × every included value × every encoding, same as a manual dissemination scan. A match gets its own distinct row highlight (red, vs. the yellow used for a plain search/highlight match) and its badge names which ground-truth field matched (e.g. "E-mail match: ..."), since a real value actually leaking is a different signal from an ordinary search hit.
 
 ## Search Functionality
 
