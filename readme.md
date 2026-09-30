@@ -184,6 +184,8 @@ Same idea as Query Params but for cookies, split by scope (sent vs. `Set-Cookie`
 
 Same raw-registry-or-aggregate idea again, but for identifiers that only ever show up inside a JSON request/response body — a UID2 token, an email hash, a resolved third-party ID — never as a cookie or query param. Every JSON body in the capture is flattened into dotted field paths (e.g. `fms_params.fms_uid2`), each tracked like a cookie/query-param name would be, split by scope (POST Data vs. Response Body). Non-JSON bodies (HTML, JS, form-encoded, binary) are silently skipped.
 
+A real identity/consent-style payload is small -- a few KB, a few dozen to low hundreds of fields. A body over 100,000 characters is skipped outright (it's a product catalog, a config dump, a translations table, not an identifier), and flattening any single body stops after 300 fields regardless of its size, as a second safety net. Both caps exist so one oversized response in a capture can't blow up this tab's response size or the browser rendering it — see `app/shared/json_body.py`.
+
 ### Dissemination
 
 Traces a single query-param or cookie key across the whole capture — not just where it's *named*, but where its *value* shows up anywhere else in the traffic.
