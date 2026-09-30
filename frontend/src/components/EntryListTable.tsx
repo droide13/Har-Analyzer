@@ -64,8 +64,9 @@ interface EntryListTableProps {
  * match-reason display can't drift apart again. Built on the shared
  * DataTable (native <table> + colgroup, TanStack column sizing/resize,
  * react-virtual row virtualization) rather than a bespoke layout, so it
- * inherits the same robust header/body alignment under horizontal scroll
- * and automatic re-fit when the entry detail panel opens beside it.
+ * inherits the same robust header/body alignment under horizontal scroll,
+ * and stays that way -- scrollable, not crushed -- when the entry detail
+ * panel opens beside it and narrows the table's share of the row.
  */
 export function EntryListTable({
   items,

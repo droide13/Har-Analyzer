@@ -228,20 +228,28 @@ export function DataTable<T>({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [columnKey])
 
-  // Re-fit column widths whenever the container itself resizes -- opening
-  // an adjacent detail panel or dragging its splitter changes this table's
-  // available width without changing its column *shape*, so the effect
-  // above (keyed only on columnKey) never re-runs for it. Only auto-fits
-  // while the user hasn't manually resized a column, so this can't fight a
-  // deliberate drag.
+  // Re-fit column widths when the container *grows* -- e.g. closing an
+  // adjacent detail panel hands this table more room back, so columns
+  // should expand to use it. Deliberately does NOT re-fit on shrink: that
+  // used to call the same computeInitialSizing on every shrink too
+  // (opening the detail panel, or dragging its splitter narrower), which
+  // squeezes every column down toward MIN_CONTENT_PX until the table's
+  // total width matches the new, narrower container exactly -- with no
+  // scrollbar, because that's the point of computeInitialSizing's "fits
+  // exactly" logic. That's fine when there's genuinely enough room; it's
+  // not when a sibling panel just ate half the table's width, where it
+  // means every cell's content gets crushed into an unreadable sliver with
+  // no way to see the rest. Only auto-fits while the user hasn't manually
+  // resized a column, so this can't fight a deliberate drag either way.
   useEffect(() => {
     const el = containerRef.current
     if (!el) return
     let lastWidth = el.clientWidth
     const observer = new ResizeObserver(() => {
       const width = el.clientWidth
-      if (Math.abs(width - lastWidth) < 2 || manuallyResizedRef.current) return
+      const grew = width - lastWidth >= 2
       lastWidth = width
+      if (!grew || manuallyResizedRef.current) return
       setColumnSizing({ key: columnKey, sizing: computeInitialSizing(columns, rows, width) })
     })
     observer.observe(el)
