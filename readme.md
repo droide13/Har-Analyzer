@@ -42,6 +42,18 @@ npm run dev   # http://localhost:5173 -- proxies /api/* to the backend on :8000
 
 Open http://localhost:5173 and upload a `.har` file.
 
+### Vendor tracker/known-ID data (optional)
+
+`backend/app/data/trackers.csv` and `backend/app/data/known_ids/*.json` (known tracker domains and identity-graph vendors' documented cookie/param names) are committed, so the app works out of the box with whatever was last generated. They're regenerated from the `ID-Graph-Tables` git submodule at repo root -- pull it in with:
+
+```bash
+git submodule update --init
+```
+
+**Note:** `.gitmodules` points at `git@github-work:droide13/ID-Graph-Tables.git` -- `github-work` is a personal SSH host alias (`~/.ssh/config`), not a public hostname. Without that alias (or without access to that private repo), this command fails; that's expected for anyone other than the primary maintainer, and harmless -- `backend/scripts/sync_tracker_data.py` (run automatically by `dev.sh`) silently skips regeneration and keeps using the already-committed data files when the submodule isn't initialized.
+
+If you do have access, re-run `python backend/scripts/sync_tracker_data.py` after updating the submodule to a newer commit to refresh the committed data files.
+
 ---
 
 ## Deployment

@@ -1211,9 +1211,9 @@ adnium.com,Adnium,advertising,
 adnkronos.com,ADN-KRONOS - S.p.A - AGENZIA GIORNALISTICA DI INFORMAZIONI,,
 adnw.xyz,Appier,advertising,
 adnwb.ru,actionpay,advertising,
-adnxs-simple.com,AppNexus,identity_graph,<description>
-adnxs.com,AppNexus,identity_graph,<description>
-adnxs.net,AppNexus,identity_graph,<description>
+adnxs-simple.com,AppNexus,identity_graph,"Source:Ghostery_O, Ghostery_P"
+adnxs.com,AppNexus,identity_graph,"Source:Ghostery_O, Ghostery_P"
+adnxs.net,AppNexus,identity_graph,"Source:Ghostery_O, Ghostery_P"
 adnxtr.com,Human Security,,
 adnymics.com,Adnymics,advertising,
 adnz.co,NZZ Management,,
@@ -3954,7 +3954,7 @@ azurefd.net,"Microsoft, Microsoft Services",misc,
 azurestaticapps.net,"Microsoft, Microsoft Services",misc,
 azurewebsites.net,"Microsoft, Microsoft Services",misc,
 b-cdn.net,"Bunny CDN, BunnyCDN",hosting,
-b-code.liadm.com,Live Intent,identity_graph,?
+b-code.liadm.com,Live Intent,identity_graph,Source: Manual. E.g. slickdeals.net
 b-europe.com,NMBS/SNCB,,
 b-fonline.com,Brown-Forman,,
 b-ok.org,zhuhaiyingxunkejiyouxiangongsi,,
@@ -9474,7 +9474,7 @@ czfirearms.us,William Chase,,
 czin.eu,WebČesky.cz,,
 d-bi.fr,DIGITAL BUSINESS INTELLIGENCE,,
 d-cd.net,DRIVE,,
-d-code.liadm.com,Live Intent,identity_graph,?
+d-code.liadm.com,Live Intent,identity_graph,Source: Manual. E.g. slickdeals.net
 d-msquared.com,DM2,advertising,
 d-nb.info,Deutsche Nationalbibliothek,,
 d-reizen.nl,D-rt Groep,,
@@ -14824,7 +14824,6 @@ global-fashion-group.com,Global Fashion Group,,
 global.gmarket.co.kr,Gmarket,advertising,
 global.ketchcdn.com,Ketch Kloud,consent,
 global.ntt,NTT,,
-globalSecurity.org,GlobalSecurity.org,,
 globalauctionguide.com,Prairie Point,,
 globalauctionplatform.com,MetroPress,,
 globalchokepoints.org,Electronic Frontier Foundation,,
@@ -14845,6 +14844,7 @@ globalplanesearch.com,GlobalPlaneSearch,,
 globalpropertyguide.com,Global Property Guide,,
 globalreach.com,Global Reach,,
 globalrph.com,David F McAuley,,
+globalsecurity.org,GlobalSecurity.org,,
 globalsign.com,GMO GlobalSign,,
 globalsiteanalytics.com,Experian,misc,
 globalsources.com,Media Data Systems,,
@@ -15781,7 +15781,7 @@ gulli.com,Beer Revolution,,
 gulliblegrip.com,Admiral,,
 guloggratis.dk,JYSK FYNSKE MEDIER P/S,,
 gum-gum-streaming.com,Quentin Picot,,
-gumgum.com,GumGum,identity_graph,<description>
+gumgum.com,GumGum,identity_graph,"Source:Ghostery_O, Ghostery_P, Tracker Radar"
 gumroad.com,Gumroad,social_media,
 gumshoenews.com,The Picture Tank,,
 gumtree.co.za,Adevinta,,
@@ -29235,7 +29235,7 @@ rapido.bike,Roppen Transportation Services,,
 rapidscansecure.com,Aperia Solutions,,
 rapidspike.com,RapidSpike,site_analytics,
 rapidssl.com,"DigiCert, Digicert",,
-rapleaf.com,LiveRamp,identity_graph,<description>
+rapleaf.com,LiveRamp,identity_graph,"Source:Ghostery_O, Ghostery_P, Tracker Radar, UID2scr"
 rappi.com,Rappi,,
 rappi.com.ar,Rappi,,
 rappi.com.co,Rappi,,
@@ -36991,7 +36991,7 @@ tvnz.co.nz,Television New Zealand,,
 tvo.org,Ontario Educational Communication Authority,,
 tvp.pl,DOMENY.PL,,
 tvpage.com,TVPage,,
-tvpixel.com,LiveRamp,identity_graph,<description>
+tvpixel.com,LiveRamp,identity_graph,"Source:Ghostery_O, Ghostery_P, Tracker Radar, UID2scr"
 tvplayer.com,TVPlayer,,
 tvplusmobile.com,Kochava,,
 tvserial.it,Asap Online,,

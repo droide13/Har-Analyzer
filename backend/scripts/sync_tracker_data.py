@@ -43,6 +43,16 @@ KNOWN_IDS_DIR_OUT = DATA_DIR / "known_ids"
 # own `category` column says for the same domain.
 MANUAL_RESEARCH_CATEGORY = "identity_graph"
 
+# Unfilled-template markers a studied vendor's Domains entry can carry before
+# its research has actually been done (see e.g. AppNexus/GumGum's Domains
+# list) -- never real description text, so must not leak into the CSV.
+_PLACEHOLDER_DESCRIPTIONS = {"<description>", "?"}
+
+
+def _clean_description(value: str) -> str:
+    cleaned = value.strip()
+    return "" if cleaned.lower() in _PLACEHOLDER_DESCRIPTIONS else cleaned
+
 
 def read_studied_services() -> list[str]:
     """Vendor keys from studied-services.txt, one per non-blank line."""
@@ -52,14 +62,20 @@ def read_studied_services() -> list[str]:
 
 def load_broad_tracker_domains() -> dict[str, dict[str, str]]:
     """domain -> {service, category, description} from merged_trackers.csv,
-    exploding its comma-joined Domains column into one entry per domain."""
+    exploding its comma-joined Domains column into one entry per domain.
+
+    Domains are lowercased here, at the source, rather than left to whichever
+    reader loads the CSV later -- otherwise a domain appearing in two
+    different casings across the broad table and a studied vendor's own
+    research would end up as two separate rows instead of one, silently
+    defeating the "manual research overlays/wins" merge in main() below."""
     domains: dict[str, dict[str, str]] = {}
     with MERGED_TRACKERS_CSV.open(encoding="utf-8", newline="") as f:
         for row in csv.DictReader(f):
             service = (row.get("Service") or "").strip()
             category = (row.get("category") or "").strip()
             raw_domains = row.get("Domains") or ""
-            for domain in (d.strip() for d in raw_domains.split(",")):
+            for domain in (d.strip().lower() for d in raw_domains.split(",")):
                 if domain:
                     domains[domain] = {"service": service, "category": category, "description": ""}
     return domains
@@ -68,27 +84,37 @@ def load_broad_tracker_domains() -> dict[str, dict[str, str]]:
 def load_studied_vendor_domains(studied: list[str]) -> dict[str, dict[str, str]]:
     """domain -> {service, category, description} from each studied vendor's
     own researched Domains list, meant to overlay (take precedence over) the
-    broad table above."""
+    broad table above. Domains are lowercased for the same merge-correctness
+    reason as load_broad_tracker_domains."""
     domains: dict[str, dict[str, str]] = {}
     for key in studied:
         json_path = RESEARCH_DIR / f"{key}.json"
         if not json_path.is_file():
-            print(f"warning: {key} is in studied-services.txt but {json_path} doesn't exist -- skipping")
+            print(f"warning: {key} in studied-services.txt but {json_path} doesn't exist -- skip")
             continue
 
         data: dict[str, Any] = json.loads(json_path.read_text(encoding="utf-8"))
         research = data.get("research", {})
         service = str(research.get("Service", key))
         for entry in research.get("Domains", []):
-            domain = str(entry.get("Domain", "")).strip()
+            domain = str(entry.get("Domain", "")).strip().lower()
             if not domain:
                 continue
-            description = str(entry.get("Description") or entry.get("Notes") or "").strip()
-            domains[domain] = {"service": service, "category": MANUAL_RESEARCH_CATEGORY, "description": description}
+            raw_description = str(entry.get("Description") or "")
+            raw_notes = str(entry.get("Notes") or "")
+            description = _clean_description(raw_description) or _clean_description(raw_notes)
+            domains[domain] = {
+                "service": service,
+                "category": MANUAL_RESEARCH_CATEGORY,
+                "description": description,
+            }
     return domains
 
 
 def write_trackers_csv(domains: dict[str, dict[str, str]]) -> None:
+    """Write the domain -> {service, category, description} map out as
+    backend/app/data/trackers.csv, one row per domain, sorted for stable
+    diffs between regenerations."""
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     with TRACKERS_CSV_OUT.open("w", encoding="utf-8", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=["domain", "service", "category", "description"])
@@ -110,13 +136,18 @@ def sync_known_ids(studied: list[str]) -> None:
         json_path = RESEARCH_DIR / f"{key}.json"
         if not json_path.is_file():
             continue  # already warned about in load_studied_vendor_domains
-        (KNOWN_IDS_DIR_OUT / f"{key}.json").write_text(json_path.read_text(encoding="utf-8"), encoding="utf-8")
+        contents = json_path.read_text(encoding="utf-8")
+        (KNOWN_IDS_DIR_OUT / f"{key}.json").write_text(contents, encoding="utf-8")
 
 
 def main() -> None:
+    """Regenerate the two static data files, or no-op if the submodule
+    hasn't been initialized -- see the module docstring."""
     if not STUDIED_SERVICES_FILE.is_file():
-        print(f"ID-Graph-Tables submodule not initialized ({STUDIED_SERVICES_FILE} not found) -- "
-              f"leaving {DATA_DIR} as-is.")
+        print(
+            f"ID-Graph-Tables submodule not initialized ({STUDIED_SERVICES_FILE} not found) -- "
+            f"leaving {DATA_DIR} as-is."
+        )
         return
 
     studied = read_studied_services()
@@ -127,7 +158,10 @@ def main() -> None:
     write_trackers_csv(domains)
     sync_known_ids(studied)
 
-    print(f"Wrote {TRACKERS_CSV_OUT} ({len(domains)} domains) and {len(studied)} known-ID files to {KNOWN_IDS_DIR_OUT}")
+    print(
+        f"Wrote {TRACKERS_CSV_OUT} ({len(domains)} domains) and "
+        f"{len(studied)} known-ID files to {KNOWN_IDS_DIR_OUT}"
+    )
 
 
 if __name__ == "__main__":
