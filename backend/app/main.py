@@ -12,6 +12,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
+from app.routers.body_fields import router as body_fields_router
 from app.routers.cookies import router as cookies_router
 from app.routers.dissemination import router as dissemination_router
 from app.routers.har import router as har_router
@@ -37,6 +38,7 @@ for router in (
     overview_router,
     cookies_router,
     query_params_router,
+    body_fields_router,
     identifiers_router,
     dissemination_router,
     metadata_router,

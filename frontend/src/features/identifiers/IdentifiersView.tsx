@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { fetchBodyFields } from '../../api/bodyFields'
 import { fetchCookies } from '../../api/cookies'
 import { fetchIdentifiers } from '../../api/identifiers'
 import { fetchQueryParams } from '../../api/queryParams'
@@ -23,12 +24,19 @@ interface IdentifiersViewProps {
   onTraceKey?: (key: string) => void
 }
 
-type Source = 'cookies' | 'query-params'
+type Source = 'cookies' | 'query-params' | 'body-fields'
 
 const SOURCE_OPTIONS = [
   { value: 'cookies', label: 'Cookies' },
   { value: 'query-params', label: 'Query Parameters' },
+  { value: 'body-fields', label: 'Body Fields' },
 ]
+
+const SOURCE_LABELS: Record<Source, string> = {
+  cookies: 'Cookies',
+  'query-params': 'Query Parameters',
+  'body-fields': 'Body Fields',
+}
 
 const SORT_OPTIONS = ['Appearances', 'Entropy', 'Avg length', 'Unique values'] as const
 
@@ -71,6 +79,21 @@ interface QueryParamAggregate {
   Hosts: string
 }
 
+interface BodyFieldRecord {
+  Name: string
+  Value: string
+  Scope: string
+  Host: string
+}
+
+interface BodyFieldAggregate {
+  Name: string
+  Scope: string
+  Value: string
+  Occurrences: number
+  Hosts: string
+}
+
 const COOKIE_AGGREGATED_COLUMNS: DataTableColumn<CookieAggregate>[] = [
   { header: 'Name', accessor: (r) => r.Name },
   { header: 'First Seen As', accessor: (r) => r['First Seen As'] },
@@ -106,12 +129,37 @@ const QUERY_PARAM_RAW_COLUMNS: DataTableColumn<QueryParamRecord>[] = [
   { header: 'Host', accessor: (r) => r.Host },
 ]
 
+const BODY_FIELD_AGGREGATED_COLUMNS: DataTableColumn<BodyFieldAggregate>[] = [
+  { header: 'Name', accessor: (r) => r.Name, className: 'font-mono text-xs' },
+  { header: 'Scope', accessor: (r) => r.Scope },
+  { header: 'Value', accessor: (r) => r.Value },
+  { header: 'Occurrences', accessor: (r) => r.Occurrences },
+  { header: 'Hosts', accessor: (r) => r.Hosts },
+]
+
+const BODY_FIELD_RAW_COLUMNS: DataTableColumn<BodyFieldRecord>[] = [
+  { header: 'Name', accessor: (r) => r.Name, className: 'font-mono text-xs' },
+  { header: 'Value', accessor: (r) => r.Value },
+  { header: 'Scope', accessor: (r) => r.Scope },
+  { header: 'Host', accessor: (r) => r.Host },
+]
+
 /** "Show all" mode: the full raw/aggregate listing for one source, unfiltered
  * -- what the old standalone Cookies/Query Params tabs showed. */
+const EMPTY_RECORDS_LABEL: Record<Source, string> = {
+  cookies: 'No cookies found.',
+  'query-params': 'No query string parameters found.',
+  'body-fields': 'No JSON body fields found.',
+}
+
 function AllRecordsView({ uploadId, source }: { uploadId: string; source: Source }) {
   const { data, isLoading, isError } = useQuery({
     queryKey: ['all-records', uploadId, source],
-    queryFn: () => (source === 'cookies' ? fetchCookies(uploadId) : fetchQueryParams(uploadId)),
+    queryFn: () => {
+      if (source === 'cookies') return fetchCookies(uploadId)
+      if (source === 'query-params') return fetchQueryParams(uploadId)
+      return fetchBodyFields(uploadId)
+    },
     placeholderData: (previous) => previous,
   })
 
@@ -119,7 +167,7 @@ function AllRecordsView({ uploadId, source }: { uploadId: string; source: Source
   if (isError || !data) return <ErrorState label="Failed to load records." />
 
   if (data.records.length === 0) {
-    return <p>{source === 'cookies' ? 'No cookies found.' : 'No query string parameters found.'}</p>
+    return <p>{EMPTY_RECORDS_LABEL[source]}</p>
   }
 
   if (source === 'cookies') {
@@ -140,19 +188,37 @@ function AllRecordsView({ uploadId, source }: { uploadId: string; source: Source
     )
   }
 
+  if (source === 'query-params') {
+    return (
+      <AggregateToggleView<QueryParamRecord, QueryParamAggregate>
+        title="Query Parameters list"
+        metrics={[
+          { label: 'Total Params', value: data.metrics.total },
+          { label: 'Unique Param Names', value: data.metrics.unique_names },
+          { label: 'Empty Values', value: data.metrics.empty_values },
+        ]}
+        aggregatedCaption="One row per param name. Method lists every HTTP method the param appeared under; Value shows the shared value or how many distinct values were seen."
+        aggregatedColumns={QUERY_PARAM_AGGREGATED_COLUMNS}
+        rawColumns={QUERY_PARAM_RAW_COLUMNS}
+        records={data.records as unknown as QueryParamRecord[]}
+        aggregated={data.aggregated as unknown as QueryParamAggregate[]}
+      />
+    )
+  }
+
   return (
-    <AggregateToggleView<QueryParamRecord, QueryParamAggregate>
-      title="Query Parameters list"
+    <AggregateToggleView<BodyFieldRecord, BodyFieldAggregate>
+      title="Body Fields list"
       metrics={[
-        { label: 'Total Params', value: data.metrics.total },
-        { label: 'Unique Param Names', value: data.metrics.unique_names },
-        { label: 'Empty Values', value: data.metrics.empty_values },
+        { label: 'Total Fields', value: data.metrics.total },
+        { label: 'Unique Field Paths', value: data.metrics.unique_paths },
+        { label: 'Unique Hosts', value: data.metrics.unique_hosts },
       ]}
-      aggregatedCaption="One row per param name. Method lists every HTTP method the param appeared under; Value shows the shared value or how many distinct values were seen."
-      aggregatedColumns={QUERY_PARAM_AGGREGATED_COLUMNS}
-      rawColumns={QUERY_PARAM_RAW_COLUMNS}
-      records={data.records as unknown as QueryParamRecord[]}
-      aggregated={data.aggregated as unknown as QueryParamAggregate[]}
+      aggregatedCaption="One row per JSON field path (flattened out of nested objects/arrays, e.g. fms_params.fms_uid2). Scope lists Request/Response body; Value shows the shared value or how many distinct values were seen."
+      aggregatedColumns={BODY_FIELD_AGGREGATED_COLUMNS}
+      rawColumns={BODY_FIELD_RAW_COLUMNS}
+      records={data.records as unknown as BodyFieldRecord[]}
+      aggregated={data.aggregated as unknown as BodyFieldAggregate[]}
     />
   )
 }
@@ -218,9 +284,13 @@ export function IdentifiersView({ uploadId, onTraceKey }: IdentifiersViewProps) 
       <div className={showAll ? 'pointer-events-none opacity-50' : undefined}>
         <h3 className="text-base font-semibold">Stable Identifier Detection</h3>
         <HelpText>
-          Flags {source === 'cookies' ? 'cookies' : 'query params'} that appear often, take on few distinct values,
-          and look sufficiently random/long to be a session, tracking, or auth token -- rather than an ordinary
-          low-cardinality param like <code>sort</code> or <code>lang</code>.
+          Flags {source === 'cookies' ? 'cookies' : source === 'query-params' ? 'query params' : 'JSON body fields'}{' '}
+          that appear often, take on few distinct values, and look sufficiently random/long to be a session,
+          tracking, or auth token -- rather than an ordinary low-cardinality param like <code>sort</code> or{' '}
+          <code>lang</code>.
+          {source === 'body-fields' && (
+            <> Catches an identifier a site only ever hands back inside a JSON payload -- a UID2 token, an email hash, a resolved third-party ID -- that never shows up as a cookie or query param at all.</>
+          )}
         </HelpText>
 
         <Disclosure summary="Common noise keys">
@@ -320,10 +390,17 @@ export function IdentifiersView({ uploadId, onTraceKey }: IdentifiersViewProps) 
               a Request Cookie already existed.
             </HelpText>
           )}
+          {source === 'body-fields' && (
+            <HelpText>
+              First Seen As marks which side of the exchange a field turned up on: POST Data (the request body) or
+              Response Body. Dissemination tracing isn't available for body fields yet -- only cookies and query
+              params can be traced there today.
+            </HelpText>
+          )}
           <IdentifiersSection
-            label={source === 'cookies' ? 'Cookies' : 'Query Parameters'}
-            identifiers={source === 'cookies' ? data.cookies : data.query_params}
-            onTraceKey={onTraceKey}
+            label={SOURCE_LABELS[source]}
+            identifiers={source === 'cookies' ? data.cookies : source === 'query-params' ? data.query_params : data.body_fields}
+            onTraceKey={source === 'body-fields' ? undefined : onTraceKey}
           />
         </>
       )}

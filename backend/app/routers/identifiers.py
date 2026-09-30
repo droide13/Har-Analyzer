@@ -1,7 +1,7 @@
-"""Identifiers tab endpoint: stable-identifier detection over query params
-and cookies, with the same 4-signal filters as the original (appearance
-count, value cardinality, average length, entropy) plus a name search and
-noise-key exclusion."""
+"""Identifiers tab endpoint: stable-identifier detection over query params,
+cookies, and JSON request/response body fields, with the same 4-signal
+filters as the original (appearance count, value cardinality, average
+length, entropy) plus a name search and noise-key exclusion."""
 
 from typing import Callable, Literal
 
@@ -13,6 +13,7 @@ from app.features.identifiers import (
     TrackedKey,
     extract_tracked_keys,
     filter_identifiers,
+    get_body_items,
     get_cookie_items,
     get_query_items,
     sort_identifiers,
@@ -87,4 +88,5 @@ async def get_identifiers(  # pylint: disable=too-many-arguments,too-many-positi
     return IdentifiersResponse(
         query_params=_build_section(record.entries, get_query_items, filters, sort_by),
         cookies=_build_section(record.entries, get_cookie_items, filters, sort_by),
+        body_fields=_build_section(record.entries, get_body_items, filters, sort_by),
     )

@@ -180,6 +180,10 @@ Lists every query-string parameter across the capture, either as a raw registry 
 
 Same idea as Query Params but for cookies, split by scope (sent vs. `Set-Cookie` received), and flags security posture per name: whether `Secure`/`HttpOnly` were always set, never set, or mixed.
 
+### Body Fields
+
+Same raw-registry-or-aggregate idea again, but for identifiers that only ever show up inside a JSON request/response body — a UID2 token, an email hash, a resolved third-party ID — never as a cookie or query param. Every JSON body in the capture is flattened into dotted field paths (e.g. `fms_params.fms_uid2`), each tracked like a cookie/query-param name would be, split by scope (POST Data vs. Response Body). Non-JSON bodies (HTML, JS, form-encoded, binary) are silently skipped.
+
 ### Dissemination
 
 Traces a single query-param or cookie key across the whole capture — not just where it's *named*, but where its *value* shows up anywhere else in the traffic.
@@ -205,7 +209,7 @@ The dissemination scan is a full sweep over every entry's every field, so it's g
 
 ### Identifiers
 
-Detection and scoring of likely identifier values (tokens, session IDs, etc.) found in the capture, feeding into the same value/field matching machinery used elsewhere in the app.
+Detection and scoring of likely identifier values (tokens, session IDs, etc.), applying the same 4-signal filter (appearance count, cardinality, average length, entropy) across three sources: Cookies, Query Parameters, and Body Fields (JSON request/response body fields, flattened into dotted paths — see **Body Fields** above). Dissemination tracing is only wired up for the Cookies/Query Parameters sources today; a body-field identifier can still be traced manually by pasting its value into a search.
 
 ### Metadata
 

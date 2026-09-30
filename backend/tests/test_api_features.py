@@ -49,11 +49,23 @@ def test_query_params_endpoint(client: TestClient, upload_id: str) -> None:
     assert body["metrics"]["unique_names"] == 1
 
 
+def test_body_fields_endpoint(client: TestClient, upload_id: str) -> None:
+    response = client.get(f"/api/har/{upload_id}/body-fields")
+    body = response.json()
+    assert response.status_code == 200
+    # Two JSON response bodies in the fixture: {"ok": true} and {"error": "gone"}.
+    assert body["metrics"]["total"] == 2
+    assert body["metrics"]["unique_paths"] == 2
+    names = {row["Name"] for row in body["aggregated"]}
+    assert names == {"ok", "error"}
+
+
 def test_identifiers_endpoint_applies_thresholds(client: TestClient, upload_id: str) -> None:
     # Defaults (min_appearances=20) filter out everything in this tiny fixture.
     default_response = client.get(f"/api/har/{upload_id}/identifiers").json()
     assert default_response["cookies"] == []
     assert default_response["query_params"] == []
+    assert default_response["body_fields"] == []
 
     # Loosened thresholds surface "session" (3 appearances, 2 unique values).
     loosened = client.get(

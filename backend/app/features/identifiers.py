@@ -9,6 +9,12 @@ entropy (randomness of characters in the value).
 Cookie sightings also carry which side of the exchange they came from, so a
 key or value can report whether it was first seen on a request (it predates
 the capture) or in a Set-Cookie response (it was issued during the capture).
+
+Three sources feed the same pipeline: query params, cookies, and JSON
+request/response body fields (via ``app.shared.json_body``, which does the
+actual JSON parsing/flattening) -- the last one is what catches an
+identifier a site only ever hands back inside a JSON payload rather than a
+cookie or query param.
 """
 
 import math
@@ -17,7 +23,8 @@ from dataclasses import dataclass, field
 from typing import Any, Callable
 
 from app.core.models import ParsedEntry
-from app.shared.search import COOKIE_LABELS
+from app.shared.json_body import flatten_json, parse_json_body
+from app.shared.search import COOKIE_LABELS, attr_label
 
 # One sighting: the item dict plus which side it came from. Query params have
 # no side, so their scope is None.
@@ -121,6 +128,21 @@ def get_cookie_items(entry: ParsedEntry) -> list[Item]:
         *((COOKIE_LABELS["sent"], c) for c in entry.req_cookies),
         *((COOKIE_LABELS["received"], c) for c in entry.res_cookies),
     ]
+
+
+def get_body_items(entry: ParsedEntry) -> list[Item]:
+    """This entry's request/response body fields, flattened out of JSON --
+    the third source alongside query params and cookies, since neither of
+    those can see an identifier a site only ever sends inside a JSON
+    payload."""
+    items: list[Item] = []
+    for attr, body in (("req_body", entry.req_body), ("res_body", entry.res_body)):
+        parsed = parse_json_body(body)
+        if parsed is None:
+            continue
+        scope = attr_label(attr)
+        items.extend((scope, {"name": path, "value": value}) for path, value in flatten_json(parsed) if value)
+    return items
 
 
 def extract_tracked_keys(

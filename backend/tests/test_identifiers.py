@@ -2,8 +2,11 @@ from app.core.models import build_entries_from_har_data
 from app.features.identifiers import (
     extract_tracked_keys,
     filter_identifiers,
+    flatten_json,
+    get_body_items,
     get_cookie_items,
     get_query_items,
+    parse_json_body,
     shannon_entropy,
     sort_identifiers,
 )
@@ -97,3 +100,70 @@ def test_sort_identifiers_by_appearances(sample_har_dict: dict) -> None:
     ordered = sort_identifiers(matches, "Appearances")
     # "session" (3 appearances) should sort before "tracking_id" (1 appearance).
     assert [tk.key for tk in ordered][0] == "session"
+
+
+def test_parse_json_body_accepts_object_and_array_rejects_everything_else() -> None:
+    assert parse_json_body('{"a": 1}') == {"a": 1}
+    assert parse_json_body("[1, 2]") == [1, 2]
+    assert parse_json_body("") is None
+    assert parse_json_body("<html></html>") is None
+    assert parse_json_body("not json at all") is None
+    assert parse_json_body("{not valid json") is None
+
+
+def test_flatten_json_produces_dotted_paths_for_nested_objects() -> None:
+    parsed = {"fms_params": {"fms_uid2": "A4AAAE...", "fms_userid": "c293b192-..."}}
+    assert set(flatten_json(parsed)) == {
+        ("fms_params.fms_uid2", "A4AAAE..."),
+        ("fms_params.fms_userid", "c293b192-..."),
+    }
+
+
+def test_flatten_json_indexes_arrays_and_drops_nulls() -> None:
+    parsed = {"eids": [{"source": "uid2.com", "id": "abc"}, None]}
+    assert set(flatten_json(parsed)) == {
+        ("eids[0].source", "uid2.com"),
+        ("eids[0].id", "abc"),
+    }
+
+
+def test_get_body_items_finds_identifier_in_json_response_body() -> None:
+    entry = {
+        "startedDateTime": "2026-01-01T00:00:00.000Z",
+        "time": 1.0,
+        "request": {"method": "GET", "url": "https://example.com/id", "headers": [], "cookies": [], "queryString": []},
+        "response": {
+            "status": 200,
+            "statusText": "OK",
+            "headers": [],
+            "cookies": [],
+            "content": {"mimeType": "application/json", "text": '{"fms_params": {"fms_uid2": "A4-token-value"}}'},
+            "bodySize": 0,
+            "headersSize": 0,
+        },
+        "_initiator": {},
+    }
+    entries = build_entries_from_har_data({"log": {"entries": [entry]}})
+    items = get_body_items(entries[0])
+
+    assert ("Response Body", {"name": "fms_params.fms_uid2", "value": "A4-token-value"}) in items
+
+
+def test_get_body_items_ignores_non_json_bodies() -> None:
+    entry = {
+        "startedDateTime": "2026-01-01T00:00:00.000Z",
+        "time": 1.0,
+        "request": {"method": "GET", "url": "https://example.com/page", "headers": [], "cookies": [], "queryString": []},
+        "response": {
+            "status": 200,
+            "statusText": "OK",
+            "headers": [],
+            "cookies": [],
+            "content": {"mimeType": "text/html", "text": "<html></html>"},
+            "bodySize": 0,
+            "headersSize": 0,
+        },
+        "_initiator": {},
+    }
+    entries = build_entries_from_har_data({"log": {"entries": [entry]}})
+    assert not get_body_items(entries[0])

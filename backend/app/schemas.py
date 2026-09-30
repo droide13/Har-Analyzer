@@ -240,6 +240,7 @@ class IdentifiersResponse(BaseModel):
 
     query_params: list[IdentifierSummaryRow]
     cookies: list[IdentifierSummaryRow]
+    body_fields: list[IdentifierSummaryRow]
 
 
 # --- Dissemination ---

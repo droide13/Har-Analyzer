@@ -172,6 +172,7 @@ export interface IdentifierSummaryRow {
 export interface IdentifiersResponse {
   query_params: IdentifierSummaryRow[]
   cookies: IdentifierSummaryRow[]
+  body_fields: IdentifierSummaryRow[]
 }
 
 // --- Dissemination ---
