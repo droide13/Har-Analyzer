@@ -7,6 +7,7 @@ from app.shared.naming import (
     derive_metadata_from_entries,
     get_attrs_from_har_name,
     get_har_filename,
+    resolve_primary_domain,
 )
 
 
@@ -66,3 +67,41 @@ def test_derive_metadata_from_entries_picks_most_common_domain(sample_har_dict: 
 def test_derive_metadata_from_entries_rejects_empty_list() -> None:
     with pytest.raises(ValueError):
         derive_metadata_from_entries([])
+
+
+def test_resolve_primary_domain_prefers_embedded_analysis(sample_har_dict: dict) -> None:
+    entries = build_entries_from_har_data(sample_har_dict)
+    filename = (
+        "fromfilename.com-platform-WEB-interact-LOA-cookies-ACC-visit-FIR-extra-000-26-01-01-10.har"
+    )
+    har_data = {
+        **sample_har_dict,
+        "log": {**sample_har_dict["log"], "_analysis": {"domain": "fromembedded.com"}},
+    }
+
+    # Even though the filename tags "fromfilename.com", a previously
+    # embedded log._analysis.domain (set by the Metadata tab's generate
+    # flow) wins -- it's the one value a user can actually correct.
+    assert resolve_primary_domain(filename, har_data, entries) == "fromembedded.com"
+
+
+def test_resolve_primary_domain_prefers_the_standardized_filename(sample_har_dict: dict) -> None:
+    entries = build_entries_from_har_data(sample_har_dict)
+    filename = (
+        "fromfilename.com-platform-WEB-interact-LOA-cookies-ACC-visit-FIR-extra-000-26-01-01-10.har"
+    )
+
+    assert resolve_primary_domain(filename, sample_har_dict, entries) == "fromfilename.com"
+
+
+def test_resolve_primary_domain_falls_back_to_derived_domain(sample_har_dict: dict) -> None:
+    entries = build_entries_from_har_data(sample_har_dict)
+
+    assert (
+        resolve_primary_domain("not-a-standardized-name.har", sample_har_dict, entries)
+        == "example.com"
+    )
+
+
+def test_resolve_primary_domain_falls_back_to_filename_when_nothing_else_works() -> None:
+    assert resolve_primary_domain("empty.har", {}, []) == "empty.har"

@@ -8,7 +8,12 @@ scope/method/encoding controls, and ``entry_matches`` from
 
 from fastapi import APIRouter, HTTPException, Query, UploadFile
 
-from app.core.models import METHOD_ORDER, SCOPE_OPTIONS, ParsedEntry, get_embedded_analysis
+from app.core.models import (
+    METHOD_ORDER,
+    SCOPE_OPTIONS,
+    ParsedEntry,
+    get_embedded_analysis,
+)
 from app.schemas import (
     BadgeFieldMatch,
     EntriesPage,
@@ -20,7 +25,11 @@ from app.schemas import (
     UploadResponse,
 )
 from app.shared.entry_summary import build_entry_summary
-from app.shared.naming import derive_metadata_from_entries, get_attrs_from_har_name
+from app.shared.naming import (
+    derive_metadata_from_entries,
+    get_attrs_from_har_name,
+    resolve_primary_domain,
+)
 from app.shared.search import (
     ENCODING_OPTIONS,
     MatchReason,
@@ -29,6 +38,7 @@ from app.shared.search import (
     reason_field_matches,
     reason_summary_line,
 )
+from app.shared.trackers import is_same_site
 from app.store import UploadRecord, upload_store
 
 from ._common import get_record_or_404
@@ -48,11 +58,10 @@ def _build_session_metadata(record: UploadRecord) -> SessionMetadata:
     extra) plus a capture date, so the header has a date to show even for a
     HAR whose filename doesn't follow the convention.
 
-    The capture date prefers a previously embedded ``log._analysis.captured_at``
-    -- it's an authoritative, human-confirmed value -- falling back to
-    re-deriving it from the traffic's ``startedDateTime`` only when no such
-    analysis has been embedded yet. Live re-detection is otherwise reserved
-    for the Metadata tab's generate flow."""
+    The capture date prefers a previously embedded ``log._analysis.captured_at``,
+    falling back to re-deriving it from the traffic's ``startedDateTime``
+    only when no such analysis has been embedded yet. Live re-detection is
+    otherwise reserved for the Metadata tab's generate flow."""
     attrs = get_attrs_from_har_name(record.filename)
     existing = get_embedded_analysis(record.har_data)
 
@@ -61,7 +70,7 @@ def _build_session_metadata(record: UploadRecord) -> SessionMetadata:
     except ValueError:
         derived = None
 
-    domain = attrs["domain"] if attrs else (derived.domain if derived else record.filename)
+    domain = resolve_primary_domain(record.filename, record.har_data, record.entries)
     extra = attrs["extra"] if attrs and attrs["extra"] != "000" else None
 
     if existing is not None:
@@ -114,12 +123,16 @@ async def list_entries(  # pylint: disable=too-many-arguments,too-many-positiona
         "log._analysis.ground_truth); omit entirely to skip the check (it's a full scan, "
         "opt-in only), empty string to run it with none included",
     ),
+    hide_first_party: bool = Query(
+        default=False, description="Discard entries whose domain is the capture's own site"
+    ),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=50, ge=10, le=500),
 ) -> EntriesPage:
     """Filtered, highlighted, paginated Network Log rows."""
     record = get_record_or_404(upload_id)
     entries = record.entries
+    primary_domain = resolve_primary_domain(record.filename, record.har_data, entries)
 
     method_set = _parse_csv(methods) or set()
     encoding_set = _parse_csv(encodings)
@@ -129,7 +142,12 @@ async def list_entries(  # pylint: disable=too-many-arguments,too-many-positiona
     filter_results = {
         e.index: entry_matches(e, q, scope, method_set, encoding_set) for e in entries
     }
-    filtered = [e for e in entries if filter_results[e.index].matched]
+    filtered = [
+        e
+        for e in entries
+        if filter_results[e.index].matched
+        and (not hide_first_party or not is_same_site(e.domain, primary_domain))
+    ]
 
     h_active = bool(h.strip())
     highlight_results = (
@@ -163,8 +181,10 @@ async def list_entries(  # pylint: disable=too-many-arguments,too-many-positiona
     for entry in filtered[start:end]:
         highlight_result = highlight_results.get(entry.index)
         gt_matches = gt_reasons_by_index.get(entry.index)
-        summary = build_entry_summary(entry)
-        summary.highlighted = bool(highlight_result and highlight_result.matched) or bool(gt_matches)
+        summary = build_entry_summary(entry, primary_domain)
+        summary.highlighted = bool(highlight_result and highlight_result.matched) or bool(
+            gt_matches
+        )
 
         # Filter and highlight are independent queries, so both badges can
         # show on the same row at once -- a filter narrowed the list down to

@@ -1,6 +1,11 @@
 from pathlib import Path
 
-from app.shared.trackers import TrackerInfo, classify_domain, load_trackers
+from app.shared.trackers import (
+    TrackerInfo,
+    classify_domain,
+    is_same_site,
+    load_trackers,
+)
 
 SAMPLE_TABLE = {
     "cbssports.com": TrackerInfo(service="Paramount", category="", description=""),
@@ -38,6 +43,40 @@ def test_classify_domain_does_not_false_positive_on_a_similar_looking_domain() -
 
 def test_classify_domain_returns_none_for_an_unknown_domain() -> None:
     assert classify_domain("totally-unrelated.example.org", SAMPLE_TABLE) is None
+
+
+def test_is_same_site_exact_match() -> None:
+    assert is_same_site("cbssports.com", "cbssports.com") is True
+
+
+def test_is_same_site_matches_a_subdomain_of_the_primary() -> None:
+    assert is_same_site("video-api-ipv4.cbssports.com", "cbssports.com") is True
+
+
+def test_is_same_site_rejects_an_unrelated_domain() -> None:
+    assert is_same_site("id5-sync.com", "cbssports.com") is False
+
+
+def test_is_same_site_does_not_false_positive_on_a_similar_looking_domain() -> None:
+    assert is_same_site("evilcbssports.com", "cbssports.com") is False
+
+
+def test_is_same_site_is_false_when_no_primary_domain_is_known() -> None:
+    assert is_same_site("anything.com", "") is False
+
+
+def test_is_same_site_ignores_a_port_on_the_entry_domain() -> None:
+    # ParsedEntry.domain is urlparse(url).netloc, which keeps a non-default
+    # port -- "example.com:8443" is still first-party against "example.com".
+    assert is_same_site("example.com:8443", "example.com") is True
+
+
+def test_is_same_site_ignores_a_port_on_the_primary_domain() -> None:
+    assert is_same_site("example.com", "example.com:8443") is True
+
+
+def test_classify_domain_ignores_a_port_on_the_entry_domain() -> None:
+    assert classify_domain("cbssports.com:8443", SAMPLE_TABLE) == SAMPLE_TABLE["cbssports.com"]
 
 
 def test_classify_domain_is_case_insensitive() -> None:

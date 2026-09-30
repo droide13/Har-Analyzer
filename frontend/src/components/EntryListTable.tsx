@@ -12,6 +12,21 @@ const BASE_COLUMNS: DataTableColumn<EntrySummary>[] = [
   { header: 'Method', accessor: (e) => e.method },
   { header: 'URL', accessor: (e) => e.url, className: 'font-mono text-xs' },
   { header: 'Domain', accessor: (e) => e.domain },
+  {
+    header: 'Party',
+    accessor: (e) => {
+      if (e.is_first_party) return <Badge tone="muted">1st Party</Badge>
+      if (e.tracker) {
+        return (
+          <span title={e.tracker.description || undefined}>
+            <Badge tone="orange">{e.tracker.service}</Badge>
+          </span>
+        )
+      }
+      return null
+    },
+    sizingText: (e) => (e.is_first_party ? '1st Party' : (e.tracker?.service ?? '')),
+  },
   { header: 'MIME', accessor: (e) => e.mime },
   { header: 'Time', accessor: (e) => `${e.time_ms.toFixed(1)} ms` },
   {

@@ -10,9 +10,10 @@ import re
 from collections import Counter
 from dataclasses import dataclass
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from app.core.har_time import parse_started_date_time
+from app.core.models import get_embedded_analysis
 
 if TYPE_CHECKING:
     from app.core.models import ParsedEntry
@@ -235,3 +236,41 @@ def derive_metadata_from_entries(entries: "list[ParsedEntry]") -> DerivedHarMeta
         captured_at=captured_at,
         entry_count=len(entries),
     )
+
+
+def resolve_primary_domain(
+    filename: str, har_data: dict[str, Any], entries: "list[ParsedEntry]"
+) -> str:
+    """The domain a HAR entry should be compared against for first-party
+    classification: a previously embedded ``log._analysis.domain`` first --
+    set by the Metadata tab's generate flow, the only place this value can
+    be overridden, so trusting it over a live guess mirrors how
+    ``_build_session_metadata`` already prefers an embedded ``captured_at``
+    over a re-derived one -- else a standardized filename's own domain
+    segment, else the domain derived live from the traffic, else the
+    filename itself verbatim.
+
+    Used by both app.routers.har and app.routers.dissemination so domain
+    classification can't disagree between Network Log and Dissemination
+    depending on which one happens to compute it.
+
+    Note: app.features.overview.get_first_party_domain answers a related but
+    distinct question (a *rooted* base domain, via get_base_domain, for
+    grouping subdomains in the Overview tab's domain explorer) with a
+    different fallback strategy (first entry in file order vs. this
+    function's most-common-domain derivation). They're intentionally not
+    unified here -- doing so would change Overview's established behavior,
+    which is out of this function's scope -- but a future cleanup pass
+    should reconcile the two into one canonical "what's this capture's own
+    site" answer."""
+    existing = get_embedded_analysis(har_data)
+    if existing is not None and existing.domain:
+        return existing.domain
+
+    attrs = get_attrs_from_har_name(filename)
+    if attrs:
+        return attrs["domain"]
+    try:
+        return derive_metadata_from_entries(entries).domain
+    except ValueError:
+        return filename

@@ -15,7 +15,6 @@ import csv
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
-from typing import Iterator
 
 from app.shared.data_files import APP_DATA_DIR
 
@@ -57,25 +56,33 @@ def load_trackers(csv_path: Path = DEFAULT_TRACKERS_CSV) -> TrackerTable:
 _TRACKERS: TrackerTable = load_trackers()
 
 
-def _candidate_suffixes(domain: str) -> Iterator[str]:
+@lru_cache(maxsize=None)
+def _candidate_suffixes(domain: str) -> tuple[str, ...]:
     """The domain itself, then each shorter parent suffix, most specific
     first -- e.g. "a.b.c.com" -> "a.b.c.com", "b.c.com", "c.com". Stops
     before a single bare label (e.g. "com" alone): no real entry in the
     table is ever a single label, so checking it would only ever waste a
     lookup, never match.
 
-    A generator, not a list: the common case is a match on the first (most
-    specific) candidate, so callers checking each one as it's produced never
-    pay to build the shorter suffixes they'll never look at.
+    Cached on ``domain`` alone: both classify_domain (via _lookup) and
+    is_same_site call this for the very same domain within one
+    build_entry_summary call, and the same handful of hostnames repeat
+    across thousands of entries in a capture -- same bounded-domain-space
+    assumption _classify_default's own cache already relies on.
 
     Not app.features.overview.get_base_domain -- that collapses a domain
     down to exactly one root for aggregation (with its own co.uk/gov.uk
     handling); this needs every candidate suffix, most-specific first, to
     look each one up against a table that can contain entries at any depth
-    (e.g. both "liadm.com" and "rp.liadm.com")."""
-    labels = domain.strip(".").lower().split(".")
-    for i in range(len(labels) - 1):
-        yield ".".join(labels[i:])
+    (e.g. both "liadm.com" and "rp.liadm.com").
+
+    A ParsedEntry.domain is urlparse(url).netloc (app.core.models.get_domain),
+    which keeps a non-default port (e.g. "example.com:8443") -- stripped
+    here the same way app.features.metadata already does for its own host
+    extraction, otherwise a ported domain would never match even itself."""
+    host = domain.strip(".").lower().split(":")[0]
+    labels = host.split(".")
+    return tuple(".".join(labels[i:]) for i in range(len(labels) - 1))
 
 
 def _lookup(domain: str, trackers: TrackerTable) -> TrackerInfo | None:
@@ -105,3 +112,17 @@ def classify_domain(domain: str, table: TrackerTable | None = None) -> TrackerIn
     if table is not None:
         return _lookup(domain, table)
     return _classify_default(domain)
+
+
+def is_same_site(domain: str, primary_domain: str) -> bool:
+    """True if ``domain`` is ``primary_domain`` itself or a subdomain of it
+    -- the same suffix rule classify_domain checks a whole table with,
+    applied instead against a single reference domain (the capture's own
+    tagged/detected site) to answer "is this entry first-party?"."""
+    if not primary_domain:
+        return False
+    # primary_domain can itself carry a port (it may come straight from a
+    # ParsedEntry.domain via derive_metadata_from_entries' fallback), so it
+    # needs the same port-stripping _candidate_suffixes applies to `domain`.
+    primary = primary_domain.strip().lower().split(":")[0]
+    return primary in _candidate_suffixes(domain)

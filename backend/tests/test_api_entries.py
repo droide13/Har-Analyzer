@@ -93,9 +93,7 @@ def test_list_entries_pagination(client: TestClient, upload_id: str) -> None:
     assert [item["index"] for item in clamped["items"]] == [0, 1, 2, 3, 4]
 
 
-def test_list_entries_ground_truth_flags_matches(
-    client: TestClient, sample_har_dict: dict
-) -> None:
+def test_list_entries_ground_truth_flags_matches(client: TestClient, sample_har_dict: dict) -> None:
     sample_har_dict["log"]["_analysis"] = {
         "domain": "example.com",
         "platform": "web",
@@ -112,7 +110,9 @@ def test_list_entries_ground_truth_flags_matches(
     }
     upload = client.post(
         "/api/har/upload",
-        files={"file": ("tagged.har", json.dumps(sample_har_dict).encode("utf-8"), "application/json")},
+        files={
+            "file": ("tagged.har", json.dumps(sample_har_dict).encode("utf-8"), "application/json")
+        },
     )
     upload_id = upload.json()["upload_id"]
 
@@ -121,7 +121,9 @@ def test_list_entries_ground_truth_flags_matches(
     unrequested = client.get(f"/api/har/{upload_id}/entries").json()
     assert all(not item["highlighted"] for item in unrequested["items"])
 
-    body = client.get(f"/api/har/{upload_id}/entries", params={"gt_keys": "E-mail,IP Address"}).json()
+    body = client.get(
+        f"/api/har/{upload_id}/entries", params={"gt_keys": "E-mail,IP Address"}
+    ).json()
     flagged = [item["index"] for item in body["items"] if item["highlighted"]]
     assert flagged == [1]  # only the login POST body ("user=alice&pass=secret") mentions it
     badge_labels = [b["label"] for b in body["items"][1]["badges"]]
@@ -148,6 +150,76 @@ def test_entry_detail_returns_full_fields(client: TestClient, upload_id: str) ->
 def test_entry_detail_unknown_index_returns_404(client: TestClient, upload_id: str) -> None:
     response = client.get(f"/api/har/{upload_id}/entries/999")
     assert response.status_code == 404
+
+
+def test_entries_carry_domain_classification_and_hide_first_party_filters(
+    client: TestClient,
+) -> None:
+    har_data = {
+        "log": {
+            "entries": [
+                {
+                    "startedDateTime": "2026-01-01T10:00:00.000Z",
+                    "time": 1.0,
+                    "request": {
+                        "method": "GET",
+                        "url": "https://example.com/",
+                        "headers": [],
+                        "cookies": [],
+                        "queryString": [],
+                    },
+                    "response": {
+                        "status": 200,
+                        "statusText": "OK",
+                        "headers": [],
+                        "cookies": [],
+                        "content": {"mimeType": "text/html", "text": ""},
+                        "bodySize": 0,
+                        "headersSize": 0,
+                    },
+                },
+                {
+                    "startedDateTime": "2026-01-01T10:00:01.000Z",
+                    "time": 1.0,
+                    "request": {
+                        "method": "GET",
+                        "url": "https://id5-sync.com/id5",
+                        "headers": [],
+                        "cookies": [],
+                        "queryString": [],
+                    },
+                    "response": {
+                        "status": 200,
+                        "statusText": "OK",
+                        "headers": [],
+                        "cookies": [],
+                        "content": {"mimeType": "text/plain", "text": ""},
+                        "bodySize": 0,
+                        "headersSize": 0,
+                    },
+                },
+            ]
+        }
+    }
+    filename = (
+        "example.com-platform-WEB-interact-LOA-cookies-ACC-visit-FIR-extra-000-26-01-01-10.har"
+    )
+    upload = client.post(
+        "/api/har/upload",
+        files={"file": (filename, json.dumps(har_data).encode("utf-8"), "application/json")},
+    )
+    uid = upload.json()["upload_id"]
+
+    everything = client.get(f"/api/har/{uid}/entries").json()
+    assert everything["filtered"] == 2
+    by_domain = {item["domain"]: item for item in everything["items"]}
+    assert by_domain["example.com"]["is_first_party"] is True
+    assert by_domain["id5-sync.com"]["is_first_party"] is False
+    assert by_domain["id5-sync.com"]["tracker"]["service"] == "ID5"
+
+    hidden = client.get(f"/api/har/{uid}/entries", params={"hide_first_party": "true"}).json()
+    assert hidden["filtered"] == 1
+    assert hidden["items"][0]["domain"] == "id5-sync.com"
 
 
 def test_meta_endpoints_expose_shared_option_tables(client: TestClient) -> None:

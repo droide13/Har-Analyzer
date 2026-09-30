@@ -50,6 +50,7 @@ export function NetworkLogView({ uploadId }: NetworkLogViewProps) {
   // GroundTruthSearchControl's button. Once started, this is which keys
   // are currently included (all of them, until one's excluded).
   const [groundTruthKeys, setGroundTruthKeys] = useState<Set<string> | null>(null)
+  const [hideFirstParty, setHideFirstParty] = useState(false)
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [page, setPage] = useState(1)
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
@@ -63,6 +64,7 @@ export function NetworkLogView({ uploadId }: NetworkLogViewProps) {
     selectedMethods,
     [...selectedEncodings].sort(),
     groundTruthKeys === null ? null : [...groundTruthKeys].sort(),
+    hideFirstParty,
   ])
   useEffect(() => {
     setPage(1)
@@ -78,6 +80,7 @@ export function NetworkLogView({ uploadId }: NetworkLogViewProps) {
         methods: selectedMethods,
         encodings: [...selectedEncodings],
         gtKeys: groundTruthKeys === null ? undefined : [...groundTruthKeys],
+        hideFirstParty,
         page,
         page_size: pageSize,
       }),
@@ -110,6 +113,8 @@ export function NetworkLogView({ uploadId }: NetworkLogViewProps) {
           onSearchGroundTruth={setGroundTruthKeys}
           pageSize={pageSize}
           onPageSizeChange={setPageSize}
+          hideFirstParty={hideFirstParty}
+          onHideFirstPartyChange={setHideFirstParty}
         />
       )}
 

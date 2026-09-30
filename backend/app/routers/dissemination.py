@@ -36,6 +36,7 @@ from app.schemas import (
     InitiatorChainLink,
 )
 from app.shared.entry_summary import build_entry_summary
+from app.shared.naming import resolve_primary_domain
 from app.shared.search import (
     MatchReason,
     dissemination_badge_labels,
@@ -65,7 +66,11 @@ def _badges(reasons: list[MatchReason]) -> list[EntryBadge]:
     badges = []
     for label in dissemination_badge_labels(reasons):
         match = field_matches.get(label)
-        matches = [BadgeFieldMatch(attr=match.attr, label=match.field_label, text=match.text)] if match else []
+        matches = (
+            [BadgeFieldMatch(attr=match.attr, label=match.field_label, text=match.text)]
+            if match
+            else []
+        )
         badges.append(EntryBadge(label=label, tone="orange", matches=matches))
     return badges
 
@@ -77,7 +82,10 @@ def _ground_truth_badges(gt_matches: list[tuple[str, list[MatchReason]]]) -> lis
         EntryBadge(
             label=f"{key} match: {reason_summary_line(reasons)}",
             tone="error",
-            matches=[BadgeFieldMatch(attr=m.attr, label=m.label, text=m.text) for m in reason_field_matches(reasons)],
+            matches=[
+                BadgeFieldMatch(attr=m.attr, label=m.label, text=m.text)
+                for m in reason_field_matches(reasons)
+            ],
         )
         for key, reasons in gt_matches
     ]
@@ -99,6 +107,7 @@ async def get_dissemination_timeline(
     shown as soon as a key is picked, no scan of the rest of the HAR."""
     record = get_record_or_404(upload_id)
     occurrences = _occurrences_or_404(record.entries, key)
+    primary_domain = resolve_primary_domain(record.filename, record.har_data, record.entries)
 
     first_entry, first_origin, first_value = occurrences[0]
     when = (
@@ -110,7 +119,7 @@ async def get_dissemination_timeline(
     initiator_chain = [
         InitiatorChainLink(
             found=hop.found,
-            entry=build_entry_summary(hop.entry) if hop.entry is not None else None,
+            entry=build_entry_summary(hop.entry, primary_domain) if hop.entry is not None else None,
             url=hop.url,
             initiator_type=hop.initiator_type,
         )
@@ -140,6 +149,7 @@ async def post_dissemination_search(
     """Full dissemination scan for one key's values, optionally narrowed/highlighted."""
     record = get_record_or_404(upload_id)
     occurrences = _occurrences_or_404(record.entries, body.key)
+    primary_domain = resolve_primary_domain(record.filename, record.har_data, record.entries)
 
     matches = find_dissemination(record.entries, distinct_values(occurrences), set(body.encodings))
 
@@ -162,13 +172,16 @@ async def post_dissemination_search(
         existing_analysis = get_embedded_analysis(record.har_data)
         if existing_analysis is not None:
             gt_reasons_by_index = ground_truth_reasons_by_entry(
-                [e for e, _ in visible], existing_analysis.ground_truth, set(body.gt_keys), set(body.encodings)
+                [e for e, _ in visible],
+                existing_analysis.ground_truth,
+                set(body.gt_keys),
+                set(body.encodings),
             )
 
     highlight_active = bool(body.highlight.strip())
     rows: list[EntrySummary] = []
     for entry, reasons in visible:
-        summary = build_entry_summary(entry)
+        summary = build_entry_summary(entry, primary_domain)
         summary.badges = _badges(reasons)
         if highlight_active:
             highlight_result = entry_matches(entry, body.highlight, "any", set())

@@ -27,6 +27,16 @@ class EntryBadge(BaseModel):
     matches: list[BadgeFieldMatch] = []
 
 
+class TrackerSummary(BaseModel):
+    """A domain's known-tracker match (app.shared.trackers.TrackerInfo,
+    reshaped as a response model) -- present on an EntrySummary only when
+    its domain isn't first-party and matches the tracker table."""
+
+    service: str
+    category: str
+    description: str
+
+
 class SessionMetadata(BaseModel):
     """Best-effort session summary for the persistent header above the tabs --
     domain/platform/interaction/cookies/visit/extra come from the filename
@@ -81,6 +91,12 @@ class EntrySummary(BaseModel):
     # which encoding/hash form it matched through, e.g. "Response Body
     # (Base64, MD5)". Empty when no search is active.
     badges: list[EntryBadge] = []
+    # Domain classification against the capture's own tagged/detected site.
+    # tracker is set only when the domain isn't first-party AND matches the
+    # known tracker table -- None for both a first-party domain and an
+    # unclassified third party. See app.shared.entry_summary.build_entry_summary.
+    is_first_party: bool = False
+    tracker: TrackerSummary | None = None
 
 
 class EntriesPage(BaseModel):

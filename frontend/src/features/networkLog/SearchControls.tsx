@@ -26,6 +26,8 @@ interface SearchControlsProps {
   onSearchGroundTruth: (keys: Set<string>) => void
   pageSize: number
   onPageSizeChange: (size: number) => void
+  hideFirstParty: boolean
+  onHideFirstPartyChange: (value: boolean) => void
 }
 
 /** Network Log's search panel: a filter query (discards non-matching
@@ -51,6 +53,8 @@ export function SearchControls({
   onSearchGroundTruth,
   pageSize,
   onPageSizeChange,
+  hideFirstParty,
+  onHideFirstPartyChange,
 }: SearchControlsProps) {
   function toggleMethod(method: string) {
     onMethodsChange(
@@ -122,6 +126,17 @@ export function SearchControls({
             onChange={(e) => onPageSizeChange(Number(e.target.value))}
           />
         </FormField>
+      </FormRow>
+
+      <FormRow>
+        <label className="inline-flex items-center gap-1.5 text-[13px] whitespace-nowrap">
+          <input
+            type="checkbox"
+            checked={hideFirstParty}
+            onChange={(e) => onHideFirstPartyChange(e.target.checked)}
+          />
+          Hide first-party domains
+        </label>
       </FormRow>
 
       <EncodingCheckboxList

@@ -54,6 +54,16 @@ export interface EntrySummary {
   res_cookie_count: number
   highlighted: boolean
   badges: EntryBadge[]
+  is_first_party: boolean
+  tracker: TrackerSummary | null
+}
+
+/** A domain's known-tracker match -- present only when an entry's domain
+ * isn't first-party and matches the tracker table. */
+export interface TrackerSummary {
+  service: string
+  category: string
+  description: string
 }
 
 export interface EntriesPage {

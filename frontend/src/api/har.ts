@@ -19,6 +19,9 @@ export interface EntriesQuery {
   /** Ground-truth keys to check for (see the file's own log._analysis.ground_truth).
    * Omit entirely for "all tagged keys" (the backend's default); pass [] for "none". */
   gtKeys?: string[]
+  /** Discard entries whose domain is the capture's own site. Omitted (not
+   * "false") when off, matching the backend's default. */
+  hideFirstParty?: boolean
   page: number
   page_size: number
 }
@@ -31,6 +34,7 @@ export function fetchEntries(uploadId: string, query: EntriesQuery): Promise<Ent
     methods: query.methods?.length ? query.methods.join(',') : undefined,
     encodings: query.encodings === undefined ? undefined : query.encodings.join(','),
     gt_keys: query.gtKeys === undefined ? undefined : query.gtKeys.join(','),
+    hide_first_party: query.hideFirstParty ? 'true' : undefined,
     page: query.page,
     page_size: query.page_size,
   })
