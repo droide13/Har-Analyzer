@@ -1,0 +1,74 @@
+{
+  "research": {
+    "Service": "Lotame",
+    "Domains": [
+      {
+        "Domain": "crwdcntrl.net",
+        "Platform": "Web",
+        "Description": "audience data management & behavioral tracking",
+        "Notes": "Source: Ghostery_O, Ghostery_P, Tracker Radar, UID2scr"
+      },
+      {
+        "Domain": "lotame.com",
+        "Platform": "Web",
+        "Description": "data management platform & audience targeting",
+        "Notes": "Source: Ghostery_O, Ghostery_P, Tracker Radar, UID2scr"
+      }
+    ],
+    "IDs": [
+      {
+        "ID": "panoramaId",
+        "Platform": "<Web>",
+        "Description": "Main Lotame id. Eg. apnews.com"
+      },
+      {
+        "ID": "_GESPSK-crwdcntrl.net",
+        "Platform": "Web",
+        "Description": "Found in IDGraph document. In my crawls only in protothema.gr"
+      },
+      {
+        "ID": "_GESPSK-crwdcntrl.net",
+        "Platform": "Web",
+        "Description": "Found in IDGraph document. In my crawls only in apnews.com and protothema.gr"
+      }
+    ],
+    "Links to public info": [
+      "https://www.lotame.com/capabilities/identity-resolution-activation/",
+      "https://docs.prebid.org/dev-docs/modules/userid-submodules/lotame.html",
+      "https://adtech.dev/data/data-management-platform/lotame-cookies/"
+    ],
+    "ExtraInfo": "Lotame is a data-driven technology platform.  Publishers, agencies, and brands leverage Lotame's Crowd Control technology to build customized audiences built on first and third-party data.",
+    "Github_Issue": "11"
+  },
+  "csv": {
+    "Service": [
+      "Lotame",
+      "Lotame Solutions"
+    ],
+    "Domains": [
+      "crwdcntrl.net",
+      "lotame.com"
+    ],
+    "Source": [
+      "Ghostery_O",
+      "Ghostery_P",
+      "Tracker Radar",
+      "UID2scr"
+    ],
+    "organization": "lotame",
+    "UID2_role": "Data Providers",
+    "website_url": "http://www.lotame.com, https://www.lotame.com/",
+    "privacy_policy_url": "https://www.lotame.com/about-lotame/privacy/",
+    "FullName": "Lotame Solutions, Inc.",
+    "alias": null,
+    "description": "Lotame is a data-driven technology platform.  Publishers, agencies, and brands leverage Lotame's Crowd Control technology to build customized audiences built on first and third-party data.",
+    "category": "advertising",
+    "tags": null,
+    "country": "US",
+    "privacy_contact": "privacy@lotame.com",
+    "ghostery_id": 103.0,
+    "PrevalenceTracking": "0.109",
+    "PrevalenceNonTracking": "0.00698",
+    "PrevalenceTotal": "0.116"
+  }
+}

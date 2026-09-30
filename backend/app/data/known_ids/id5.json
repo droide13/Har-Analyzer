@@ -1,0 +1,94 @@
+{
+  "research": {
+    "Service": "ID5",
+    "Domains": [
+      {
+        "Domain": "id5-sync.com",
+        "Platform": "<platform>",
+        "Description": "Centralized domain for all operations",
+        "Notes": "Source: Ghostery_O, Tracker Radar"
+      }
+    ],
+    "IDs": [
+      {
+        "ID": "id5id",
+        "Platform": "Web",
+        "Description": "Found in IDGraph document in localstorage, domain: id5-sync.com. Eg apnews.com"
+      },
+      {
+        "ID": "id5id",
+        "Platform": "Web",
+        "Description": "Found in IDGraph document in localstorage, domain: gpid.id5-sync.com. This domain is not that common. Eg erotik.markt.de"
+      },
+      {
+        "ID": "id5id_v2_3690964879268720",
+        "Platform": "Web",
+        "Description": "Found in IDGraph document in localstorage, domain: gpid.id5-sync.com. Not found in my crawl"
+      },
+      {
+        "ID": "id5id_v2_4464377857968480",
+        "Platform": "Web",
+        "Description": "Found in IDGraph document in localstorage, domain: id5-sync.com. Not found in my crawl"
+      },
+      {
+        "ID": "_GESPSK-id5-sync.com",
+        "Platform": "Web",
+        "Description": "Found in IDGraph document in localstorage, domain: id5-sync.com. Eg. protothema.gr"
+      },
+      {
+        "ID": "OPTABLE_ID5",
+        "Platform": "Web",
+        "Description": "Found in IDGraph document in localstorage, domain: id5-sync.com. Not found in my crawls"
+      },
+      {
+        "ID": "av_eids611",
+        "Platform": "Web",
+        "Description": "Found in IDGraph document in localstorage, domain: id5-sync.com. Found in my crawls only in protothema.gr and www.ojogodobicho.com"
+      },
+      {
+        "ID": "id5id_v2_1344447014779310",
+        "Platform": "Web",
+        "Description": "Found in IDGraph document in localstorage, domain: id5-sync.com. Not found in my crawls"
+      },
+      {
+        "ID": "id5id_v2_7261612528677373",
+        "Platform": "Web",
+        "Description": "Found in IDGraph document in localstorage, domain: id5-sync.com. Not found in my crawls"
+      }
+    ],
+    "Links to public info": [
+      "https://wiki.id5.io/docs/openrtb-eid-enrichment-guide",
+      "https://github.com/id5io/id5-api.js/"
+    ],
+    "ExtraInfo": "ID5 operates an identity platform for the digital advertising industry. Its technology facilitates user recognition on websites, mobile apps, and digital properties, enabling advertisers to improve the efficiency of their ad targeting.",
+    "Github_Issue": "8"
+  },
+  "csv": {
+    "Service": [
+      "ID5",
+      "ID5 Technology"
+    ],
+    "Domains": [
+      "id5-sync.com"
+    ],
+    "Source": [
+      "Ghostery_O",
+      "Tracker Radar"
+    ],
+    "organization": null,
+    "UID2_role": null,
+    "website_url": "https://id5.io/",
+    "privacy_policy_url": "https://id5.io/platform-privacy-policy/",
+    "FullName": "ID5 Technology Ltd",
+    "alias": null,
+    "description": "ID5 operates an identity platform for the digital advertising industry. Its technology facilitates user recognition on websites, mobile apps, and digital properties, enabling advertisers to improve the efficiency of their ad targeting.",
+    "category": null,
+    "tags": null,
+    "country": "GB",
+    "privacy_contact": "privacy@id5.io",
+    "ghostery_id": null,
+    "PrevalenceTracking": "0.103",
+    "PrevalenceNonTracking": "0.00673",
+    "PrevalenceTotal": "0.11"
+  }
+}

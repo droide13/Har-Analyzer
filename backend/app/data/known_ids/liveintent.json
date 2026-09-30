@@ -1,0 +1,109 @@
+{
+  "research": {
+    "Service": "Live Intent",
+    "Domains": [
+      {
+        "Domain": "liadm.com",
+        "Platform": "Web",
+        "Description": "identity resolution & cookie-sync",
+        "Notes": "Source: Ghostery_O, Ghostery_P, Tracker Radar, UID2scr"
+      },
+      {
+        "Domain": "i.liadm.com",
+        "Platform": "Web",
+        "Description": "Cookie syncing",
+        "Notes": "Request with lidid cookie, url like: https://i.liadm.com/sync-container?. Also appears as referer in a request to live.rezync.com suggesting cookie sync. Source: Manual"
+      },
+      {
+        "Domain": "idx.liadm.com",
+        "Platform": "Web",
+        "Description": "Cookie syncing",
+        "Notes": "Source: Manual. E.g. slickdeals.net"
+      },
+      {
+        "Domain": "rp.liadm.com",
+        "Platform": "Web",
+        "Description": "Identity resolution",
+        "Notes": "Recieves email in sha256. Response with set cookie header setting lidid, initiator GTM. Source: Manual"
+      },
+      {
+        "Domain": "b-code.liadm.com",
+        "Platform": "Web",
+        "Description": "?",
+        "Notes": "Source: Manual. E.g. slickdeals.net"
+      },
+      {
+        "Domain": "d-code.liadm.com",
+        "Platform": "Web",
+        "Description": "?",
+        "Notes": "Source: Manual. E.g. slickdeals.net"
+      },
+      {
+        "Domain": "liveintent.com",
+        "Platform": "Web",
+        "Description": "email ad serving & identity management",
+        "Notes": "Source: Ghostery_O, Ghostery_P, Tracker Radar, UID2scr"
+      }
+    ],
+    "IDs": [
+      {
+        "ID": "lidid",
+        "Platform": "Web",
+        "Description": "Web cookie with UID format. Seems like it changes in different runs. Eg. www.slickdeals.net"
+      },
+      {
+        "ID": "lipb.lipbid",
+        "Platform": "",
+        "Description": "The LiveIntent nonID is a user identifier tied to an active, encrypted email in the graph and functions in cookie-challenged environments and browsers. Alongside the nonID, LiveIntent\u2019s user ID sub-module can resolve multiple other user identifiers called attributes - such as uid2, pubmatic, and others (source: prebid). Eg. www.marca.com"
+      },
+      {
+        "ID": "__tamLIResolveResult",
+        "Platform": "Web",
+        "Description": "Found in IDGraph document. Eg. apnews.com"
+      },
+      {
+        "ID": "_GESPSK-liveintent.com",
+        "Platform": "Web",
+        "Description": "Found in IDGraph document. Not found in my crawls"
+      }
+    ],
+    "Links to public info": [
+      "https://www.liveintent.com/identity-solutions/",
+      "https://docs.prebid.org/dev-docs/modules/userid-submodules/liveintent.html",
+      "https://www.liveintent.com/authenticated-bridge/"
+    ],
+    "ExtraInfo": "LiveIntent provides an email and social marketing solution that enables advertisers to serve dynamic ads through traditionally non-dynamic channels such as email and newsletters. LiveIntent serves dynamic and personalized ads to viewers based on data gathered about the user in real time.",
+    "Github_Issue": "9"
+  },
+  "csv": {
+    "Service": [
+      "Live Intent",
+      "LiveIntent"
+    ],
+    "Domains": [
+      "liadm.com",
+      "liveintent.com"
+    ],
+    "Source": [
+      "Ghostery_O",
+      "Ghostery_P",
+      "Tracker Radar",
+      "UID2scr"
+    ],
+    "organization": "liveintent",
+    "UID2_role": "DSPs/SSPs",
+    "website_url": "https://www.liveintent.com/",
+    "privacy_policy_url": "https://liveintent.com/services-privacy-policy/",
+    "FullName": "LiveIntent Inc.",
+    "alias": null,
+    "description": "LiveIntent provides an email and social marketing solution that enables advertisers to serve dynamic ads through traditionally non-dynamic channels such as email and newsletters. LiveIntent serves dynamic and personalized ads to viewers based on data gathered about the user in real time.",
+    "category": "site_analytics",
+    "tags": null,
+    "country": "US",
+    "privacy_contact": "info@liveintent.com",
+    "ghostery_id": 674.0,
+    "PrevalenceTracking": "0.0741",
+    "PrevalenceNonTracking": "0.00226",
+    "PrevalenceTotal": "0.0764"
+  }
+}

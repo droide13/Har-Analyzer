@@ -1,0 +1,115 @@
+{
+  "research": {
+    "Service": "Magnite",
+    "Domains": [
+      {
+        "Domain": "chango.com",
+        "Platform": "Web",
+        "Description": "search retargeting & programmatic",
+        "Notes": "Source: Ghostery_O, Ghostery_P, Tracker Radar, UID2scr"
+      },
+      {
+        "Domain": "dpclk.com",
+        "Platform": "Web",
+        "Description": "ad serving & user tracking",
+        "Notes": "Source: Ghostery_O, Ghostery_P, Tracker Radar, UID2scr"
+      },
+      {
+        "Domain": "magnite.com",
+        "Platform": "Web",
+        "Description": "supply-side platform (SSP)",
+        "Notes": "Source: Ghostery_O, Ghostery_P, Tracker Radar, UID2scr"
+      },
+      {
+        "Domain": "mobsmith.com",
+        "Platform": "Web",
+        "Description": "mobile ad serving",
+        "Notes": "Source: Ghostery_O, Ghostery_P, Tracker Radar, UID2scr"
+      },
+      {
+        "Domain": "nearbyad.com",
+        "Platform": "Web",
+        "Description": "location-based ad network",
+        "Notes": "Source: Ghostery_O, Ghostery_P, Tracker Radar, UID2scr"
+      },
+      {
+        "Domain": "rubiconproject.com",
+        "Platform": "Web",
+        "Description": "ad exchange & SSP",
+        "Notes": "Source: Ghostery_O, Ghostery_P, Tracker Radar, UID2scr"
+      },
+      {
+        "Domain": "sharedid.org",
+        "Platform": "Web",
+        "Description": "identity resolution & cookie-sync",
+        "Notes": "Source: Ghostery_O, Ghostery_P, Tracker Radar, UID2scr"
+      },
+      {
+        "Domain": "freeskreen.com",
+        "Platform": "Web",
+        "Description": "video ad serving",
+        "Notes": "Company owned by magnite. Source: Ghostery_O, Ghostery_P, Tracker Radar, UID2scr"
+      },
+      {
+        "Domain": "springserve.com",
+        "Platform": "Web",
+        "Description": "video ad serving & SSP",
+        "Notes": "Company owned by magnite. Source: Ghostery_O, Ghostery_P, Tracker Radar, UID2scr"
+      },
+      {
+        "Domain": "pixel.rubiconproject.com",
+        "Platform": "Web",
+        "Description": "Pixel serving",
+        "Notes": "Manual analysis"
+      }
+    ],
+    "IDs": [
+      {
+        "ID": "khaos",
+        "Platform": "Web",
+        "Description": "Their main ID solution, found in apnews.com"
+      }
+    ],
+    "Links to public info": [
+      "https://www.magnite.com/blog/how-magnite-match-makes-first-party-data-actionable/",
+      "https://www.magnite.com/blog/enhance-addressability-with-streamlined-identity-integrations-via-control-center/"
+    ],
+    "ExtraInfo": "Supports UID2, rampID, Yahoo connect ID, epsilon COREid via Publink, and sharedid. Magnite Inc (formerly Rubicon Project) is an advertising technology company that provides online advertising solutions. The company offers ad network optimization services and ad quality protection programs.",
+    "Github_Issue": "12"
+  },
+  "csv": {
+    "Service": [
+      "Magnite"
+    ],
+    "Domains": [
+      "chango.com",
+      "dpclk.com",
+      "magnite.com",
+      "mobsmith.com",
+      "nearbyad.com",
+      "rubiconproject.com",
+      "sharedid.org"
+    ],
+    "Source": [
+      "Ghostery_O",
+      "Ghostery_P",
+      "Tracker Radar",
+      "UID2scr"
+    ],
+    "organization": "magnite",
+    "UID2_role": "DSPs/SSPs",
+    "website_url": "https://www.magnite.com/",
+    "privacy_policy_url": "https://www.magnite.com/legal/",
+    "FullName": "Magnite, Inc.",
+    "alias": null,
+    "description": "Magnite Inc (formerly Rubicon Project) is an advertising technology company that provides online advertising solutions. The company offers ad network optimization services and ad quality protection programs.",
+    "category": "advertising",
+    "tags": null,
+    "country": "US",
+    "privacy_contact": "privacy@magnite.com",
+    "ghostery_id": null,
+    "PrevalenceTracking": "0.128",
+    "PrevalenceNonTracking": "0.00313",
+    "PrevalenceTotal": "0.131"
+  }
+}

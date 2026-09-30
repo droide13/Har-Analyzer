@@ -1,0 +1,193 @@
+{
+  "research": {
+    "Service": "LiveRamp",
+    "Domains": [
+      {
+        "Domain": "acuity-data.com",
+        "Platform": "Web",
+        "Description": "audience targeting & data management",
+        "Notes": "Source: Ghostery_O, Tracker Radar, UID2scr"
+      },
+      {
+        "Domain": "arbor.io",
+        "Platform": "Web",
+        "Description": "data marketplace & monetization",
+        "Notes": "Source: Ghostery_O, Tracker Radar, UID2scr"
+      },
+      {
+        "Domain": "circulate.com",
+        "Platform": "Web",
+        "Description": "identity resolution & data monetization",
+        "Notes": "Source: Ghostery_O, Tracker Radar, UID2scr"
+      },
+      {
+        "Domain": "faktor.io",
+        "Platform": "Web",
+        "Description": "consent management platform",
+        "Notes": "Source: Ghostery_O, Tracker Radar, UID2scr"
+      },
+      {
+        "Domain": "liveramp.co.jp",
+        "Platform": "Web",
+        "Description": "identity resolution & data onboarding",
+        "Notes": "Source: Ghostery_O, Tracker Radar, UID2scr"
+      },
+      {
+        "Domain": "liveramp.com",
+        "Platform": "Web",
+        "Description": "identity resolution & data onboarding",
+        "Notes": "Source: Ghostery_O, Tracker Radar, UID2scr"
+      },
+      {
+        "Domain": "liveramp.com.au",
+        "Platform": "Web",
+        "Description": "identity resolution & data onboarding",
+        "Notes": "Source: Ghostery_O, Tracker Radar, UID2scr"
+      },
+      {
+        "Domain": "liveramp.com.cn",
+        "Platform": "Web",
+        "Description": "identity resolution & data onboarding",
+        "Notes": "Source: Ghostery_O, Tracker Radar, UID2scr"
+      },
+      {
+        "Domain": "liveramp.de",
+        "Platform": "Web",
+        "Description": "identity resolution & data onboarding",
+        "Notes": "Source: Ghostery_O, Tracker Radar, UID2scr"
+      },
+      {
+        "Domain": "liveramp.es",
+        "Platform": "Web",
+        "Description": "identity resolution & data onboarding",
+        "Notes": "Source: Ghostery_O, Tracker Radar, UID2scr"
+      },
+      {
+        "Domain": "liveramp.fr",
+        "Platform": "Web",
+        "Description": "identity resolution & data onboarding",
+        "Notes": "Source: Ghostery_O, Tracker Radar, UID2scr"
+      },
+      {
+        "Domain": "liveramp.it",
+        "Platform": "Web",
+        "Description": "identity resolution & data onboarding",
+        "Notes": "Source: Ghostery_O, Tracker Radar, UID2scr"
+      },
+      {
+        "Domain": "liveramp.org",
+        "Platform": "Web",
+        "Description": "identity resolution & data onboarding",
+        "Notes": "Source: Ghostery_O, Tracker Radar, UID2scr"
+      },
+      {
+        "Domain": "liveramp.uk",
+        "Platform": "Web",
+        "Description": "identity resolution & data onboarding",
+        "Notes": "Source: Ghostery_O, Tracker Radar, UID2scr"
+      },
+      {
+        "Domain": "pippio.com",
+        "Platform": "Web",
+        "Description": "identity graph & data onboarding",
+        "Notes": "Source: Ghostery_O, Tracker Radar, UID2scr"
+      },
+      {
+        "Domain": "privacymanager.io",
+        "Platform": "Web",
+        "Description": "consent management platform",
+        "Notes": "Source: Ghostery_O, Tracker Radar, UID2scr"
+      },
+      {
+        "Domain": "rlcdn.com",
+        "Platform": "Web",
+        "Description": "cookie-sync & identity resolution",
+        "Notes": "Source: Ghostery_O, Tracker Radar, UID2scr"
+      },
+      {
+        "Domain": "rapleaf.com",
+        "Platform": "<platform>",
+        "Description": "<description>",
+        "Notes": "Source:Ghostery_O, Ghostery_P, Tracker Radar, UID2scr"
+      },
+      {
+        "Domain": "tvpixel.com",
+        "Platform": "<platform>",
+        "Description": "<description>",
+        "Notes": "Source:Ghostery_O, Ghostery_P, Tracker Radar, UID2scr"
+      }
+    ],
+    "IDs": [
+      {
+        "ID": "RampID",
+        "Platform": "Both",
+        "Description": "Connect the dots across channels with the industry\u2019s most durable, interoperable, and secure identifier. RampID acts as a translator across platforms, so you can turn disparate customer data into a single, comprehensive, and actionable view for better reach, targeting, and measurement."
+      },
+      {
+        "ID": "idl_env",
+        "Platform": "Web",
+        "Description": "Found in IDGraph document in jscookie and localstorage. Eg. apnews.com"
+      },
+      {
+        "ID": "pbjs_identitylink",
+        "Platform": "Web",
+        "Description": "Found in IDGraph document in jscookie. Eg. www.mlb.com"
+      },
+      {
+        "ID": "av_eids611",
+        "Platform": "Web",
+        "Description": "Found in IDGraph document, in my crawls only in protothema.gr and ojogodobicho.com"
+      }
+    ],
+    "Links to public info": [],
+    "ExtraInfo": "LiveRamp Holdings, Inc. offers a data connectivity platform whose services include data onboarding, the transfer of offline data online for marketing purposes.",
+    "Github_Issue": "10"
+  },
+  "csv": {
+    "Service": [
+      "LiveRamp"
+    ],
+    "Domains": [
+      "acuity-data.com",
+      "arbor.io",
+      "circulate.com",
+      "faktor.io",
+      "liveramp.co.jp",
+      "liveramp.com",
+      "liveramp.com.au",
+      "liveramp.com.cn",
+      "liveramp.de",
+      "liveramp.es",
+      "liveramp.fr",
+      "liveramp.it",
+      "liveramp.org",
+      "liveramp.uk",
+      "pippio.com",
+      "privacymanager.io",
+      "rlcdn.com",
+      "rapleaf.com",
+      "tvpixel.com"
+    ],
+    "Source": [
+      "Ghostery_O",
+      "Ghostery_P",
+      "Tracker Radar",
+      "UID2scr"
+    ],
+    "organization": "acxiom",
+    "UID2_role": "CDPs / Clean Rooms, Data Providers",
+    "website_url": "https://liveramp.com, https://liveramp.com/",
+    "privacy_policy_url": "https://liveramp.com/privacy",
+    "FullName": "LiveRamp Holdings, Inc.",
+    "alias": null,
+    "description": "LiveRamp Holdings, Inc. offers a data connectivity platform whose services include data onboarding, the transfer of offline data online for marketing purposes.",
+    "category": "advertising",
+    "tags": null,
+    "country": "US",
+    "privacy_contact": null,
+    "ghostery_id": 319.0,
+    "PrevalenceTracking": "0.11",
+    "PrevalenceNonTracking": "0.0237",
+    "PrevalenceTotal": "0.134"
+  }
+}

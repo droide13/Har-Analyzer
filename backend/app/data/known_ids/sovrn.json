@@ -1,0 +1,151 @@
+{
+  "research": {
+    "Service": "Sovrn",
+    "Domains": [
+      {
+        "Domain": "d3pkae9owd2lcf.cloudfront.net",
+        "Platform": "Web",
+        "Description": "ad script hosting & content delivery",
+        "Notes": "Source: Ghostery_O, Ghostery_P, Tracker Radar, UID2scr"
+      },
+      {
+        "Domain": "erovinmo.com",
+        "Platform": "Web",
+        "Description": "ad serving & redirection",
+        "Notes": "Company owned by sovrn. Source: Ghostery_O, Ghostery_P, Tracker Radar, UID2scr"
+      },
+      {
+        "Domain": "he.lijit.com",
+        "Platform": "Web",
+        "Description": "",
+        "Notes": "Source: Manual"
+      },
+      {
+        "Domain": "ap.lijit.com",
+        "Platform": "Web",
+        "Description": "Sets the ljt_reader cookie which recognizes your browser or device when you return to our site or one of our partner’s sites.",
+        "Notes": "Source: Manual"
+      },
+      {
+        "Domain": "ce.lijit.com",
+        "Platform": "Web",
+        "Description": "Proably manages ljtrtbexp cookie, which sets the 3p cookies that need to be refreshed, to decode it URL Decode -> Base64 Decode -> zlib Inflate)",
+        "Notes": "Source: Manual"
+      },
+      {
+        "Domain": "bb.lijit.com",
+        "Platform": "Web",
+        "Description": "",
+        "Notes": "Source: Manual"
+      },
+      {
+        "Domain": "lijit.com",
+        "Platform": "Web",
+        "Description": "ad serving & user tracking",
+        "Notes": "Source: Ghostery_O, Ghostery_P, Tracker Radar, UID2scr"
+      },
+      {
+        "Domain": "linksmart.com",
+        "Platform": "Web",
+        "Description": "in-text advertising & monetization",
+        "Notes": "Company owned by sovrn. Source: Ghostery_O, Ghostery_P, Tracker Radar, UID2scr"
+      },
+      {
+        "Domain": "onscroll.com",
+        "Platform": "Web",
+        "Description": "viewability measurement & ad refresh",
+        "Notes": "Company owned by sovrn. Source: Ghostery_O, Ghostery_P, Tracker Radar, UID2scr"
+      },
+      {
+        "Domain": "s-onetag.com",
+        "Platform": "Web",
+        "Description": "header bidding & container tag",
+        "Notes": "Source: Ghostery_O, Ghostery_P, Tracker Radar, UID2scr"
+      },
+      {
+        "Domain": "sovrn.com",
+        "Platform": "Web",
+        "Description": "supply-side platform & monetization",
+        "Notes": "Source: Ghostery_O, Ghostery_P, Tracker Radar, UID2scr"
+      },
+      {
+        "Domain": "sovrnlabs.net",
+        "Platform": "Web",
+        "Description": "ad tech infrastructure",
+        "Notes": "Source: Ghostery_O, Ghostery_P, Tracker Radar, UID2scr"
+      },
+      {
+        "Domain": "viglink.com",
+        "Platform": "Web",
+        "Description": "affiliate marketing & link monetization",
+        "Notes": "Source: Ghostery_O, Ghostery_P, Tracker Radar, UID2scr"
+      }
+    ],
+    "IDs": [
+      {
+        "ID": "ctag",
+        "Platform": "Web",
+        "Description": "container partner sync ID cookie"
+      },
+      {
+        "ID": "ljt_reader",
+        "Platform": "Web",
+        "Description": "browser tracking. Enables us to recognize your browser or device when you return to our site or one of our partner’s sites..Eg marca.com (24 char length string)"
+      },
+      {
+        "ID": "ljtrtb",
+        "Platform": "Web",
+        "Description": "RTB partner mapping ID"
+      },
+      {
+        "ID": "vglnk.Agent.p",
+        "Platform": "Web",
+        "Description": "affiliate tracking cookie (might be discontinued, seems like a company acquired by sovrn)"
+      }
+    ],
+    "Links to public info": [
+      "https://www.sovrn.com/about-our-cookies/",
+      "https://web.archive.org/web/20211126123530/https://www.viglink.com/legal/cookie-policy/",
+      "https://www.sovrn.com/blog/sovrn-acquires-viglink/"
+    ],
+    "ExtraInfo": "They have a ctag cookie for other identity solutions (keep track of the partners with whom we have synced our Lijit ID to their ID. It allows us to store the IDs that these partners use to identify you and pass it to data partners as part of our advertising services.).\"We spend a great deal of our lives online. Whether it's for information, commerce, or entertainment, each of us have come to depend on what we discover, consume and share online. Publishers-those who create and curate content-are the cornerstones of what we all cherish about the internet. Yet these publishers practice their craft largely alone-without reference points or deep understandings about how they compare. sovrn shows publishers how their site is viewed and valued by advertisers. We offer insights and tools they need and deserve to understand their readers and to create content that works. this work is our mission. It's the reason we exist: to foster an ecosystem where these independent and influential publishers can thrive.\"",
+    "Github_Issue": "17"
+  },
+  "csv": {
+    "Service": [
+      "Sovrn",
+      "Sovrn Holdings",
+      "Sovrn Holdings Inc",
+      "sovrn"
+    ],
+    "Domains": [
+      "d3pkae9owd2lcf.cloudfront.net",
+      "lijit.com",
+      "s-onetag.com",
+      "sovrn.com",
+      "sovrnlabs.net",
+      "viglink.com"
+    ],
+    "Source": [
+      "Ghostery_O",
+      "Ghostery_P",
+      "Tracker Radar",
+      "UID2scr"
+    ],
+    "organization": "sovrn",
+    "UID2_role": "DSPs/SSPs",
+    "website_url": "https://www.sovrn.com/",
+    "privacy_policy_url": "https://www.sovrn.com/sovrn-privacy/",
+    "FullName": "Sovrn Holdings",
+    "alias": null,
+    "description": "\"We spend a great deal of our lives online. Whether it's for information, commerce, or entertainment, each of us have come to depend on what we discover, consume and share online. Publishers-those who create and curate content-are the cornerstones of what we all cherish about the internet. Yet these publishers practice their craft largely alone-without reference points or deep understandings about how they compare. sovrn shows publishers how their site is viewed and valued by advertisers. We offer insights and tools they need and deserve to understand their readers and to create content that works. this work is our mission. It's the reason we exist: to foster an ecosystem where these independent and influential publishers can thrive.\"",
+    "category": "advertising",
+    "tags": null,
+    "country": "US",
+    "privacy_contact": "info@sovrn.com",
+    "ghostery_id": 99.0,
+    "PrevalenceTracking": "0.0626",
+    "PrevalenceNonTracking": "0.0087",
+    "PrevalenceTotal": "0.0713"
+  }
+}

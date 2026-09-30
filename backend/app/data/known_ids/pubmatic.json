@@ -1,0 +1,69 @@
+{
+  "research": {
+    "Service": "PubMatic",
+    "Domains": [
+      {
+        "Domain": "ads.mocean.mobi",
+        "Platform": "Web",
+        "Description": "ad serving & user tracking",
+        "Notes": "Source: Ghostery_O, Ghostery_P, Tracker Radar, UID2scr"
+      },
+      {
+        "Domain": "ads.moceanads.com",
+        "Platform": "Web",
+        "Description": "ad serving & user tracking",
+        "Notes": "Company owned by pubmatic. Source: Ghostery_O, Ghostery_P, Tracker Radar, UID2scr"
+      },
+      {
+        "Domain": "pubmatic.com",
+        "Platform": "Web",
+        "Description": "SSP & ad exchange",
+        "Notes": "Company owned by pubmatic.Source: Ghostery_O, Ghostery_P, Tracker Radar, UID2scr"
+      }
+    ],
+    "IDs": [
+      {
+        "ID": "pubmaticId",
+        "Platform": "Web",
+        "Description": "Main ID for prebid, found in news.infoseek.co.jp"
+      }
+    ],
+    "Links to public info": [
+      "https://pubmatic.com/legal/platform-cookie-policy/",
+      "https://docs.prebid.org/dev-docs/modules/userid-submodules/pubmatic.html"
+    ],
+    "ExtraInfo": "PubMatic provides ad optimization solutions to online publishers. It provides  online publishers with a single interface to integrate with multiple ad networks and exchanges selecting the most lucrative ads available on a real-time auction basis.",
+    "Github_Issue": "16"
+  },
+  "csv": {
+    "Service": [
+      "Inc.",
+      "Pub Matic",
+      "PubMatic"
+    ],
+    "Domains": [
+      "pubmatic.com"
+    ],
+    "Source": [
+      "Ghostery_O",
+      "Ghostery_P",
+      "Tracker Radar",
+      "UID2scr"
+    ],
+    "organization": "pubmatic",
+    "UID2_role": "DSPs/SSPs",
+    "website_url": "https://www.pubmatic.com/",
+    "privacy_policy_url": "https://pubmatic.com/legal/privacy-policy/",
+    "FullName": "PubMatic, Inc.",
+    "alias": null,
+    "description": "PubMatic provides ad optimization solutions to online publishers. It provides  online publishers with a single interface to integrate with multiple ad networks and exchanges selecting the most lucrative ads available on a real-time auction basis.",
+    "category": "advertising",
+    "tags": null,
+    "country": "US",
+    "privacy_contact": "https://pubmatic.com/legal/privacy-policy/#contactus",
+    "ghostery_id": 348.0,
+    "PrevalenceTracking": "0.11",
+    "PrevalenceNonTracking": "0.0117",
+    "PrevalenceTotal": "0.122"
+  }
+}

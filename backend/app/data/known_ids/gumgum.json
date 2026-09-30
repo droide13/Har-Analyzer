@@ -1,0 +1,52 @@
+{
+  "research": {
+    "Service": "GumGum",
+    "Domains": [
+      {
+        "Domain": "gumgum.com",
+        "Platform": "<platform>",
+        "Description": "<description>",
+        "Notes": "Source:Ghostery_O, Ghostery_P, Tracker Radar"
+      }
+    ],
+    "IDs": [
+      {
+        "ID": "<ID>",
+        "Platform": "<platform>",
+        "Description": "<description>"
+      }
+    ],
+    "Links to public info": [],
+    "ExtraInfo": "GumGum is a Santa Monica, California-based developer of computer vision and machine learning systems for contextually driven advertising and brand protection., GumGum's technology uses machine learning to serve contextual advertising in line with content that users have already engaged with to add value to images and videos that are relevant.",
+    "Github_Issue": "20"
+  },
+  "csv": {
+    "Service": [
+      "GumGum",
+      "gumgum"
+    ],
+    "Domains": [
+      "gumgum.com"
+    ],
+    "Source": [
+      "Ghostery_O",
+      "Ghostery_P",
+      "Tracker Radar"
+    ],
+    "organization": "gumgum",
+    "UID2_role": null,
+    "website_url": "http://gumgum.com, https://gumgum.com/",
+    "privacy_policy_url": "https://gumgum.com/privacy-policy",
+    "FullName": "GumGum",
+    "alias": null,
+    "description": "GumGum's technology uses machine learning to serve contextual advertising in line with content that users have already engaged with to add value to images and videos that are relevant.",
+    "category": "advertising",
+    "tags": null,
+    "country": "US",
+    "privacy_contact": "contact@gumgum.com",
+    "ghostery_id": 84.0,
+    "PrevalenceTracking": "0.0497",
+    "PrevalenceNonTracking": "0.006",
+    "PrevalenceTotal": "0.0557"
+  }
+}

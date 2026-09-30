@@ -1,0 +1,158 @@
+{
+  "research": {
+    "Service": "Open X",
+    "Domains": [
+      {
+        "Domain": "deliverimp.com",
+        "Platform": "Web",
+        "Description": "ad serving & impression delivery",
+        "Notes": "Source: Ghostery_O, Ghostery_P, Tracker Radar, UID2scr"
+      },
+      {
+        "Domain": "godengo.com",
+        "Platform": "Web",
+        "Description": "local media ad network & ad serving",
+        "Notes": "Source: Ghostery_O, Ghostery_P, Tracker Radar, UID2scr"
+      },
+      {
+        "Domain": "jump-time.net",
+        "Platform": "Web",
+        "Description": "content optimization & user engagement analytics",
+        "Notes": "Source: Ghostery_O, Ghostery_P, Tracker Radar, UID2scr"
+      },
+      {
+        "Domain": "mezzobit.com",
+        "Platform": "Web",
+        "Description": "data container & tag management instrumentation",
+        "Notes": "Source: Ghostery_O, Ghostery_P, Tracker Radar, UID2scr"
+      },
+      {
+        "Domain": "openx.com",
+        "Platform": "Web",
+        "Description": "programmatic ad exchange & supply-side platform",
+        "Notes": "Source: Ghostery_O, Ghostery_P, Tracker Radar, UID2scr"
+      },
+      {
+        "Domain": "openx.net",
+        "Platform": "Web",
+        "Description": "ad serving & tracking infrastructure",
+        "Notes": "Source: Ghostery_O, Ghostery_P, Tracker Radar, UID2scr"
+      },
+      {
+        "Domain": "openx.org",
+        "Platform": "Web",
+        "Description": "open-source ad server legacy support",
+        "Notes": "Source: Ghostery_O, Ghostery_P, Tracker Radar, UID2scr"
+      },
+      {
+        "Domain": "openxadexchange.com",
+        "Platform": "Web",
+        "Description": "programmatic marketplace & ad exchange",
+        "Notes": "Source: Ghostery_O, Ghostery_P, Tracker Radar, UID2scr"
+      },
+      {
+        "Domain": "openxcdn.net",
+        "Platform": "Web",
+        "Description": "content delivery network for ad creative assets",
+        "Notes": "Source: Ghostery_O, Ghostery_P, Tracker Radar, UID2scr"
+      },
+      {
+        "Domain": "pixfuture.net",
+        "Platform": "Web",
+        "Description": "monetization platform & programmatic ad serving",
+        "Notes": "Source: Ghostery_O, Ghostery_P, Tracker Radar, UID2scr"
+      },
+      {
+        "Domain": "pubnation.com",
+        "Platform": "Web",
+        "Description": "publisher ad quality management & monetization",
+        "Notes": "Source: Ghostery_O, Ghostery_P, Tracker Radar, UID2scr"
+      },
+      {
+        "Domain": "servedbyopenx.com",
+        "Platform": "Web",
+        "Description": "ad serving & tracking domain",
+        "Notes": "Source: Ghostery_O, Ghostery_P, Tracker Radar, UID2scr"
+      },
+      {
+        "Domain": "jumptime.com",
+        "Platform": "Web",
+        "Description": "content optimization & user engagement analytics",
+        "Notes": "Source: Ghostery_O, Ghostery_P, Tracker Radar, UID2scr"
+      },
+      {
+        "Domain": "odnxs.net",
+        "Platform": "Web",
+        "Description": "ad serving & user tracking",
+        "Notes": "Source: Ghostery_O, Ghostery_P, Tracker Radar, UID2scr"
+      },
+      {
+        "Domain": "openxenterprise.com",
+        "Platform": "Web",
+        "Description": "enterprise ad serving & marketplace solutions",
+        "Notes": "Source: Ghostery_O, Ghostery_P, Tracker Radar, UID2scr"
+      }
+    ],
+    "IDs": [
+      {
+        "ID": "__tamLIResolveResult",
+        "Platform": "Web",
+        "Description": "Found in IDGraph document in local storage, eg. apnews.com"
+      },
+      {
+        "ID": "__connatixLIResolveResult",
+        "Platform": "Web",
+        "Description": "Found in IDGraph document in local storage. Not found in my crawls"
+      }
+    ],
+    "Links to public info": [
+      "https://www.openx.com/press-releases/openx-announces-openxselect-an-advanced-supply-side-targeting-and-curation-platform-for-brands-and-agencies/"
+    ],
+    "ExtraInfo": "OpenX Limited is an open source advertising community that develops independent ad servers and services. The OpenX Market is an exchange platform that enables publishers to sell their supply directly to ad buyers through real-time auctions, while providing technology to ad networks, sales houses and affiliate networks for ad serving. OpenX features an integrated banner management interface and tracking system to gather statistical data across the exchange.",
+    "Github_Issue": "14"
+  },
+  "csv": {
+    "Service": [
+      "Open X",
+      "OpenX",
+      "OpenX Software Ltd."
+    ],
+    "Domains": [
+      "deliverimp.com",
+      "godengo.com",
+      "jump-time.net",
+      "mezzobit.com",
+      "openx.com",
+      "openx.net",
+      "openx.org",
+      "openxadexchange.com",
+      "openxcdn.net",
+      "pixfuture.net",
+      "pubnation.com",
+      "servedbyopenx.com",
+      "odnxs.net",
+      "openxenterprise.com"
+    ],
+    "Source": [
+      "Ghostery_O",
+      "Ghostery_P",
+      "Tracker Radar",
+      "UID2scr"
+    ],
+    "organization": "openx",
+    "UID2_role": "DSPs/SSPs",
+    "website_url": "https://www.openx.com, https://www.openx.com/",
+    "privacy_policy_url": "https://www.openx.com/legal/privacy-policy/",
+    "FullName": "OpenX Technologies Inc",
+    "alias": null,
+    "description": "OpenX Limited is an open source advertising community that develops independent ad servers and services. The OpenX Market is an exchange platform that enables publishers to sell their supply directly to ad buyers through real-time auctions, while providing technology to ad networks, sales houses and affiliate networks for ad serving. OpenX features an integrated banner management interface and tracking system to gather statistical data across the exchange.",
+    "category": "advertising",
+    "tags": null,
+    "country": "US",
+    "privacy_contact": "dpo@openx.com",
+    "ghostery_id": 131.0,
+    "PrevalenceTracking": "0.0994",
+    "PrevalenceNonTracking": "0.0183",
+    "PrevalenceTotal": "0.118"
+  }
+}

@@ -1,0 +1,3 @@
+[submodule "ID-Graph-Tables"]
+	path = ID-Graph-Tables
+	url = git@github-work:droide13/ID-Graph-Tables.git

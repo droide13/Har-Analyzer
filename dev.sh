@@ -67,6 +67,9 @@ if [ ! -d "$FRONTEND_DIR/node_modules" ]; then
   (cd "$FRONTEND_DIR" && npm install)
 fi
 
+echo "==> Syncing tracker/known-ID data (no-op if the ID-Graph-Tables submodule isn't initialized)..."
+"$BACKEND_DIR/.venv/bin/python3" "$SCRIPT_DIR/backend/scripts/sync_tracker_data.py"
+
 echo "==> Starting backend on :$BACKEND_PORT"
 (cd "$BACKEND_DIR" && exec .venv/bin/uvicorn app.main:app --reload --port "$BACKEND_PORT") &
 BACKEND_PID=$!
