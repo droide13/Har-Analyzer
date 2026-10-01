@@ -52,6 +52,11 @@
         "Description": "Web cookie with UID format. Seems like it changes in different runs. Eg. www.slickdeals.net"
       },
       {
+        "ID": "_li_ss",
+        "Platform": "Web",
+        "Description": "Web cookie, it stores the 3rd party identity solutions to refresh. Eg. www.slickdeals.net"
+      },
+      {
         "ID": "lipb.lipbid",
         "Platform": "",
         "Description": "The LiveIntent nonID is a user identifier tied to an active, encrypted email in the graph and functions in cookie-challenged environments and browsers. Alongside the nonID, LiveIntent\u2019s user ID sub-module can resolve multiple other user identifiers called attributes - such as uid2, pubmatic, and others (source: prebid). Eg. www.marca.com"

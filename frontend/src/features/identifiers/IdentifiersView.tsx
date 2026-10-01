@@ -13,6 +13,7 @@ import { ErrorState, LoadingState } from '../../components/QueryState'
 import { RangeField } from '../../components/RangeField'
 import { SegmentedControl } from '../../components/SegmentedControl'
 import { useDebouncedValue } from '../../hooks/useDebouncedValue'
+import type { IdentifiersResponse } from '../../api/types'
 import { IdentifiersSection } from './IdentifiersSection'
 
 interface IdentifiersViewProps {
@@ -24,18 +25,32 @@ interface IdentifiersViewProps {
   onTraceKey?: (key: string) => void
 }
 
-type Source = 'cookies' | 'query-params' | 'body-fields'
+type Source = 'cookies' | 'query-params' | 'body-fields' | 'known-ids'
+
+/** Known IDs is an exact-name lookup against studied vendors, not a
+ * heuristic -- it has no entropy/cardinality filter sliders and no raw
+ * "Show all" superset, unlike the other three sources. It gets its own
+ * view component below rather than threading conditionals through the
+ * shared filtered view. */
+type RecordsSource = Exclude<Source, 'known-ids'>
 
 const SOURCE_OPTIONS = [
+  { value: 'known-ids', label: 'Known IDs' },
   { value: 'cookies', label: 'Cookies' },
   { value: 'query-params', label: 'Query Parameters' },
   { value: 'body-fields', label: 'Body Fields' },
 ]
 
-const SOURCE_LABELS: Record<Source, string> = {
+const SOURCE_LABELS: Record<RecordsSource, string> = {
   cookies: 'Cookies',
   'query-params': 'Query Parameters',
   'body-fields': 'Body Fields',
+}
+
+const SOURCE_DATA_KEY: Record<RecordsSource, keyof IdentifiersResponse> = {
+  cookies: 'cookies',
+  'query-params': 'query_params',
+  'body-fields': 'body_fields',
 }
 
 const SORT_OPTIONS = ['Appearances', 'Entropy', 'Avg length', 'Unique values'] as const
@@ -144,15 +159,63 @@ const BODY_FIELD_RAW_COLUMNS: DataTableColumn<BodyFieldRecord>[] = [
   { header: 'Host', accessor: (r) => r.Host },
 ]
 
+/** The "Search key name" + "Sort by" pair, shared by FilteredIdentifiersView
+ * and KnownIdsView -- identical shape, differing only in placeholder text
+ * and whether disabled while "Show all" is on. */
+function NameAndSortFields({
+  nameQuery,
+  onNameQueryChange,
+  namePlaceholder,
+  sortBy,
+  onSortByChange,
+  disabled,
+}: {
+  nameQuery: string
+  onNameQueryChange: (value: string) => void
+  namePlaceholder: string
+  sortBy: (typeof SORT_OPTIONS)[number]
+  onSortByChange: (value: (typeof SORT_OPTIONS)[number]) => void
+  disabled?: boolean
+}) {
+  return (
+    <>
+      <FormField label="Search key name">
+        <input
+          type="text"
+          className={fieldInputClasses}
+          value={nameQuery}
+          onChange={(e) => onNameQueryChange(e.target.value)}
+          placeholder={namePlaceholder}
+          disabled={disabled}
+        />
+      </FormField>
+      <FormField label="Sort by">
+        <select
+          className={fieldInputClasses}
+          value={sortBy}
+          onChange={(e) => onSortByChange(e.target.value as (typeof SORT_OPTIONS)[number])}
+          disabled={disabled}
+        >
+          {SORT_OPTIONS.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      </FormField>
+    </>
+  )
+}
+
 /** "Show all" mode: the full raw/aggregate listing for one source, unfiltered
  * -- what the old standalone Cookies/Query Params tabs showed. */
-const EMPTY_RECORDS_LABEL: Record<Source, string> = {
+const EMPTY_RECORDS_LABEL: Record<RecordsSource, string> = {
   cookies: 'No cookies found.',
   'query-params': 'No query string parameters found.',
   'body-fields': 'No JSON body fields found.',
 }
 
-function AllRecordsView({ uploadId, source }: { uploadId: string; source: Source }) {
+function AllRecordsView({ uploadId, source }: { uploadId: string; source: RecordsSource }) {
   const { data, isLoading, isError } = useQuery({
     queryKey: ['all-records', uploadId, source],
     queryFn: () => {
@@ -223,13 +286,20 @@ function AllRecordsView({ uploadId, source }: { uploadId: string; source: Source
   )
 }
 
-/** Cookies, Query Params, and stable-identifier detection all live here now:
- * a source switch (Cookies / Query Params) plus a "Show all" kill switch
- * that either applies the 4-signal identifier filter (sliders stay pinned
- * above the table either way) or bypasses it entirely for the same raw/
- * aggregate view the old standalone Cookies/Query Params tabs had. */
-export function IdentifiersView({ uploadId, onTraceKey }: IdentifiersViewProps) {
-  const [source, setSource] = useState<Source>('cookies')
+/** Cookies, Query Params, and Body Fields: the shared entropy-filtered view,
+ * with a "Show all" kill switch that either applies the 4-signal identifier
+ * filter (sliders stay pinned above the table either way) or bypasses it
+ * entirely for the same raw/aggregate view the old standalone Cookies/Query
+ * Params tabs had. */
+function FilteredIdentifiersView({
+  uploadId,
+  source,
+  onTraceKey,
+}: {
+  uploadId: string
+  source: RecordsSource
+  onTraceKey?: (key: string) => void
+}) {
   const [showAll, setShowAll] = useState(false)
 
   const [nameQuery, setNameQuery] = useState('')
@@ -272,9 +342,8 @@ export function IdentifiersView({ uploadId, onTraceKey }: IdentifiersViewProps) 
   })
 
   return (
-    <div>
+    <>
       <FormRow>
-        <SegmentedControl legend="Source" options={SOURCE_OPTIONS} value={source} onChange={(v) => setSource(v as Source)} />
         <label className="inline-flex items-center gap-1.5 text-[13px] whitespace-nowrap">
           <input type="checkbox" checked={showAll} onChange={(e) => setShowAll(e.target.checked)} />
           Show all (ignore identifier filter)
@@ -301,30 +370,14 @@ export function IdentifiersView({ uploadId, onTraceKey }: IdentifiersViewProps) 
         </Disclosure>
 
         <FormRow>
-          <FormField label="Search key name">
-            <input
-              type="text"
-              className={fieldInputClasses}
-              value={nameQuery}
-              onChange={(e) => setNameQuery(e.target.value)}
-              placeholder="e.g. sess, token, sid"
-              disabled={showAll}
-            />
-          </FormField>
-          <FormField label="Sort by">
-            <select
-              className={fieldInputClasses}
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as (typeof SORT_OPTIONS)[number])}
-              disabled={showAll}
-            >
-              {SORT_OPTIONS.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-          </FormField>
+          <NameAndSortFields
+            nameQuery={nameQuery}
+            onNameQueryChange={setNameQuery}
+            namePlaceholder="e.g. sess, token, sid"
+            sortBy={sortBy}
+            onSortByChange={setSortBy}
+            disabled={showAll}
+          />
           <label className="inline-flex items-center gap-1.5 text-[13px] whitespace-nowrap">
             <input
               type="checkbox"
@@ -399,11 +452,109 @@ export function IdentifiersView({ uploadId, onTraceKey }: IdentifiersViewProps) 
           )}
           <IdentifiersSection
             label={SOURCE_LABELS[source]}
-            identifiers={source === 'cookies' ? data.cookies : source === 'query-params' ? data.query_params : data.body_fields}
+            identifiers={data[SOURCE_DATA_KEY[source]]}
             onTraceKey={source === 'body-fields' ? undefined : onTraceKey}
           />
         </>
       )}
+    </>
+  )
+}
+
+/** min_appearances/max_unique_values/min_avg_length/min_avg_entropy/
+ * exclude_common don't affect the Known IDs section at all -- filter_known_ids
+ * on the backend ignores them entirely. These are inert placeholders to
+ * satisfy fetchIdentifiers' shared param shape, not a copy of the other
+ * view's real defaults, so they're never meant to be kept in sync with it. */
+const KNOWN_IDS_IGNORED_FILTER_PARAMS = {
+  min_appearances: 1,
+  max_unique_values: 20,
+  min_avg_length: 0,
+  min_avg_entropy: 0,
+  exclude_common: false,
+} as const
+
+/** Known IDs: an exact-name match against studied vendors' documented
+ * identifiers (see app.features.identifiers.filter_known_ids on the
+ * backend). No entropy/cardinality filter sliders and no raw "Show all"
+ * mode -- it's already the precise view by construction. */
+function KnownIdsView({ uploadId, onTraceKey }: { uploadId: string; onTraceKey?: (key: string) => void }) {
+  const [nameQuery, setNameQuery] = useState('')
+  const debouncedNameQuery = useDebouncedValue(nameQuery)
+  const [sortBy, setSortBy] = useState<(typeof SORT_OPTIONS)[number]>('Appearances')
+
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['identifiers', uploadId, 'known-ids', debouncedNameQuery, sortBy],
+    queryFn: () =>
+      fetchIdentifiers(uploadId, {
+        ...KNOWN_IDS_IGNORED_FILTER_PARAMS,
+        name_query: debouncedNameQuery,
+        sort_by: sortBy,
+      }),
+    placeholderData: (previous) => previous,
+  })
+
+  return (
+    <>
+      <h3 className="text-base font-semibold">Known Identifiers</h3>
+      <HelpText>
+        Matches cookie/query-param/body-field names against identifiers documented by studied ad-tech and identity
+        vendors (UID2, ID5, RampID, Prebid...). This is an exact name match, not a heuristic, so a confirmed match is
+        shown regardless of how rarely it appears -- the 4-signal thresholds used elsewhere in this tab don't apply
+        here.
+      </HelpText>
+
+      <FormRow>
+        <NameAndSortFields
+          nameQuery={nameQuery}
+          onNameQueryChange={setNameQuery}
+          namePlaceholder="e.g. uid2, id5id"
+          sortBy={sortBy}
+          onSortByChange={setSortBy}
+        />
+      </FormRow>
+
+      {isLoading && <LoadingState />}
+      {isError && <ErrorState label="Failed to load identifiers." />}
+
+      {data && (
+        <>
+          <HelpText>
+            First Seen As marks which side of the exchange a field turned up on: Request/Response Cookie, POST Data,
+            Response Body, or blank for a query param. Trace jumps to Dissemination, which only tracks cookie and
+            query-param sightings -- a Known ID seen only inside a JSON body field won't be traceable there.
+          </HelpText>
+          <IdentifiersSection label="Known IDs" identifiers={data.known_ids} onTraceKey={onTraceKey} />
+        </>
+      )}
+    </>
+  )
+}
+
+export function IdentifiersView({ uploadId, onTraceKey }: IdentifiersViewProps) {
+  const [source, setSource] = useState<Source>('known-ids')
+  const isKnownIds = source === 'known-ids'
+
+  return (
+    <div>
+      <FormRow>
+        <SegmentedControl legend="Source" options={SOURCE_OPTIONS} value={source} onChange={(v) => setSource(v as Source)} />
+      </FormRow>
+
+      {/* Both views stay mounted the whole time (rather than swapping which
+       * component type renders at this slot) so switching the Source control
+       * back and forth never remounts-and-resets FilteredIdentifiersView's
+       * filter state or KnownIdsView's search/sort state. */}
+      <div className={isKnownIds ? undefined : 'hidden'}>
+        <KnownIdsView uploadId={uploadId} onTraceKey={onTraceKey} />
+      </div>
+      <div className={isKnownIds ? 'hidden' : undefined}>
+        <FilteredIdentifiersView
+          uploadId={uploadId}
+          source={source === 'known-ids' ? 'cookies' : source}
+          onTraceKey={onTraceKey}
+        />
+      </div>
     </div>
   )
 }

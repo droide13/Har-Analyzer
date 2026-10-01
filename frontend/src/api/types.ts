@@ -176,6 +176,9 @@ export interface IdentifierSummaryRow {
   avg_length: number
   avg_entropy: number
   domains: string
+  /** Comma-joined vendor name(s) documenting this exact key -- set only for
+   * the Known IDs source. */
+  vendor: string | null
   values: IdentifierValueRow[]
 }
 
@@ -183,6 +186,7 @@ export interface IdentifiersResponse {
   query_params: IdentifierSummaryRow[]
   cookies: IdentifierSummaryRow[]
   body_fields: IdentifierSummaryRow[]
+  known_ids: IdentifierSummaryRow[]
 }
 
 // --- Dissemination ---

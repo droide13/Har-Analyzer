@@ -1,7 +1,10 @@
 from app.core.models import build_entries_from_har_data
 from app.features.identifiers import (
+    TrackedKey,
     extract_tracked_keys,
     filter_identifiers,
+    filter_known_ids,
+    get_all_items,
     get_body_items,
     get_cookie_items,
     get_query_items,
@@ -104,13 +107,22 @@ def test_get_body_items_finds_identifier_in_json_response_body() -> None:
     entry = {
         "startedDateTime": "2026-01-01T00:00:00.000Z",
         "time": 1.0,
-        "request": {"method": "GET", "url": "https://example.com/id", "headers": [], "cookies": [], "queryString": []},
+        "request": {
+            "method": "GET",
+            "url": "https://example.com/id",
+            "headers": [],
+            "cookies": [],
+            "queryString": [],
+        },
         "response": {
             "status": 200,
             "statusText": "OK",
             "headers": [],
             "cookies": [],
-            "content": {"mimeType": "application/json", "text": '{"fms_params": {"fms_uid2": "A4-token-value"}}'},
+            "content": {
+                "mimeType": "application/json",
+                "text": '{"fms_params": {"fms_uid2": "A4-token-value"}}',
+            },
             "bodySize": 0,
             "headersSize": 0,
         },
@@ -122,11 +134,66 @@ def test_get_body_items_finds_identifier_in_json_response_body() -> None:
     assert ("Response Body", {"name": "fms_params.fms_uid2", "value": "A4-token-value"}) in items
 
 
+def test_get_all_items_combines_query_cookie_and_body_sources() -> None:
+    entry = {
+        "startedDateTime": "2026-01-01T00:00:00.000Z",
+        "time": 1.0,
+        "request": {
+            "method": "GET",
+            "url": "https://example.com/id?id5id=abc",
+            "headers": [],
+            "cookies": [{"name": "session", "value": "s1"}],
+            "queryString": [{"name": "id5id", "value": "abc"}],
+        },
+        "response": {
+            "status": 200,
+            "statusText": "OK",
+            "headers": [],
+            "cookies": [],
+            "content": {"mimeType": "application/json", "text": '{"nested": {"id5id": "abc"}}'},
+            "bodySize": 0,
+            "headersSize": 0,
+        },
+        "_initiator": {},
+    }
+    entries = build_entries_from_har_data({"log": {"entries": [entry]}})
+    names = {item.get("name") for _, item in get_all_items(entries[0])}
+
+    assert names == {"id5id", "session", "nested.id5id"}
+
+
+def test_filter_known_ids_matches_regardless_of_appearance_count(sample_har_dict: dict) -> None:
+    entries = build_entries_from_har_data(sample_har_dict)
+    tracked = extract_tracked_keys(entries, get_query_items)
+
+    # "token" (2 appearances) isn't a studied vendor's documented ID name.
+    assert filter_known_ids(tracked, name_query="") == []
+
+    # A real studied-vendor ID name added at a single, low appearance count
+    # must still surface -- Known IDs has no appearance-count threshold.
+    tracked["id5id"] = TrackedKey(key="id5id", total_appearances=1)
+    matches = filter_known_ids(tracked, name_query="")
+    assert {tk.key for tk in matches} == {"id5id"}
+
+
+def test_filter_known_ids_respects_name_query() -> None:
+    tracked = {"id5id": TrackedKey(key="id5id", total_appearances=1)}
+
+    assert filter_known_ids(tracked, name_query="id5") != []
+    assert filter_known_ids(tracked, name_query="nope") == []
+
+
 def test_get_body_items_ignores_non_json_bodies() -> None:
     entry = {
         "startedDateTime": "2026-01-01T00:00:00.000Z",
         "time": 1.0,
-        "request": {"method": "GET", "url": "https://example.com/page", "headers": [], "cookies": [], "queryString": []},
+        "request": {
+            "method": "GET",
+            "url": "https://example.com/page",
+            "headers": [],
+            "cookies": [],
+            "queryString": [],
+        },
         "response": {
             "status": 200,
             "statusText": "OK",

@@ -23,7 +23,7 @@
       {
         "Domain": "ap.lijit.com",
         "Platform": "Web",
-        "Description": "Sets the ljt_reader cookie which recognizes your browser or device when you return to our site or one of our partner’s sites.",
+        "Description": "Sets the ljt_reader cookie which recognizes your browser or device when you return to our site or one of our partner's sites.",
         "Notes": "Source: Manual"
       },
       {
@@ -90,7 +90,7 @@
       {
         "ID": "ljt_reader",
         "Platform": "Web",
-        "Description": "browser tracking. Enables us to recognize your browser or device when you return to our site or one of our partner’s sites..Eg marca.com (24 char length string)"
+        "Description": "browser tracking. Enables us to recognize your browser or device when you return to our site or one of our partner's sites..Eg marca.com (24 char length string)"
       },
       {
         "ID": "ljtrtb",

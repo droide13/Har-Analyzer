@@ -1,3 +1,5 @@
+import json
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -66,6 +68,7 @@ def test_identifiers_endpoint_applies_thresholds(client: TestClient, upload_id: 
     assert default_response["cookies"] == []
     assert default_response["query_params"] == []
     assert default_response["body_fields"] == []
+    assert default_response["known_ids"] == []
 
     # Loosened thresholds surface "session" (3 appearances, 2 unique values).
     loosened = client.get(
@@ -85,3 +88,47 @@ def test_identifiers_endpoint_applies_thresholds(client: TestClient, upload_id: 
 
 def test_identifiers_endpoint_unknown_upload_returns_404(client: TestClient) -> None:
     assert client.get("/api/har/does-not-exist/identifiers").status_code == 404
+
+
+def test_identifiers_known_ids_ignores_the_4_signal_thresholds(client: TestClient) -> None:
+    har_data = {
+        "log": {
+            "entries": [
+                {
+                    "startedDateTime": "2026-01-01T10:00:00.000Z",
+                    "time": 1.0,
+                    "request": {
+                        "method": "GET",
+                        "url": "https://id5-sync.com/id5?id5id=abc",
+                        "headers": [],
+                        "cookies": [],
+                        "queryString": [{"name": "id5id", "value": "abc"}],
+                    },
+                    "response": {
+                        "status": 200,
+                        "statusText": "OK",
+                        "headers": [],
+                        "cookies": [],
+                        "content": {"mimeType": "text/plain", "text": ""},
+                        "bodySize": 0,
+                        "headersSize": 0,
+                    },
+                }
+            ]
+        }
+    }
+    upload = client.post(
+        "/api/har/upload",
+        files={"file": ("sample.har", json.dumps(har_data).encode("utf-8"), "application/json")},
+    )
+    uid = upload.json()["upload_id"]
+
+    # A single appearance would fail every one of the default 4-signal
+    # thresholds (min_appearances=20 alone rules it out) -- Known IDs must
+    # surface it anyway, since it's an exact vendor-documented match.
+    body = client.get(f"/api/har/{uid}/identifiers").json()
+    assert body["query_params"] == []
+    known_id_keys = {row["key"]: row for row in body["known_ids"]}
+    assert "id5id" in known_id_keys
+    assert known_id_keys["id5id"]["vendor"] == "ID5"
+    assert known_id_keys["id5id"]["appearances"] == 1

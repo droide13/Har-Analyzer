@@ -239,7 +239,8 @@ class IdentifierValueRow(BaseModel):
 
 
 class IdentifierSummaryRow(BaseModel):
-    """One tracked key (query param or cookie name) and its per-value breakdown."""
+    """One tracked key (query param, cookie, or body-field name) and its
+    per-value breakdown."""
 
     key: str
     first_seen_as: str | None
@@ -248,6 +249,10 @@ class IdentifierSummaryRow(BaseModel):
     avg_length: float
     avg_entropy: float
     domains: str
+    # Comma-joined vendor name(s) documenting this exact key -- set only for
+    # the Known IDs source; None for the other three. A name can legitimately
+    # be documented by more than one vendor (see app.shared.known_ids).
+    vendor: str | None = None
     values: list[IdentifierValueRow]
 
 
@@ -257,6 +262,7 @@ class IdentifiersResponse(BaseModel):
     query_params: list[IdentifierSummaryRow]
     cookies: list[IdentifierSummaryRow]
     body_fields: list[IdentifierSummaryRow]
+    known_ids: list[IdentifierSummaryRow]
 
 
 # --- Dissemination ---

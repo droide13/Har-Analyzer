@@ -10,11 +10,16 @@ Cookie sightings also carry which side of the exchange they came from, so a
 key or value can report whether it was first seen on a request (it predates
 the capture) or in a Set-Cookie response (it was issued during the capture).
 
-Three sources feed the same pipeline: query params, cookies, and JSON
-request/response body fields (via ``app.shared.json_body``, which does the
-actual JSON parsing/flattening) -- the last one is what catches an
-identifier a site only ever hands back inside a JSON payload rather than a
-cookie or query param.
+Three sources feed the same entropy-filtered pipeline: query params,
+cookies, and JSON request/response body fields (via ``app.shared.json_body``,
+which does the actual JSON parsing/flattening) -- the last one is what
+catches an identifier a site only ever hands back inside a JSON payload
+rather than a cookie or query param.
+
+A fourth source, Known IDs, is a different kind of detector entirely: an
+exact-name match against ``app.shared.known_ids``' studied-vendor table
+(see ``filter_known_ids``), bypassing the entropy thresholds altogether
+since a confirmed vendor match is meaningful no matter how rarely it appears.
 """
 
 import math
@@ -24,6 +29,7 @@ from typing import Any, Callable
 
 from app.core.models import ParsedEntry
 from app.shared.json_body import flatten_json, parse_json_body
+from app.shared.known_ids import vendor_for_id_name
 from app.shared.search import COOKIE_LABELS, attr_label
 
 # One sighting: the item dict plus which side it came from. Query params have
@@ -141,8 +147,18 @@ def get_body_items(entry: ParsedEntry) -> list[Item]:
         if parsed is None:
             continue
         scope = attr_label(attr)
-        items.extend((scope, {"name": path, "value": value}) for path, value in flatten_json(parsed) if value)
+        items.extend(
+            (scope, {"name": path, "value": value}) for path, value in flatten_json(parsed) if value
+        )
     return items
+
+
+def get_all_items(entry: ParsedEntry) -> list[Item]:
+    """Every cookie/query-param/body-field occurrence on this entry,
+    combined. Used only by the Known IDs source: a documented vendor ID
+    name could turn up as any of the three, and Known IDs matches on the
+    name alone, not on which kind of field carried it."""
+    return [*get_query_items(entry), *get_cookie_items(entry), *get_body_items(entry)]
 
 
 def extract_tracked_keys(
@@ -179,6 +195,13 @@ def extract_tracked_keys(
     return tracked
 
 
+def _matches_name_query(key: str, name_query: str) -> bool:
+    """Case-insensitive substring match on a tracked key's name, shared by
+    both filter_identifiers and filter_known_ids."""
+    query_lower = name_query.strip().lower()
+    return not query_lower or query_lower in key.lower()
+
+
 def filter_identifiers(  # pylint: disable=too-many-arguments,too-many-positional-arguments
     tracked: dict[str, TrackedKey],
     min_appearances: int,
@@ -190,7 +213,6 @@ def filter_identifiers(  # pylint: disable=too-many-arguments,too-many-positiona
 ) -> list[TrackedKey]:
     """Apply all threshold + text filters and return matches."""
     matches: list[TrackedKey] = []
-    query_lower = name_query.strip().lower()
 
     for tk in tracked.values():
         if tk.total_appearances < min_appearances:
@@ -203,11 +225,25 @@ def filter_identifiers(  # pylint: disable=too-many-arguments,too-many-positiona
             continue
         if exclude_common and tk.key.lower() in COMMON_NOISE_KEYS:
             continue
-        if query_lower and query_lower not in tk.key.lower():
+        if not _matches_name_query(tk.key, name_query):
             continue
         matches.append(tk)
 
     return matches
+
+
+def filter_known_ids(tracked: dict[str, TrackedKey], name_query: str) -> list[TrackedKey]:
+    """Keep only keys whose name exactly matches a studied vendor's
+    documented ID -- no appearance/cardinality/length/entropy thresholds,
+    unlike filter_identifiers. A confirmed vendor-name match is worth
+    surfacing regardless of how rarely it appears: a real UID2 token found
+    while building this feature appeared only twice in its whole capture,
+    which the default entropy-filter thresholds would have hidden entirely."""
+    return [
+        tk
+        for tk in tracked.values()
+        if vendor_for_id_name(tk.key) and _matches_name_query(tk.key, name_query)
+    ]
 
 
 def sort_identifiers(identifiers: list[TrackedKey], sort_by: str) -> list[TrackedKey]:

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { IdentifierSummaryRow, IdentifierValueRow } from '../../api/types'
+import { Badge } from '../../components/Badge'
 import { Button } from '../../components/Button'
 import { DataTable, type DataTableColumn } from '../../components/DataTable'
 import { Disclosure } from '../../components/Disclosure'
@@ -49,9 +50,26 @@ export function IdentifiersSection({ label, identifiers, onTraceKey }: Identifie
   }
 
   const hasScope = identifiers.some((tk) => tk.first_seen_as)
+  const hasVendor = identifiers.some((tk) => tk.vendor)
 
   const summaryColumns: DataTableColumn<IdentifierSummaryRow>[] = [
     { header: 'Key', accessor: (tk) => tk.key },
+    ...(hasVendor
+      ? [
+          {
+            header: 'Vendor',
+            // A name can be documented by more than one vendor (see
+            // app.shared.known_ids), so vendor is a comma-joined string --
+            // one Badge per vendor, same tone as EntryListTable's tracker badge.
+            accessor: (tk: IdentifierSummaryRow) =>
+              tk.vendor?.split(', ').map((vendor) => (
+                <Badge key={vendor} tone="orange">
+                  {vendor}
+                </Badge>
+              )),
+          },
+        ]
+      : []),
     ...(hasScope ? [{ header: 'First Seen As', accessor: (tk: IdentifierSummaryRow) => tk.first_seen_as }] : []),
     { header: 'Appearances', accessor: (tk) => tk.appearances },
     { header: 'Unique Values', accessor: (tk) => tk.unique_values },
