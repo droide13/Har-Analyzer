@@ -44,7 +44,25 @@ Open http://localhost:5173 and upload a `.har` file.
 
 ### Vendor tracker/known-ID data (optional)
 
-`backend/app/data/trackers.csv` and `backend/app/data/known_ids/*.json` (known tracker domains and identity-graph vendors' documented cookie/param names) are committed, so the app works out of the box with whatever was last generated. They're regenerated from the `ID-Graph-Tables` git submodule at repo root -- pull it in with:
+Two generated data files back two separate features -- kept conceptually
+separate since they answer different questions:
+
+- **`backend/app/data/trackers.csv`** -- domain -> tracker service/category,
+  a broad list (tens of thousands of domains, domain-exploded from Ghostery +
+  Tracker Radar) used by Network Log's **Party** column and "Hide
+  first-party domains" filter (see **Network Log** below). Answers "is this
+  domain a known tracker, and roughly what kind?"
+- **`backend/app/data/known_ids/*.json`** -- identity/ad-tech vendors'
+  documented cookie/query-param/body-field *names* (e.g. `id5id` -> ID5),
+  used by the Identifiers tab's **Known IDs** source (see **Identifiers**
+  below). Answers "does this exact field name match something a specific
+  vendor documents?" -- a narrower, curated subset (the `ID-Graph-Tables`
+  submodule's *studied-services* list) rather than its full, less-reviewed
+  research set.
+
+Both are committed, so the app works out of the box with whatever was last
+generated. They're regenerated from the `ID-Graph-Tables` git submodule at
+repo root -- pull it in with:
 
 ```bash
 git submodule update --init
@@ -96,6 +114,7 @@ means:
 │   ├── main.py                  # FastAPI app + router registration
 │   ├── store.py                 # In-memory upload registry (parse once, look up by id)
 │   ├── schemas.py                # Pydantic response/request models
+│   ├── data/                    # Generated: trackers.csv + known_ids/*.json (see Vendor tracker/known-ID data above)
 │   ├── core/
 │   │   ├── models.py               # ParsedEntry / HarAnalysis data types + HAR parsing
 │   │   ├── har_time.py             # HAR ISO-8601 timestamp parsing (stdlib only)
@@ -104,13 +123,19 @@ means:
 │   │   ├── search.py                # Searching, tokenizing, matching engine
 │   │   ├── naming.py                 # Standardized filename format
 │   │   ├── aggregation.py            # Group-by-name helpers (Cookies/Query Params)
-│   │   └── entry_summary.py          # ParsedEntry -> EntrySummary (Network Log + Dissemination)
+│   │   ├── entry_summary.py          # ParsedEntry -> EntrySummary (Network Log + Dissemination)
+│   │   ├── json_body.py              # JSON body parsing/flattening (Body Fields, Identifiers)
+│   │   ├── trackers.py               # Domain -> tracker service/category classification
+│   │   ├── known_ids.py              # Exact id-name -> documenting vendor(s)
+│   │   └── data_files.py             # Shared APP_DATA_DIR constant
 │   ├── features/                  # Pure per-tab logic, no FastAPI imports
 │   │   ├── overview.py, cookies.py, query_params.py, identifiers.py,
 │   │   └── dissemination.py, metadata.py
 │   └── routers/                   # Thin HTTP layer: parse request, call features/, shape response
 │       └── har.py, overview.py, cookies.py, query_params.py, identifiers.py,
 │           dissemination.py, metadata.py, naming.py
+├── scripts/
+│   └── sync_tracker_data.py     # Regenerates app/data/* from the ID-Graph-Tables submodule
 └── tests/                        # pytest -- unit tests per feature module + API integration tests
 
 ./frontend
@@ -184,6 +209,8 @@ High-level summary of the loaded HAR file: request/size/domain/latency metrics, 
 
 The main request/response browser: a virtualized table (handles large captures without the browser choking) plus a detail panel per row with tabs for Request/Response Headers, Post data, Query & Cookies, Response Body, Initiator, Timing, Details, and (when the entry has any) **Matched Fields**. Supports the full filter/highlight search described below, plus the opt-in **ground-truth search** — see **Ground Truth** below.
 
+Each row's **Party** column classifies the request's domain against the tracker table (see **Vendor tracker/known-ID data** above): a `1st Party` badge for same-site requests, or the matched tracker's service name (hover for its description) for a known third-party domain -- blank when the domain matches neither. A **Hide first-party domains** checkbox above the table filters the list down to third-party traffic only.
+
 ### Query Params
 
 Lists every query-string parameter across the capture, either as a raw registry (one row per occurrence) or aggregated by name — showing whether a param's method and value stayed consistent or varied, how often it appeared, and which hosts used it.
@@ -223,7 +250,12 @@ The dissemination scan is a full sweep over every entry's every field, so it's g
 
 ### Identifiers
 
-Detection and scoring of likely identifier values (tokens, session IDs, etc.), applying the same 4-signal filter (appearance count, cardinality, average length, entropy) across three sources: Cookies, Query Parameters, and Body Fields (JSON request/response body fields, flattened into dotted paths — see **Body Fields** above). Dissemination tracing is only wired up for the Cookies/Query Parameters sources today; a body-field identifier can still be traced manually by pasting its value into a search.
+Detection and scoring of likely identifier values (tokens, session IDs, etc.), across four sources picked via the Source control:
+
+* **Known IDs** (shown first, and the tab's default) — exact-name matches against identity/ad-tech vendors' documented cookie/query-param/body-field names (see **Vendor tracker/known-ID data** above), e.g. `id5id` matching ID5. This bypasses the 4-signal filter entirely -- a confirmed vendor-documented match is worth showing no matter how rarely it appears -- and has no raw "Show all" mode, since it's already the precise view by construction.
+* **Cookies**, **Query Parameters**, **Body Fields** (JSON request/response body fields, flattened into dotted paths — see **Body Fields** above) — the original heuristic detector: the same 4-signal filter (appearance count, cardinality, average length, entropy), each with its own raw "Show all" listing.
+
+Dissemination tracing (the **Trace** button) works for any matched key that is, or ever was, a cookie or query param — including a Known IDs match that happens to be one — since Dissemination itself only ever tracks cookie/query-param sightings. A match seen only inside a JSON body field (the Body Fields source, or a body-only Known IDs match) can't be traced there that way; its value can still be searched manually.
 
 ### Metadata
 
